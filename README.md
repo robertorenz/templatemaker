@@ -44,6 +44,8 @@ templates/                      # ready-to-register Clarion templates
   showLine.tpl                  #   Ctrl+Shift+P "where am I" hotkey (see below)
   myFuncs/                      #   global function library (see below)
     myFuncs.tpl                 #     self-contained: prototypes + bodies in one template
+  myPie/                        #   pie chart for a window (see below)
+    myPie.tpl                   #     global helper + procedure extension
 README.md
 ```
 
@@ -97,6 +99,22 @@ us  = weekNumberUS(myOrder:Date)! US week of the same date (can differ by one)
 
 Install: register `myFuncs.tpl`, then add **myFuncs - Global Function Library (Global)** under
 Global → Extensions, generate, and build. (No source files to copy — everything is generated.)
+
+### `templates/myPie/` — pie chart on a window
+Two ABC extensions that render a pie chart into an IMAGE control using Clarion's built-in `PIE` graphics
+primitive (no external files):
+- **`myPieGlobal`** (APPLICATION) — adds a global helper `myPieDraw(imageFeq, slices[], colors[], depth)`
+  to the program module that does `SETTARGET(,image)` + `PIE(...)`. Add once, globally.
+- **`myPie`** (PROCEDURE) — drop on a window procedure; pick a sized **IMAGE control**, set an optional 3D
+  depth, and define 4–5+ segments (label / relative **value** / **color**). On window open it builds the
+  slice and color arrays and calls the helper, drawing the pie into the control.
+
+`PIE` (`builtins.clw:1402`) takes a SIGNED array of relative slice sizes and a LONG array of colors and
+draws the whole chart in one call; `SETTARGET(window, ?image)` aims the graphics at the IMAGE control.
+
+Install: register `myPie.tpl`; add **myPie - Global Helper** under Global → Extensions; drop a sized
+IMAGE control (e.g. `?PieImage`) on a window; add the **myPie** procedure extension to that procedure,
+pick the image, define segments; generate and build.
 
 ## Install
 
