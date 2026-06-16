@@ -55,7 +55,10 @@ myPieDraw(SIGNED pImageFeq,*SIGNED[] pSlices,*LONG[] pColors,SIGNED pPieW,SIGNED
 myPieDraw  PROCEDURE(SIGNED pImageFeq,*SIGNED[] pSlices,*LONG[] pColors,SIGNED pPieW,SIGNED pPieH,SIGNED pDepth=0,LONG pBackColor=COLOR:White)
   CODE
   SETTARGET(,pImageFeq)                                       ! draw into the IMAGE control
-  SETPENCOLOR(pBackColor)                                     ! erase the old drawing (graphics persist)
+  BLANK                                                       ! WIPE all prior graphics (no resize artifacts).
+                                                              !   A filled BOX only paints over - old/larger
+                                                              !   drawings survive a shrink; BLANK truly clears.
+  SETPENCOLOR(pBackColor)                                     ! paint the chosen background
   BOX(0,0,pImageFeq{PROP:Width},pImageFeq{PROP:Height},pBackColor)
   SETPENCOLOR(COLOR:Black)                                    ! slice outlines
   PIE(0,0,pPieW,pPieH,pSlices,pColors,pDepth)                 ! the pie itself

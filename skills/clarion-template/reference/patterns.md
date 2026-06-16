@@ -197,8 +197,11 @@ depth=0, wholeValue=0, startAngle=0)` draws a whole pie from arrays of relative 
 - **Target a control as the canvas:** `SETTARGET(<window>, ?imageControl)` aims primitives at an IMAGE
   control (the `band` param). Coordinates are relative to the control; `SETTARGET()` with no args restores.
   (`svgraph.clw` creates an image and draws into it this way.)
-- **Image graphics PERSIST and accumulate** — they are NOT auto-cleared. Before redrawing, erase with a
-  filled `BOX(0,0,w,h,backColor)` (set the pen to the same color first so no border shows), then draw.
+- **Image graphics PERSIST and accumulate** — they are NOT auto-cleared. Before redrawing, clear with
+  **`BLANK`** (no args = wipe the whole current target's graphics; `svgraph.clw` calls `blank` at the top
+  of every redraw). A filled `BOX` is NOT a real clear — it only paints over, so when the control shrinks
+  the older/larger drawing survives underneath/around it and you get resize artifacts. Use `BLANK` first,
+  then (optionally) a `BOX` to set a specific background color, then draw.
 - **Redraw after a resize via a POSTED event, not directly in `EVENT:Sized`.** At the top of
   `TakeWindowEvent` (PRIORITY 2000) the ABC resizer has NOT yet repositioned/resized the child controls,
   so the control's `PROP:Width/Height` is still the old size. Instead `POST` a private event
