@@ -208,11 +208,29 @@ its per-instance settings.
 
 ## Adding a global, callable utility function via template
 
+The make-or-break rule: a module that **defines** a free procedure must see a **BARE** prototype for it
+(no `MODULE()` wrapper) — that's what marks it "defined in THIS module" so the body matches. Other
+modules (and the global map) must see it **wrapped** in `MODULE('thatfile.clw')` so the linker knows
+where it lives. Proof: `wbstd.CLW`/`ICSTD.CLW` prototype their own procedures bare in their own MAP;
+`MODULE('Windows')`/`MODULE('SCHOOLnnn.CLW')` wrappers are used only for *external* procedures. Putting a
+`MODULE('self.clw')` wrapper in the defining module's own MAP yields "No matching prototype available",
+"Unknown identifier: <param>", and "Cannot RETURN value" all at once.
+
 To make `Func()` callable from any procedure in the app:
-1. Ship a prototype include (e.g. `myFuncs.inc`) holding a `MODULE('myFuncs.clw') ... END` block with the
-   prototype(s): `Func PROCEDURE(LONG p=0),LONG`.
-2. Ship the body module `myFuncs.clw` as `MEMBER()` with its OWN `MAP` that `INCLUDE`s the prototype file,
-   then the procedure bodies (implementation headers carry NO default — see gotcha above).
-3. Template: `#AT(%GlobalMap),WHERE(...)` → `INCLUDE('myFuncs.inc'),ONCE` (prototypes visible app-wide),
-   and `#AT(%CustomGlobalDeclarations),WHERE(...)` → `#PROJECT('myFuncs.clw')` (compile the bodies).
+1. Ship a **bare** prototype include `myFuncs.inc` — just the prototype lines, NO `MODULE()` wrapper, NO
+   `MAP`: `Func PROCEDURE(LONG p=0),LONG`.
+2. Ship the body module `myFuncs.clw` as `MEMBER()` with its OWN `MAP` that `INCLUDE('myFuncs.inc')` (so it
+   gets the bare prototype and the bodies match), then the procedure bodies. Implementation headers carry
+   NO default value (see gotcha above) — the default lives in the prototype and is applied at the call site.
+3. Template — wrap the include in a `MODULE()` block ONLY in the global map, and add the body to the build:
+   ```
+   #AT(%GlobalMap),WHERE(...)
+       MODULE('myFuncs.clw')
+   INCLUDE('myFuncs.inc'),ONCE
+       END
+   #ENDAT
+   #AT(%CustomGlobalDeclarations),WHERE(...)
+   #PROJECT('myFuncs.clw')
+   #ENDAT
+   ```
 The default value in the prototype is what makes the parameter omittable at the call site (`Func()`).

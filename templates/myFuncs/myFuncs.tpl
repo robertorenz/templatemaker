@@ -53,7 +53,9 @@
 #!  every function is callable from any procedure in the app.                   !
 #!-----------------------------------------------------------------------------!
 #AT(%GlobalMap),WHERE(%myFuncsDisable=0),DESCRIPTION('myFuncs - global function prototypes')
+    MODULE('myFuncs.clw')
 INCLUDE('myFuncs.inc'),ONCE
+    END
 #ENDAT
 #!-----------------------------------------------------------------------------!
 #!  Bodies: add the source module to the project so it is compiled and linked.  !
