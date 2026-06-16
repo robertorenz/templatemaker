@@ -132,7 +132,13 @@ per-procedure, project files, export lists, custom embeds).
 - **Output-line indentation is literal Clarion** — a label must be column 1, executable code column ≥ 2.
   A stray leading space on a label line breaks compilation.
 - **`%Symbol` substitution happens inside output lines** — `%MyObject.Init()` emits the symbol's value.
-  To emit a literal `%`, escape it. Inside string attributes, `<39>` emits a single quote `'`.
+  Inside string attributes, `<39>` emits a single quote `'`.
+- **Escape a literal `%` as `%%` in EVERY emitted line (code AND comments).** The template parser reads
+  `%` as the start of a symbol name, so a Clarion modulus like `x % 7` — and especially `x%7` (no space)
+  — makes it expect an identifier. Symptom: the template **won't register**, with `Expected an identifier`
+  at the offending line. Write `x %% 7` (emits `x % 7`); the corpus does this for the modulus operator
+  (`ABUPDATE.TPW:866`: `SELF.RecordsProcessed %% %RecordsToCheckpoint`). Simplest for comments: avoid `%`
+  (write "MOD") rather than escaping. Beware trailing notes like `(... literal %)` — that bare `%` also trips it.
 - **`#AT` blocks need `WHERE()` guards** so disabled templates emit nothing. Always honor your own
   `%...Disable` prompt on every `#AT`.
 - **`PRIORITY(n)` orders multiple `#AT`s at the same embed** (lower runs earlier; ABC uses ~2000–8000).

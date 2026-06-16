@@ -43,7 +43,7 @@
 #!  compile them into the shared/root target and export the names there.        !
 #!-----------------------------------------------------------------------------!
 #SYSTEM
-  #EQUATE(%myFuncsTPLVersion,'1.10')
+  #EQUATE(%myFuncsTPLVersion,'1.20')
 #!-----------------------------------------------------------------------------!
 #EXTENSION(myFuncsGlobal,'myFuncs - Global Function Library (Global)'),APPLICATION,HLP('~myFuncs.htm')
 #SHEET,HSCROLL
@@ -80,11 +80,11 @@ weekNumberUS(LONG pDate=0),LONG  !US week number (Sunday start, Jan 1 = week 1);
 ! weekNumber - ISO-8601 (European) week number of pDate (omitted/0 => today).
 !   ISO weeks start Monday; week 1 is the week containing the year's first
 !   Thursday. The Thursday of a date's week decides which year owns the week.
-!   date % 7 gives 0=Sun..6=Sat (Clarion epoch: standard date 4 = Thu 01-Jan-1801).
+!   date MOD 7 gives 0=Sun..6=Sat (Clarion epoch: standard date 4 = Thu 01-Jan-1801).
 !=============================================================================
 weekNumber  PROCEDURE(LONG pDate=0)
 loc:Date      LONG                                    ! the date we are working on
-loc:M         LONG                                    ! date % 7  (0=Sun .. 6=Sat)
+loc:M         LONG                                    ! date MOD 7  (0=Sun .. 6=Sat)
 loc:ISODow    LONG                                    ! ISO weekday: Mon=1 .. Sun=7
 loc:Thursday  LONG                                    ! the Thursday of loc:Date's week
 loc:ISOYear   LONG                                    ! the year that owns this week
@@ -94,7 +94,7 @@ loc:Jan1      LONG                                    ! 1st January of loc:ISOYe
   IF ~loc:Date                                        ! no date passed -> use today
     loc:Date = TODAY()
   END
-  loc:M      = loc:Date % 7                            ! 0=Sun,1=Mon,...,6=Sat
+  loc:M      = loc:Date %% 7                           ! date MOD 7 -> 0=Sun,1=Mon,...,6=Sat
   loc:ISODow = CHOOSE(loc:M = 0, 7, loc:M)             ! Sunday(0) -> 7, else Mon..Sat = 1..6
   loc:Thursday = loc:Date + (4 - loc:ISODow)           ! move to Thursday of this ISO week
   loc:ISOYear  = YEAR(loc:Thursday)                    ! the Thursday decides the week's year
@@ -105,8 +105,8 @@ loc:Jan1      LONG                                    ! 1st January of loc:ISOYe
 !   Weeks start SUNDAY; week 1 is the week containing January 1st, so Jan 1 is
 !   always in week 1. We find the Sunday that starts pDate's week and the Sunday
 !   that starts week 1 (the Sunday on/before Jan 1), then count 7-day blocks.
-!   date % 7 gives days-since-Sunday (0=Sun..6=Sat), so date-(date%7) = that
-!   week's Sunday.
+!   date MOD 7 gives days-since-Sunday (0=Sun..6=Sat); date minus that lands on
+!   the week's Sunday.
 !=============================================================================
 weekNumberUS  PROCEDURE(LONG pDate=0)
 loc:Date      LONG                                    ! the date we are working on
@@ -118,8 +118,8 @@ loc:Jan1Sun   LONG                                    ! Sunday that starts week 
   IF ~loc:Date                                        ! no date passed -> use today
     loc:Date = TODAY()
   END
-  loc:WeekSun = loc:Date - (loc:Date % 7)              ! back up to this week's Sunday
+  loc:WeekSun = loc:Date - (loc:Date %% 7)             ! back up to this week's Sunday
   loc:Year    = YEAR(loc:Date)
-  loc:Jan1Sun = DATE(1,1,loc:Year) - (DATE(1,1,loc:Year) % 7)  ! Sunday on/before Jan 1
+  loc:Jan1Sun = DATE(1,1,loc:Year) - (DATE(1,1,loc:Year) %% 7)  ! Sunday on/before Jan 1
   RETURN INT((loc:WeekSun - loc:Jan1Sun) / 7) + 1
 #ENDAT

@@ -197,6 +197,9 @@ its per-instance settings.
 - [ ] Multi-instance symbols carry `%ActiveTemplateInstance`.
 - [ ] `PRIORITY()` set where multiple `#AT`s share an embed point.
 - [ ] `<39>` (not a bare `'`) for quotes inside string attributes/defaults.
+- [ ] Literal `%` in emitted lines (modulus `x % 7`, etc.) escaped as `%%` — otherwise the template
+      won't register (`Expected an identifier`). Avoid `%` in comments (write "MOD"). Watch for bare `%`
+      in trailing parentheticals. Corpus: `ABUPDATE.TPW:866` (`SELF.RecordsProcessed %% %RecordsToCheckpoint`).
 - [ ] Block terminators balanced (`#ENDAT`, `#ENDIF`/`#END`, `#ENDFOR`, `#ENDTAB`, `#ENDSHEET`, …).
 - [ ] `.tpl` `#INCLUDE`s all its `.tpw` parts; `#TEMPLATE` header present and at column 1.
 - [ ] Default parameter values (`=0`, `=1`) appear ONLY in the **prototype** (the MAP / `.inc`),
