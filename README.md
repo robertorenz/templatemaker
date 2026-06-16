@@ -106,8 +106,10 @@ primitive (no external files):
 - **`myPieGlobal`** (APPLICATION) — adds a global helper `myPieDraw(imageFeq, slices[], colors[], depth)`
   to the program module that does `SETTARGET(,image)` + `PIE(...)`. Add once, globally.
 - **`myPie`** (PROCEDURE) — drop on a window procedure; pick a sized **IMAGE control**, set an optional 3D
-  depth, and define 4–5+ segments (label / relative **value** / **color**). On window open it builds the
-  slice and color arrays and calls the helper, drawing the pie into the control.
+  depth and background, and define 4–5+ segments (label / relative **value** / **color**). It draws the pie
+  plus a **legend** (color swatch + label + **percentage**), redraws automatically on **window resize**, and
+  exposes a **`myPieRepaint`** routine — change `myPie:Slices[n]` at run time and `DO myPieRepaint` to
+  repaint (percentages recompute automatically).
 
 `PIE` (`builtins.clw:1402`) takes a SIGNED array of relative slice sizes and a LONG array of colors and
 draws the whole chart in one call; `SETTARGET(window, ?image)` aims the graphics at the IMAGE control.
