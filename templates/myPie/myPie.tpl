@@ -79,6 +79,26 @@ myPieDraw  PROCEDURE(SIGNED pImageFeq,*SIGNED[] pSlices,*LONG[] pColors,SIGNED p
       #PROMPT('Show &percentages in legend',CHECK),%myPieShowPct,DEFAULT(1),AT(10)
     #ENDBOXED
   #ENDTAB
+  #TAB('&Instructions')
+    #BOXED('How to use myPie')
+      #DISPLAY('1. Add an IMAGE control to the window. It must be an Image -')
+      #DISPLAY('   Clarion draws the chart into an Image control; a Region')
+      #DISPLAY('   will not receive the drawing.')
+      #DISPLAY('2. Size and move the Image control wherever you want it.')
+      #DISPLAY('3. On the General tab, select that control in the')
+      #DISPLAY('   "Image control to draw into" prompt.')
+      #DISPLAY('4. Set the Background color, the 3D Depth, and the')
+      #DISPLAY('   "Show legend" / "Show percentages" options.')
+      #DISPLAY('5. On the Segments tab, add one slice per segment and give')
+      #DISPLAY('   each a Label, a Value (relative size) and a Color.')
+      #DISPLAY('   Add as many segments as you want.')
+      #DISPLAY('6. For a resizable window, set the Image control to resize or')
+      #DISPLAY('   anchor (window resizer) so the chart follows the window.')
+      #DISPLAY('7. Generate, compile, run, and test.')
+      #DISPLAY('')
+      #DISPLAY('To change the data at run time, see the Runtime tab.')
+    #ENDBOXED
+  #ENDTAB
   #TAB('&Segments')
     #DISPLAY('Define each pie slice. Value is the RELATIVE size of the slice.')
     #BUTTON('Pie Segments'),MULTI(%myPieSeg,%myPieSegLabel & ' = ' & %myPieSegValue),INLINE
