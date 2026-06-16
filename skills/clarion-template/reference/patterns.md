@@ -188,6 +188,24 @@ its per-instance settings.
 
 ---
 
+## Drawing graphics into a control, and redrawing on resize
+
+Clarion has graphics primitives — `PIE`, `ELLIPSE`, `BOX`, `ROUNDBOX`, `ARC`, `CHORD`, `POLYGON`, `LINE`
+(see `builtins.clw`) — plus `SETPENCOLOR`/`SETPENWIDTH`. `PIE(x,y,w,h, *SIGNED[] slices, *LONG[] colors,
+depth=0, wholeValue=0, startAngle=0)` draws a whole pie from arrays of relative sizes + colors.
+
+- **Target a control as the canvas:** `SETTARGET(<window>, ?imageControl)` aims primitives at an IMAGE
+  control (the `band` param). Coordinates are relative to the control; `SETTARGET()` with no args restores.
+  (`svgraph.clw` creates an image and draws into it this way.)
+- **Image graphics PERSIST and accumulate** — they are NOT auto-cleared. Before redrawing, erase with a
+  filled `BOX(0,0,w,h,backColor)` (set the pen to the same color first so no border shows), then draw.
+- **Redraw after a resize via a POSTED event, not directly in `EVENT:Sized`.** At the top of
+  `TakeWindowEvent` (PRIORITY 2000) the ABC resizer has NOT yet repositioned/resized the child controls,
+  so the control's `PROP:Width/Height` is still the old size. Instead `POST` a private event
+  (`EQUATE(EVENT:User+nnn)`) on `EVENT:Sized` (and on `EVENT:OpenWindow` for the first draw), and do the
+  actual draw when that posted event is handled — by then the window has finished opening / resizing and
+  the control reports its new size. Re-read `PROP:Width/Height` inside the draw so it fits the new size.
+
 ## Gotchas checklist
 
 - [ ] Every `#AT` honors the disable prompt via `WHERE()`.
