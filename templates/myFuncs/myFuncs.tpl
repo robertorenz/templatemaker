@@ -58,7 +58,10 @@
 #!  PROTOTYPES - bare, inside the program's global MAP (callable app-wide).     !
 #!-----------------------------------------------------------------------------!
 #AT(%GlobalMap),WHERE(%myFuncsDisable=0),DESCRIPTION('myFuncs - global function prototypes')
-weekNumber           PROCEDURE(LONG pDate=0),LONG  !ISO-8601 (European) week number; pDate omitted/0 = today
+#! SHORT prototype form (name(params),return) - has no column-1 label, so it
+#! survives the indentation that %GlobalMap applies to embed content. The long
+#! form (weekNumber PROCEDURE(...)) would need its label in column 1 and break.
+weekNumber(LONG pDate=0),LONG  !ISO-8601 (European) week number; pDate omitted/0 = today
 #ENDAT
 #!-----------------------------------------------------------------------------!
 #!  BODIES - defined in the program module itself.                             !

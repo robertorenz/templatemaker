@@ -235,6 +235,15 @@ corpus examples of a procedure with a default param (ABC class methods, e.g. ABB
 `=0` in BOTH the prototype and the body header — mirror that (`=0` in both) for an exact match.
 `%ProgramProcedures` is EXE-only; for multi-DLL, emit the body into the shared/root target and export it.
 
+**Critical MAP-indentation gotcha:** `%GlobalMap` (and any embed inside a structure) auto-indents your
+emitted lines. A **long-form** prototype `Func PROCEDURE(...)` needs its label in **column 1**, so the
+auto-indent breaks it with bogus errors ("Redefining system intrinsic: LONG", "Illegal return type",
+"Indistinguishable new prototype"). Use the **short prototype form** in a MAP embed — `Func(params),return`
+(no `PROCEDURE` keyword, no label) — which has no column-1 requirement and survives indentation. This is
+exactly what `ICSTD.CLW`'s MAP (`GetHexValue(BYTE),BYTE`, indented) and `anytext.tpl`'s `%GlobalMap`
+(`AnyTextFreeCache()`) do. The body in `%ProgramProcedures` is a DATA region and is NOT auto-indented, so
+write it long-form at column 1 as normal. Short-form proto and long-form body match fine.
+
 **Alternative (separate shipped module):** if you must keep bodies in a hand-maintained `.clw`, the
 defining module must see a BARE prototype (its own `MAP` `INCLUDE`s a bare `.inc`), and the global map
 must reference it WRAPPED in `MODULE('myFuncs.clw')`, plus `#PROJECT('myFuncs.clw')` to compile it. This
