@@ -39,8 +39,25 @@ Clarion source so you know exactly what to verify.
 ```
 skills/clarion-template/        # the skill (SKILL.md + reference/)
 agents/clarion-template-pro.md  # the specialist subagent
+templates/                      # ready-to-register Clarion templates
+  myPixel.tpl                   #   per-window diagnostic pixel (see below)
 README.md
 ```
+
+## Included templates
+
+### `templates/myPixel.tpl` — per-window diagnostic pixel
+A global (APPLICATION-scope) ABC extension that needs no per-procedure setup. On **every** procedure
+that owns a window it drops a tiny configurable REGION "pixel" in the top-left corner. Hovering it shows
+a tooltip with the **procedure name**, the current **thread number**, and the **binary** the procedure
+lives in (app/EXE or DLL). Pressing **Ctrl+Shift+I** pops a message box with the same information.
+
+- Prompts: master disable, pixel fill color, pixel size, and a Ctrl+Shift+I hotkey toggle.
+- Implementation: a self-contained `CASE EVENT()` injected at the top of `WindowManager.TakeWindowEvent`
+  (PRIORITY 2000, before the framework's CYCLE/BREAK loop), creating the control on `EVENT:OpenWindow`
+  and answering `EVENT:AlertKey`. Local-only code — no globals, so no multi-DLL handling needed.
+- Register it like any template (see below), then add **myPixel - Diagnostic Pixel (Global)** under
+  Global → Extensions.
 
 ## Install
 
