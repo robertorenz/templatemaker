@@ -221,11 +221,16 @@ depth=0, wholeValue=0, startAngle=0)` draws a whole pie from arrays of relative 
 - [ ] `#GROUP` definitions placed AFTER all `#AT`/`#EMBED` blocks (a `#GROUP` has no end-marker and
       swallows following lines until the next section directive — an `#AT` after a `#GROUP` errors
       "#AT not valid in a #GROUP"). Put groups at the end; calls resolve by forward reference.
-- [ ] Per-iteration values needed inside per-procedure `#AT` output (e.g. an INI key from `%Procedure`+
-      `%Control`) computed INLINE via a value-returning `#GROUP` — `'%(%MakeKey())'` — NOT via an
-      extension-level `#DECLARE`'d symbol + `#SET`. An extension-scoped declared symbol is not in scope
-      during per-procedure generation and yields "GEN: Unknown Variable '%sym'". `%(...)` works inside a
-      quoted output string (corpus: `'%(QUOTE(...))'` ABBROWSE.TPW:1943).
+- [ ] Per-iteration values in per-procedure `#AT` output (e.g. an INI key from `%Procedure`+`%Control`)
+      built by **direct symbol substitution** in the output line: `'%Procedure' & '_' & '%Control'`
+      (each `%Sym` substitutes inside the quotes at gen time; `&` concatenates the literals at runtime).
+      Two traps that both yield a BLANK/wrong value here:
+        • an extension-level `#DECLARE`'d symbol + `#SET` → "GEN: Unknown Variable '%sym'" (the symbol is
+          not in scope during per-procedure generation);
+        • a `#GROUP` that reads *ambient* `%Control`/`%Procedure` called inline as `%(%MakeKey())` →
+          returns EMPTY, because an inline group call does NOT inherit the caller's `#FOR` context.
+      If you must use a group, PASS the values as parameters (corpus idiom: `%(%StripPling(%BrowseFile))`),
+      don't rely on ambient context.
 - [ ] Literal `%` in emitted lines (modulus `x % 7`, etc.) escaped as `%%` — otherwise the template
       won't register (`Expected an identifier`). Avoid `%` in comments (write "MOD"). Watch for bare `%`
       in trailing parentheticals. Corpus: `ABUPDATE.TPW:866` (`SELF.RecordsProcessed %% %RecordsToCheckpoint`).

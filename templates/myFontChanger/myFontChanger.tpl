@@ -103,7 +103,7 @@ loc:Choice     SIGNED
   CASE EVENT()
   OF EVENT:OpenWindow
 #FOR(%Control),WHERE(%ControlType='LIST')
-    myFontApply(%Control, '%(%mfcMakeKey())', '%mfcIni', '%mfcDefName', %mfcDefSize)
+    myFontApply(%Control, '%Procedure' & '_' & '%Control', '%mfcIni', '%mfcDefName', %mfcDefSize)
     %Control{PROP:Alrt,250} = MouseRightUp
 #ENDFOR
   END
@@ -120,28 +120,19 @@ loc:Choice     SIGNED
       CASE FIELD()
 #FOR(%Control),WHERE(%ControlType='LIST')
       OF %Control
-        myFontChange(%Control, '%(%mfcMakeKey())', '%mfcIni', '%mfcDefName', %mfcDefSize)
+        myFontChange(%Control, '%Procedure' & '_' & '%Control', '%mfcIni', '%mfcDefName', %mfcDefSize)
 #ENDFOR
       END
     END
   END
 #ENDAT
 #!-----------------------------------------------------------------------------------
-#! Helper #GROUP: build the regeneration-stable INI key (procedure + control name,
-#! '?' stripped) and RETURN it. Called inline as '%(%mfcMakeKey())' so the key is
-#! computed at generation time without a #DECLARE'd symbol - an extension-level
-#! #DECLARE'd symbol is not in scope during per-procedure #AT generation and gives
-#! "GEN: Unknown Variable". The group reads %Procedure/%Control from the #FOR context.
-#! MUST live at the END of the file: a #GROUP has NO end-marker, so it swallows
-#! every following line until the next section directive - an #AT placed after a
-#! #GROUP errors "#AT not valid in a #GROUP". Calls resolve by forward reference.
-#!-----------------------------------------------------------------------------------
-#GROUP(%mfcMakeKey)
-  #IF(SUB(%Control,1,1)='?')
-    #RETURN(%Procedure & '_' & SUB(%Control,2,LEN(CLIP(%Control))))
-  #ELSE
-    #RETURN(%Procedure & '_' & %Control)
-  #ENDIF
+#! INI key per browse = '%Procedure' & '_' & '%Control', built by DIRECT symbol
+#! substitution in the output line (e.g. 'BrowseClients' & '_' & '?List:2'). This is
+#! the reliable approach: a #GROUP called inline as %(%group()) does NOT inherit the
+#! #FOR loop's %Control/%Procedure, so it returned an empty key (sections [] / :Name).
+#! The '?' from %Control is kept - it is a valid, unique, regeneration-stable INI
+#! section name. So each browse gets its own [Procedure_?Control] section.
 #!-----------------------------------------------------------------------------------
 #! End myFontChanger
 #!-----------------------------------------------------------------------------------
