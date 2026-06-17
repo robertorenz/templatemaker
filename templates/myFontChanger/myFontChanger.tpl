@@ -27,6 +27,7 @@
     #DISPLAY('Right-click a browse/list at run time for a popup menu:')
     #DISPLAY('   Change Font...        - pick a font for that list')
     #DISPLAY('   Reset to Default Font - revert it to the global default')
+    #DISPLAY('Ctrl + mouse wheel over a list nudges its font size up/down by 1 point.')
     #DISPLAY('Each list is saved in its OWN INI section and re-applied on reopen.')
   #ENDTAB
 #ENDSHEET
@@ -36,6 +37,7 @@
 #AT(%GlobalMap),WHERE(%mfcDisable=0),DESCRIPTION('myFontChanger - helper prototypes')
 myFontApply(SIGNED pFeq, STRING pKey, STRING pIni, STRING pDefName, SIGNED pDefSize)
 myFontChange(SIGNED pFeq, STRING pKey, STRING pIni, STRING pDefName, SIGNED pDefSize)
+myFontBump(SIGNED pFeq, STRING pKey, STRING pIni, SIGNED pDelta)
 #ENDAT
 #!-----------------------------------------------------------------------------------
 #! Helper bodies, defined in the program module (%ProgramProcedures = DATA region,
@@ -92,6 +94,25 @@ loc:Choice     SIGNED
     myFontApply(pFeq, pKey, pIni, pDefName, pDefSize) !revert to the global default font
   END
   RETURN
+#!
+myFontBump  PROCEDURE(SIGNED pFeq, STRING pKey, STRING pIni, SIGNED pDelta)
+loc:Size  LONG
+  CODE
+  !Ctrl+mouse-wheel: nudge the list font size by pDelta (+1/-1), clamp, and save.
+  loc:Size = pFeq{PROP:FontSize} + pDelta
+  IF loc:Size < 4                                   !sensible floor
+    loc:Size = 4
+  ELSIF loc:Size > 72                               !sensible ceiling
+    loc:Size = 72
+  END
+  pFeq{PROP:FontSize} = loc:Size                    !apply just the size
+  !Store the FULL current font so myFontApply re-applies it on reopen
+  !(it keys off the Name entry being present).
+  PUTINI(CLIP(pKey), 'Name',  pFeq{PROP:FontName},  pIni)
+  PUTINI(CLIP(pKey), 'Size',  loc:Size,             pIni)
+  PUTINI(CLIP(pKey), 'Color', pFeq{PROP:FontColor}, pIni)
+  PUTINI(CLIP(pKey), 'Style', pFeq{PROP:FontStyle}, pIni)
+  RETURN
 #ENDAT
 #!-----------------------------------------------------------------------------------
 #! TakeWindowEvent: TakeWindowEvent runs only when FIELD()=0 (ABWINDOW.clw:720).
@@ -109,21 +130,34 @@ loc:Choice     SIGNED
   END
 #ENDAT
 #!-----------------------------------------------------------------------------------
-#! TakeFieldEvent: a list right-click arrives here with FIELD()=the list
-#! (ABWINDOW.clw:720). Self-contained CASE at PRIORITY 2000 (above framework CASE at
-#! ABWINDOW.TPW:724 PRIORITY 2500); never RETURN.
+#! TakeFieldEvent: list events arrive here with FIELD()=the list (ABWINDOW.clw:720).
+#!   - Right-click (MouseRightUp, armed in TakeWindowEvent) -> font popup menu.
+#!   - Ctrl+mouse-wheel (EVENT:ScrollUp/Down + CtrlKeyPressed) -> nudge size by 1
+#!     and RETURN Level:Notify so the list does NOT also scroll a row.
+#! Self-contained CASE at PRIORITY 2000 (above framework CASE at ABWINDOW.TPW:724
+#! PRIORITY 2500). We only RETURN for the Ctrl+wheel case we consume.
 #!-----------------------------------------------------------------------------------
-#AT(%WindowManagerMethodCodeSection,'TakeFieldEvent','(),BYTE'),PRIORITY(2000),WHERE(%mfcDisable=0 AND %Window),DESCRIPTION('myFontChanger - right-click font picker')
-  CASE EVENT()
-  OF EVENT:AlertKey
-    IF KEYCODE() = MouseRightUp
-      CASE FIELD()
+#AT(%WindowManagerMethodCodeSection,'TakeFieldEvent','(),BYTE'),PRIORITY(2000),WHERE(%mfcDisable=0 AND %Window),DESCRIPTION('myFontChanger - right-click + Ctrl-wheel')
+  CASE FIELD()
 #FOR(%Control),WHERE(%ControlType='LIST')
-      OF %Control
+  OF %Control
+    CASE EVENT()
+    OF EVENT:AlertKey
+      IF KEYCODE() = MouseRightUp
         myFontChange(%Control, '%Procedure' & '_' & '%Control', '%mfcIni', '%mfcDefName', %mfcDefSize)
-#ENDFOR
+      END
+    OF EVENT:ScrollUp
+      IF BAND(KEYSTATE(),CtrlKeyPressed)
+        myFontBump(%Control, '%Procedure' & '_' & '%Control', '%mfcIni', 1)
+        RETURN Level:Notify
+      END
+    OF EVENT:ScrollDown
+      IF BAND(KEYSTATE(),CtrlKeyPressed)
+        myFontBump(%Control, '%Procedure' & '_' & '%Control', '%mfcIni', -1)
+        RETURN Level:Notify
       END
     END
+#ENDFOR
   END
 #ENDAT
 #!-----------------------------------------------------------------------------------
