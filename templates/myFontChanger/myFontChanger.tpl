@@ -30,6 +30,29 @@
     #DISPLAY('With a list focused, Ctrl+Plus / Ctrl+Minus change its font size by 1 point.')
     #DISPLAY('Each list is saved in its OWN INI section and re-applied on reopen.')
   #ENDTAB
+  #TAB('&Instructions')
+    #BOXED('How to use myFontChanger')
+      #DISPLAY('SETUP (design time)')
+      #DISPLAY('1. Add this extension ONCE, at the Global / Application level.')
+      #DISPLAY('2. On the General tab set the default font Name and Size (used by')
+      #DISPLAY('   every browse/list) and the INI file name.')
+      #DISPLAY('3. Generate and build the application.')
+      #DISPLAY('')
+      #DISPLAY('AT RUN TIME')
+      #DISPLAY('- Every browse/list opens in the default font.')
+      #DISPLAY('- Right-click a list for a popup menu:')
+      #DISPLAY('     Change Font...         opens the Windows font dialog')
+      #DISPLAY('     Reset to Default Font  reverts that list to the default')
+      #DISPLAY('- Click into a list, then press Ctrl+Plus / Ctrl+Minus to grow or')
+      #DISPLAY('   shrink that list font by 1 point.')
+      #DISPLAY('')
+      #DISPLAY('STORAGE')
+      #DISPLAY('- Each list is saved in its OWN INI section named Procedure_Control')
+      #DISPLAY('   (e.g. BrowseClients_?List:2), with Name/Size/Color/Style entries.')
+      #DISPLAY('- On reopen the stored font is re-applied; a per-list font overrides')
+      #DISPLAY('   the global default. Reset deletes that list section.')
+    #ENDBOXED
+  #ENDTAB
 #ENDSHEET
 #!-----------------------------------------------------------------------------------
 #! Global MAP prototypes (SHORT FORM - survives MAP auto-indent; SKILL gotcha 1).
