@@ -17,18 +17,14 @@
 #EXTENSION(myFontChanger,'myFontChanger - global per-list font picker'),APPLICATION
 #SHEET,ADJUST
   #TAB('&General')
-    #BOXED('myFontChanger')
+    #BOXED('myFontChanger'),AT(,,250)
       #PROMPT('&Disable this template',CHECK),%mfcDisable,DEFAULT(0),AT(10)
-      #PROMPT('Default font &name (blank = leave control font):',@s64),%mfcDefName,DEFAULT(''),AT(10)
-      #PROMPT('Default font &size (0 = leave control size):',SPIN(@n3,0,72,1)),%mfcDefSize,DEFAULT(0),AT(10)
-      #PROMPT('&INI file name:',@s255),%mfcIni,DEFAULT('.\myFontChanger.INI'),REQ,AT(10)
+      #PROMPT('Default font &name:',@s64),%mfcDefName,DEFAULT(''),PROMPTAT(8),AT(92,,150)
+      #PROMPT('Default font &size:',SPIN(@n3,0,72,1)),%mfcDefSize,DEFAULT(0),PROMPTAT(8),AT(92,,40)
+      #PROMPT('&INI file name:',@s255),%mfcIni,DEFAULT('.\myFontChanger.INI'),REQ,PROMPTAT(8),AT(92,,150)
+      #DISPLAY('Name blank = keep each list current font;  Size 0 = keep current size.')
     #ENDBOXED
-    #DISPLAY('')
-    #DISPLAY('Right-click a browse/list at run time for a popup menu:')
-    #DISPLAY('   Change Font...        - pick a font for that list')
-    #DISPLAY('   Reset to Default Font - revert it to the global default')
-    #DISPLAY('With a list focused, Ctrl+Plus / Ctrl+Minus change its font size by 1 point.')
-    #DISPLAY('Each list is saved in its OWN INI section and re-applied on reopen.')
+    #DISPLAY('See the Instructions tab for run-time usage (right-click menu, Ctrl+Plus/Minus).')
   #ENDTAB
   #TAB('&Instructions')
     #BOXED('How to use myFontChanger')
