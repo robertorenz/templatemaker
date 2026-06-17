@@ -218,6 +218,9 @@ depth=0, wholeValue=0, startAngle=0)` draws a whole pie from arrays of relative 
 - [ ] Multi-instance symbols carry `%ActiveTemplateInstance`.
 - [ ] `PRIORITY()` set where multiple `#AT`s share an embed point.
 - [ ] `<39>` (not a bare `'`) for quotes inside string attributes/defaults.
+- [ ] `#GROUP` definitions placed AFTER all `#AT`/`#EMBED` blocks (a `#GROUP` has no end-marker and
+      swallows following lines until the next section directive — an `#AT` after a `#GROUP` errors
+      "#AT not valid in a #GROUP"). Put groups at the end; calls resolve by forward reference.
 - [ ] Literal `%` in emitted lines (modulus `x % 7`, etc.) escaped as `%%` — otherwise the template
       won't register (`Expected an identifier`). Avoid `%` in comments (write "MOD"). Watch for bare `%`
       in trailing parentheticals. Corpus: `ABUPDATE.TPW:866` (`SELF.RecordsProcessed %% %RecordsToCheckpoint`).

@@ -64,6 +64,13 @@ Generates inline at an embed point chosen in the IDE. `PRESERVE` keeps prior sta
 Call with `#CALL(%Group,args)` (side effects) or `#INSERT(%Group,args)` (emit its output), or in an
 expression `%StripQFromControl()` when it `#RETURN`s a value.
 
+**Placement gotcha:** a `#GROUP` has **no end-marker** — its body runs until the next *section* directive
+(`#GROUP`, `#PROCEDURE`, `#CONTROL`, `#EXTENSION`, `#CODE`, `#APPLICATION`, `#MODULE`, `#SYSTEM`) or EOF.
+`#AT`/`#EMBED` do NOT end a group and are not allowed inside one, so a `#GROUP` placed *before* an `#AT`
+swallows it → `Error: #AT not valid in a #GROUP`. **Define your `#GROUP`s after all `#AT` blocks (commonly
+at the very end of the file/extension).** Calls resolve by forward reference, so using a group earlier than
+it is defined is fine.
+
 ---
 
 ## 2. Prompt / UI directives (build the configuration dialog)

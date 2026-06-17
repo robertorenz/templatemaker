@@ -32,16 +32,6 @@
   #ENDTAB
 #ENDSHEET
 #!-----------------------------------------------------------------------------------
-#! Helper #GROUP: strip the leading '?' from %Control to build a regeneration-stable
-#! INI key. Cited pattern: reference/patterns.md P6 / SKILL StripQFromControl.
-#!-----------------------------------------------------------------------------------
-#GROUP(%mfcStripQ)
-  #IF(SUB(%Control,1,1)='?')
-    #RETURN(SUB(%Control,2,LEN(CLIP(%Control))))
-  #ELSE
-    #RETURN(%Control)
-  #ENDIF
-#!-----------------------------------------------------------------------------------
 #! Global MAP prototypes (SHORT FORM - survives MAP auto-indent; SKILL gotcha 1).
 #!-----------------------------------------------------------------------------------
 #AT(%GlobalMap),WHERE(%mfcDisable=0),DESCRIPTION('myFontChanger - helper prototypes')
@@ -139,6 +129,19 @@ loc:Choice     SIGNED
     END
   END
 #ENDAT
+#!-----------------------------------------------------------------------------------
+#! Helper #GROUP: strip the leading '?' from %Control to build a regeneration-stable
+#! INI key. MUST live at the END of the file: a #GROUP has NO end-marker, so it
+#! swallows every following line until the next section directive - an #AT placed
+#! after a #GROUP errors "#AT not valid in a #GROUP". Groups resolve by forward
+#! reference, so the calls earlier in the file still work.
+#!-----------------------------------------------------------------------------------
+#GROUP(%mfcStripQ)
+  #IF(SUB(%Control,1,1)='?')
+    #RETURN(SUB(%Control,2,LEN(CLIP(%Control))))
+  #ELSE
+    #RETURN(%Control)
+  #ENDIF
 #!-----------------------------------------------------------------------------------
 #! End myFontChanger
 #!-----------------------------------------------------------------------------------
