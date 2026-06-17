@@ -128,6 +128,23 @@ Install: register `myPie.tpl`; add **myPie - Global Helper** under Global → Ex
 IMAGE control (e.g. `?PieImage`) on a window; add the **myPie** procedure extension to that procedure,
 pick the image, define segments; generate and build.
 
+### `templates/myFontChanger/` — global + per-list font picker
+A single global (APPLICATION-scope) ABC extension, no per-procedure setup:
+- Applies a **default font** (name + size) to every browse/`LIST` control at window open.
+- **Right-click any list** at run time for a popup menu (**Change Font…** → the Windows font dialog, or
+  **Reset to Default Font**).
+- With a list focused, **Ctrl+Plus / Ctrl+Minus** change its font size up/down by **1 point** and save it.
+- Saves each list's choice in **its own INI section** (`[Procedure_Control]`, with Name/Size/Color/Style)
+  and re-applies it on reopen — a stored per-list font overrides the global default; reset reverts to it.
+
+It adds two helpers to the program module (`myFontApply`, `myFontChange`) and injects into
+`WindowManager.TakeWindowEvent` (apply fonts + arm the right-click on `EVENT:OpenWindow`) and
+`TakeFieldEvent` (list events arrive there with `FIELD()` = the list). Uses `SETFONT`, `FONTDIALOG`,
+`GETINI`/`PUTINI`, and armed-key alerts (`MouseRightUp` for the menu, `CtrlPlus`/`CtrlMinus` for sizing).
+The extension has a **General** tab (default font, size, INI name) and an **Instructions** tab.
+Register it, add **myFontChanger - global per-list font picker** under Global → Extensions, set the
+default font + INI name, generate and build.
+
 ## Install
 
 Copy the two folders into your Claude Code config (`~/.claude` on macOS/Linux,
@@ -145,23 +162,6 @@ Restart Claude Code (or start a new session) so the skill and agent are picked u
 - Ask Claude to build/edit a Clarion template and it will pick up the `clarion-template` skill
   automatically (or invoke `/clarion-template`).
 - For a focused deep task, delegate to the `clarion-template-pro` agent.
-
-### `templates/myFontChanger/` — global + per-list font picker
-A single global (APPLICATION-scope) ABC extension, no per-procedure setup:
-- Applies a **default font** (name + size) to every browse/`LIST` control at window open.
-- **Right-click any list** at run time for a popup menu (**Change Font…** → the Windows font dialog, or
-  **Reset to Default Font**).
-- With a list focused, **Ctrl+Plus / Ctrl+Minus** change its font size up/down by **1 point** and save it.
-- Saves each list's choice in **its own INI section** (`[Procedure_Control]`, with Name/Size/Color/Style)
-  and re-applies it on reopen — a stored per-list font overrides the global default; reset reverts to it.
-
-It adds two helpers to the program module (`myFontApply`, `myFontChange`) and injects into
-`WindowManager.TakeWindowEvent` (apply fonts + arm the right-click on `EVENT:OpenWindow`) and
-`TakeFieldEvent` (list events arrive there with `FIELD()` = the list). Uses `SETFONT`, `FONTDIALOG`,
-`GETINI`/`PUTINI`, and armed-key alerts (`MouseRightUp` for the menu, `CtrlPlus`/`CtrlMinus` for sizing).
-The extension has a **General** tab (default font, size, INI name) and an **Instructions** tab.
-Register it, add **myFontChanger - global per-list font picker** under Global → Extensions, set the
-default font + INI name, generate and build.
 
 ## Verifying a generated template
 
