@@ -25,8 +25,10 @@
       #PROMPT('&INI file name:',@s255),%mfcIni,DEFAULT('.\myFontChanger.INI'),REQ,AT(10)
     #ENDBOXED
     #DISPLAY('')
-    #DISPLAY('Right-click any browse/list at run time to choose a font for that list.')
-    #DISPLAY('The choice is saved in the INI file above and re-applied on reopen.')
+    #DISPLAY('Right-click a browse/list at run time for a popup menu:')
+    #DISPLAY('   Change Font...        - pick a font for that list')
+    #DISPLAY('   Reset to Default Font - revert it to the global default')
+    #DISPLAY('Each list is saved in its OWN INI section and re-applied on reopen.')
   #ENDTAB
 #ENDSHEET
 #!-----------------------------------------------------------------------------------
@@ -44,7 +46,7 @@
 #!-----------------------------------------------------------------------------------
 #AT(%GlobalMap),WHERE(%mfcDisable=0),DESCRIPTION('myFontChanger - helper prototypes')
 myFontApply(SIGNED pFeq, STRING pKey, STRING pIni, STRING pDefName, SIGNED pDefSize)
-myFontChange(SIGNED pFeq, STRING pKey, STRING pIni)
+myFontChange(SIGNED pFeq, STRING pKey, STRING pIni, STRING pDefName, SIGNED pDefSize)
 #ENDAT
 #!-----------------------------------------------------------------------------------
 #! Helper bodies, defined in the program module (%ProgramProcedures = DATA region,
@@ -58,12 +60,12 @@ loc:Size       LONG
 loc:Color      LONG
 loc:Style      LONG
   CODE
-  loc:Name  = GETINI('myFontChanger', CLIP(pKey) & ':Name', '', pIni)
+  loc:Name  = GETINI(CLIP(pKey), 'Name', '', pIni)         ! each browse has its OWN [section]
   IF loc:Name
     !A stored per-list font exists - it overrides the global default.
-    loc:Size  = GETINI('myFontChanger', CLIP(pKey) & ':Size',  0, pIni)
-    loc:Color = GETINI('myFontChanger', CLIP(pKey) & ':Color', COLOR:None, pIni)
-    loc:Style = GETINI('myFontChanger', CLIP(pKey) & ':Style', -1, pIni)
+    loc:Size  = GETINI(CLIP(pKey), 'Size',  0, pIni)
+    loc:Color = GETINI(CLIP(pKey), 'Color', COLOR:None, pIni)
+    loc:Style = GETINI(CLIP(pKey), 'Style', -1, pIni)
     SETFONT(pFeq, loc:Name, loc:Size, loc:Color, loc:Style)
   ELSIF pDefName
     !No stored font - apply the global default (name + size only).
@@ -71,23 +73,34 @@ loc:Style      LONG
   END
   RETURN
 #!
-myFontChange  PROCEDURE(SIGNED pFeq, STRING pKey, STRING pIni)
+myFontChange  PROCEDURE(SIGNED pFeq, STRING pKey, STRING pIni, STRING pDefName, SIGNED pDefSize)
 loc:Name       CSTRING(65)
 loc:Size       LONG
 loc:Color      LONG
 loc:Style      LONG
+loc:Choice     SIGNED
   CODE
-  !Seed the dialog with the control<39>s current font.
-  loc:Name  = pFeq{PROP:FontName}
-  loc:Size  = pFeq{PROP:FontSize}
-  loc:Color = pFeq{PROP:FontColor}
-  loc:Style = pFeq{PROP:FontStyle}
-  IF FONTDIALOG('Choose List Font', loc:Name, loc:Size, loc:Color, loc:Style)
-    SETFONT(pFeq, loc:Name, loc:Size, loc:Color, loc:Style)
-    PUTINI('myFontChanger', CLIP(pKey) & ':Name',  CLIP(loc:Name), pIni)
-    PUTINI('myFontChanger', CLIP(pKey) & ':Size',  loc:Size,  pIni)
-    PUTINI('myFontChanger', CLIP(pKey) & ':Color', loc:Color, pIni)
-    PUTINI('myFontChanger', CLIP(pKey) & ':Style', loc:Style, pIni)
+  !Right-click popup menu. POPUP() shows at the mouse and returns the item number
+  !(0 = nothing chosen). No separator so the items number 1, 2 cleanly.
+  loc:Choice = POPUP('Change Font...|Reset to Default Font')
+  CASE loc:Choice
+  OF 1                                             !--- Change Font... ---
+    !Seed the dialog with the control<39>s current font.
+    loc:Name  = pFeq{PROP:FontName}
+    loc:Size  = pFeq{PROP:FontSize}
+    loc:Color = pFeq{PROP:FontColor}
+    loc:Style = pFeq{PROP:FontStyle}
+    IF FONTDIALOG('Choose List Font', loc:Name, loc:Size, loc:Color, loc:Style)
+      SETFONT(pFeq, loc:Name, loc:Size, loc:Color, loc:Style)
+      !Save into THIS browse<39>s own INI section, named after pKey.
+      PUTINI(CLIP(pKey), 'Name',  CLIP(loc:Name), pIni)
+      PUTINI(CLIP(pKey), 'Size',  loc:Size,  pIni)
+      PUTINI(CLIP(pKey), 'Color', loc:Color, pIni)
+      PUTINI(CLIP(pKey), 'Style', loc:Style, pIni)
+    END
+  OF 2                                             !--- Reset to Default Font ---
+    PUTINI(CLIP(pKey),,,pIni)                       !delete this browse<39>s whole section
+    myFontApply(pFeq, pKey, pIni, pDefName, pDefSize) !revert to the global default font
   END
   RETURN
 #ENDAT
@@ -120,7 +133,7 @@ loc:Style      LONG
 #FOR(%Control),WHERE(%ControlType='LIST')
     #SET(%mfcKey,%Procedure & '_' & %mfcStripQ())
       OF %Control
-        myFontChange(%Control, '%mfcKey', '%mfcIni')
+        myFontChange(%Control, '%mfcKey', '%mfcIni', '%mfcDefName', %mfcDefSize)
 #ENDFOR
       END
     END

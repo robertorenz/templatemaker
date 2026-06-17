@@ -149,9 +149,10 @@ Restart Claude Code (or start a new session) so the skill and agent are picked u
 ### `templates/myFontChanger/` — global + per-list font picker
 A single global (APPLICATION-scope) ABC extension, no per-procedure setup:
 - Applies a **default font** (name + size) to every browse/`LIST` control at window open.
-- **Right-click any list** at run time to pick a font (the Windows font dialog) for *that* list.
-- Saves each per-list choice to an **INI file** (keyed by procedure + control name) and re-applies it on
-  reopen — a stored per-list font overrides the global default.
+- **Right-click any list** at run time for a popup menu (**Change Font…** → the Windows font dialog, or
+  **Reset to Default Font**).
+- Saves each list's choice in **its own INI section** (`[Procedure_Control]`, with Name/Size/Color/Style)
+  and re-applies it on reopen — a stored per-list font overrides the global default; reset reverts to it.
 
 It adds two helpers to the program module (`myFontApply`, `myFontChange`) and injects into
 `WindowManager.TakeWindowEvent` (apply fonts + arm the right-click on `EVENT:OpenWindow`) and
