@@ -47,6 +47,8 @@ templates/                      # ready-to-register Clarion templates
     myFuncs.tpl                 #     self-contained: prototypes + bodies in one template
   myPie/                        #   pie chart for a window (see below)
     myPie.tpl                   #     global helper + procedure extension
+  myFontChanger/                #   global + per-list font picker (see below)
+    myFontChanger.tpl
 README.md
 ```
 
@@ -143,6 +145,20 @@ Restart Claude Code (or start a new session) so the skill and agent are picked u
 - Ask Claude to build/edit a Clarion template and it will pick up the `clarion-template` skill
   automatically (or invoke `/clarion-template`).
 - For a focused deep task, delegate to the `clarion-template-pro` agent.
+
+### `templates/myFontChanger/` — global + per-list font picker
+A single global (APPLICATION-scope) ABC extension, no per-procedure setup:
+- Applies a **default font** (name + size) to every browse/`LIST` control at window open.
+- **Right-click any list** at run time to pick a font (the Windows font dialog) for *that* list.
+- Saves each per-list choice to an **INI file** (keyed by procedure + control name) and re-applies it on
+  reopen — a stored per-list font overrides the global default.
+
+It adds two helpers to the program module (`myFontApply`, `myFontChange`) and injects into
+`WindowManager.TakeWindowEvent` (apply fonts + arm the right-click on `EVENT:OpenWindow`) and
+`TakeFieldEvent` (a list right-click arrives there with `FIELD()` = the list). Uses `SETFONT`,
+`FONTDIALOG`, `GETINI`/`PUTINI`, and alerts `MouseRightUp` (the same right-click key ABC browses use).
+Register it, add **myFontChanger - global per-list font picker** under Global → Extensions, set the
+default font + INI name, generate and build.
 
 ## Verifying a generated template
 
