@@ -163,8 +163,10 @@ Restart Claude Code (or start a new session) so the skill and agent are picked u
 
 `designer/ClarionTplDesigner/` is a **.NET 9 / WPF** visual designer for a template's *prompt UI*:
 open a `.tpl`, see each `#TAB`'s controls at their real `AT()` positions (icons render as the actual
-PNGs), then **drag, resize, snap to a grid/guides, and re-order** them — and save, rewriting only the
-`AT()` values. See `designer/ClarionTplDesigner/README.md`.
+PNGs), then **drag, resize, snap to a grid/guides, re-order, and delete** controls — and save, rewriting
+only the `AT()` values (and dropping deleted lines). Guides pull from the rulers and are removed by
+dragging them back onto a ruler; deleting a control whose `%symbol` is still referenced elsewhere pops a
+warning so you don't break code generation. See `designer/ClarionTplDesigner/README.md`.
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
