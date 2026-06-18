@@ -66,7 +66,7 @@ public partial class MainWindow : Window
     IHighlightingDefinition? _clarionHl;
 
     // panel layout persistence
-    FrameworkElement? _designerContent, _sourceContent, _propsContent, _outlineContent;
+    FrameworkElement? _designerContent, _sourceContent, _propsContent, _outlineContent, _problemsContent;
     bool _buildingOutline;
     string? _defaultLayoutXml;
     LayoutAnchorable? _wiredSource;
@@ -105,7 +105,9 @@ public partial class MainWindow : Window
         _sourceContent = (FrameworkElement)anchSource.Content;
         _propsContent = (FrameworkElement)anchProps.Content;
         _outlineContent = (FrameworkElement)anchOutline.Content;
+        _problemsContent = (FrameworkElement)anchProblems.Content;
         miViewOutline.IsChecked = anchOutline.IsVisible;
+        miViewProblems.IsChecked = anchProblems.IsVisible;
         try { _defaultLayoutXml = SerializeLayout(); } catch { }
         LoadPrefs();
         Loaded += (_, _) => TryLoadSavedLayout();
@@ -127,6 +129,7 @@ public partial class MainWindow : Window
             int files = _doc.Files.Count, comps = _doc.Components.Count;
             status.Text = $"Loaded {_parts.Count} editable part(s) of {comps} component(s) across {files} file(s). "
                         + "Pick a Part and Tab; the colour-coded source is in the panel below (toggle with “View Source”).";
+            Validate();
         }
         catch (Exception ex) { MessageBox.Show("Parse failed:\n" + ex.Message); }
     }
@@ -158,6 +161,7 @@ public partial class MainWindow : Window
             if (structural) ReloadFromDisk();      // re-sync the model so re-saving can't duplicate/re-drop
             else foreach (var f in _doc.Files) f.Dirty = false;   // raw-text edits (rename) are now on disk
             LoadSource();                          // reflect what's now on disk
+            Validate();
             status.Text = "Saved " + System.IO.Path.GetFileName(_doc.Path);
         }
         catch (Exception ex) { MessageBox.Show("Save failed:\n" + ex.Message); }
@@ -609,6 +613,7 @@ public partial class MainWindow : Window
                     "source" => _sourceContent,
                     "props" => _propsContent,
                     "outline" => _outlineContent,
+                    "problems" => _problemsContent,
                     _ => null
                 };
                 if (e.Content == null) e.Cancel = true;
@@ -618,10 +623,12 @@ public partial class MainWindow : Window
 
             var prp = FindAnchorable("props"); if (prp != null) anchProps = prp;
             var src = FindAnchorable("source"); if (src != null) WireSource(src);
-            EnsureOutline();                          // a layout saved before v2.5 won't contain it
+            EnsureOutline();                          // a layout saved before these panels won't contain them
+            EnsureProblems();
             _srcOpen = anchSource?.IsVisible ?? false;
             miViewSource.IsChecked = _srcOpen;
             miViewOutline.IsChecked = anchOutline?.IsVisible ?? false;
+            miViewProblems.IsChecked = anchProblems?.IsVisible ?? false;
         }
         catch { /* a bad/old layout file must never break startup */ }
     }
@@ -638,6 +645,18 @@ public partial class MainWindow : Window
         if (pane == null || _outlineContent == null) return;
         anchOutline = new LayoutAnchorable { ContentId = "outline", Title = "Outline", Content = _outlineContent };
         pane.Children.Add(anchOutline);
+    }
+
+    void EnsureProblems()
+    {
+        var existing = FindAnchorable("problems");
+        if (existing != null) { anchProblems = existing; return; }
+        // prefer the pane that hosts Source so Problems tabs alongside it
+        var pane = FindAnchorable("source")?.Parent as LayoutAnchorablePane
+                   ?? dockMgr.Layout.Descendents().OfType<LayoutAnchorablePane>().FirstOrDefault();
+        if (pane == null || _problemsContent == null) return;
+        anchProblems = new LayoutAnchorable { ContentId = "problems", Title = "Problems", Content = _problemsContent };
+        pane.Children.Add(anchProblems);
     }
 
     void TryLoadSavedLayout()
@@ -1734,6 +1753,131 @@ public partial class MainWindow : Window
         }
         var pick = firstLeaf ?? first;
         if (pick != null) { SelectFromOutline(pick); e.Handled = true; }
+    }
+
+    // ---------- validation / lint ----------
+    sealed class Issue { public bool Warn; public string Text = ""; public TplElement? El; public int File = -1, Line = -1; }
+    readonly List<Issue> _problems = new();
+
+    void Problems_Toggle(object s, RoutedEventArgs e)
+    {
+        if (anchProblems == null) return;
+        if (miViewProblems.IsChecked) { anchProblems.Show(); anchProblems.IsActive = true; }
+        else anchProblems.Hide();
+    }
+
+    void Validate_Click(object s, RoutedEventArgs e)
+    {
+        anchProblems?.Show(); if (anchProblems != null) anchProblems.IsActive = true;
+        miViewProblems.IsChecked = anchProblems?.IsVisible ?? false;
+        Validate();
+    }
+
+    static string IssueLabel(TplElement e) => e.Title.Length > 0 ? $"{e.Kind} '{e.Title}'" : e.Kind.ToString();
+
+    void Validate()
+    {
+        _problems.Clear();
+        if (_doc == null || _component == null)
+        {
+            lstProblems.ItemsSource = null;
+            if (probSummary != null) probSummary.Text = "Open a template part to check.";
+            return;
+        }
+        var all = _component.Tabs.SelectMany(Flat).Where(x => !x.Deleted).ToList();
+
+        // duplicate %symbols within the part
+        foreach (var g in all.Where(x => !string.IsNullOrEmpty(x.Symbol))
+                             .GroupBy(x => x.Symbol, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1))
+            _problems.Add(new Issue { Warn = true, El = g.First(),
+                Text = $"Duplicate symbol {g.Key} — used by {g.Count()} controls" });
+
+        // positions: negative, off-canvas, risky AT on auto-built prompts
+        foreach (var x in all.Where(x => x.IsPositionable && x.HasX && x.HasY))
+        {
+            if (x.X < 0 || x.Y < 0)
+                _problems.Add(new Issue { Warn = true, El = x, Text = $"{IssueLabel(x)} has a negative position AT({x.X},{x.Y})" });
+            else if (x.HasW && x.W > 0 && x.X + x.W > _previewWidth)
+                _problems.Add(new Issue { Warn = false, El = x,
+                    Text = $"{IssueLabel(x)} extends past the {_previewWidth}-DLU window width" });
+        }
+        foreach (var x in all.Where(x => x.Kind == TplKind.Prompt && x.HasX && x.HasY && ClassifyPrompt(x.PromptType).Special))
+            _problems.Add(new Issue { Warn = false, El = x,
+                Text = $"{IssueLabel(x)} is auto-built by Clarion but has an explicit AT — it may move/hide the generated part" });
+
+        // declared symbols never referenced anywhere else
+        foreach (var x in all.Where(x => x.Kind == TplKind.Prompt && !string.IsNullOrEmpty(x.Symbol)))
+        {
+            int others = FindUsages(x.Symbol).Count(u => !(u.File == _component.FileIndex && u.Line == x.LineIndex));
+            if (others == 0)
+                _problems.Add(new Issue { Warn = false, El = x, Text = $"Symbol {x.Symbol} is never referenced elsewhere" });
+        }
+
+        // overlapping leaf controls that share a parent
+        foreach (var grp in all.Where(x => x.Kind is TplKind.Prompt or TplKind.Display or TplKind.Image
+                                           && x.HasX && x.HasY && x.HasW && x.HasH)
+                               .GroupBy(x => x.Parent))
+        {
+            var sibs = grp.ToList();
+            for (int i = 0; i < sibs.Count; i++)
+                for (int j = i + 1; j < sibs.Count; j++)
+                    if (OverlapArea(sibs[i], sibs[j]) is double a && a > 0)
+                    {
+                        double min = Math.Min(sibs[i].W * sibs[i].H, sibs[j].W * sibs[j].H);
+                        if (min > 0 && a >= 0.5 * min)
+                            _problems.Add(new Issue { Warn = false, El = sibs[i],
+                                Text = $"{IssueLabel(sibs[i])} overlaps {IssueLabel(sibs[j])}" });
+                    }
+        }
+
+        // structural balance per file (catches hand-edits)
+        for (int fi = 0; fi < _doc.Files.Count; fi++)
+            foreach (var (open, close) in CountPairs(_doc.Files[fi].Lines))
+                _problems.Add(new Issue { Warn = true, File = fi, Line = 0,
+                    Text = $"{System.IO.Path.GetFileName(_doc.Files[fi].Path)}: {open.n} {open.d} vs {close.n} {close.d} — unbalanced" });
+
+        var rows = _problems.Select(p => $"{(p.Warn ? "⚠" : "·")}  {p.Text}").ToList();
+        lstProblems.ItemsSource = rows;
+        int w = _problems.Count(p => p.Warn), n = _problems.Count - w;
+        probSummary.Text = _problems.Count == 0 ? "No problems found ✓" : $"{w} warning(s), {n} note(s)";
+    }
+
+    static double OverlapArea(TplElement a, TplElement b)
+    {
+        double ix = Math.Max(0, Math.Min(a.X + a.W, b.X + b.W) - Math.Max(a.X, b.X));
+        double iy = Math.Max(0, Math.Min(a.Y + a.H, b.Y + b.H) - Math.Max(a.Y, b.Y));
+        return ix * iy;
+    }
+
+    // Directive open/close pairs that don't balance in a file.
+    static IEnumerable<((string d, int n) open, (string d, int n) close)> CountPairs(string[] lines)
+    {
+        (string o, string c)[] pairs =
+        {
+            ("#SHEET", "#ENDSHEET"), ("#TAB", "#ENDTAB"), ("#BOXED", "#ENDBOXED"),
+            ("#BUTTON", "#ENDBUTTON"), ("#ENABLE", "#ENDENABLE")
+        };
+        foreach (var (o, c) in pairs)
+        {
+            int no = 0, nc = 0;
+            foreach (var l in lines)
+            {
+                var t = l.TrimStart();
+                if (t.StartsWith(c, StringComparison.OrdinalIgnoreCase)) nc++;
+                else if (t.StartsWith(o, StringComparison.OrdinalIgnoreCase)
+                         && (t.Length == o.Length || !char.IsLetter(t[o.Length]))) no++;
+            }
+            if (no != nc) yield return ((o, no), (c, nc));
+        }
+    }
+
+    void Problem_Navigate(object s, MouseButtonEventArgs e)
+    {
+        int i = lstProblems.SelectedIndex;
+        if (i < 0 || i >= _problems.Count) return;
+        var p = _problems[i];
+        if (p.El != null) SelectFromOutline(p.El);
+        else if (p.File >= 0) GotoUsage(p.File, Math.Max(0, p.Line));
     }
 
     // A small bordered button simulating Clarion's auto-built dropdown (▾) / lookup (…) control.

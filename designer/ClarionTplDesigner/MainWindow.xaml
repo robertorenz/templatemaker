@@ -18,6 +18,8 @@
             <MenuItem Header="_Undo" Click="Undo_Click" InputGestureText="Ctrl+Z"/>
             <Separator/>
             <MenuItem Header="Add _AT to all controls" Click="MaterializeAll_Click"/>
+            <Separator/>
+            <MenuItem Header="_Check for problems" Click="Validate_Click"/>
         </MenuItem>
         <MenuItem Header="_Insert">
             <MenuItem Header="_Label" Click="Add_Label_Click"/>
@@ -79,6 +81,7 @@
             <MenuItem x:Name="miPreviewPending" Header="Preview _unsaved work (off = saved file)" IsCheckable="True" IsChecked="True" Click="PreviewPending_Toggle"/>
             <MenuItem x:Name="miViewSource" Header="_Source panel" IsCheckable="True" Click="Source_Click"/>
             <MenuItem x:Name="miViewOutline" Header="_Outline panel" IsCheckable="True" Click="Outline_Toggle"/>
+            <MenuItem x:Name="miViewProblems" Header="_Problems panel" IsCheckable="True" Click="Problems_Toggle"/>
             <Separator/>
             <MenuItem Header="_Reset panel layout" Click="ResetLayout_Click"/>
         </MenuItem>
@@ -225,6 +228,19 @@
                             <local:MinimapControl x:Name="srcMap" Grid.Column="1" Width="92" Cursor="Hand"
                                                   Visibility="Collapsed"/>
                         </Grid>
+                    </DockPanel>
+                  </avalonDock:LayoutAnchorable>
+                  <avalonDock:LayoutAnchorable x:Name="anchProblems" Title="Problems" ContentId="problems" CanClose="True">
+                    <DockPanel Background="#FBFCFD">
+                      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6,4">
+                        <Button Content="↻ Re-check" Padding="9,1" Click="Validate_Click"
+                                ToolTip="Scan this part for structural and layout problems"/>
+                        <TextBlock x:Name="probSummary" VerticalAlignment="Center" Margin="12,0,0,0"
+                                   FontSize="12" Foreground="#6E7885"/>
+                      </StackPanel>
+                      <ListBox x:Name="lstProblems" BorderThickness="0" Background="Transparent" FontSize="12"
+                               MouseDoubleClick="Problem_Navigate"
+                               ToolTip="Double-click a problem to jump to the control or source line"/>
                     </DockPanel>
                   </avalonDock:LayoutAnchorable>
                 </avalonDock:LayoutAnchorablePane>
