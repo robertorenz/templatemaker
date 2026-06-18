@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace ClarionTplDesigner;
@@ -63,51 +64,90 @@ public partial class MainWindow
 
             if (el.Kind == TplKind.Prompt && u.StartsWith("RADIO") && optionGroup != null)
             {
-                var rb = new RadioButton { Content = el.Title, Margin = new Thickness(2, 2, 2, 2) };
-                ApplyFont(rb, el); optionGroup.Children.Add(rb);
+                var rb = new RadioButton { Content = el.Title, Margin = new Thickness(2), IsHitTestVisible = false };
+                ApplyFont(rb, el); optionGroup.Children.Add(Selectable(rb, el));
                 continue;
             }
 
             if (!(el.Kind == TplKind.Prompt && u.StartsWith("OPTION"))) optionGroup = null;
 
+            FrameworkElement content;
             switch (el.Kind)
             {
                 case TplKind.Display:
                     var disp = new TextBlock { Text = el.Title.Length > 0 ? el.Title : " ",
-                        Margin = new Thickness(0, 2, 0, 2), TextWrapping = TextWrapping.Wrap };
-                    ApplyFont(disp, el); host.Children.Add(disp);
+                        Margin = new Thickness(0, 2, 0, 2), TextWrapping = TextWrapping.Wrap, IsHitTestVisible = false };
+                    ApplyFont(disp, el); content = disp;
                     break;
                 case TplKind.Image:
-                    host.Children.Add(new TextBlock { Text = "🖼 " + el.Title, Margin = new Thickness(0, 2, 0, 2),
-                        Foreground = new SolidColorBrush(Color.FromRgb(0x8A, 0x95, 0xA3)) });
+                    content = new TextBlock { Text = "🖼 " + el.Title, Margin = new Thickness(0, 2, 0, 2),
+                        IsHitTestVisible = false, Foreground = new SolidColorBrush(Color.FromRgb(0x8A, 0x95, 0xA3)) };
                     break;
                 case TplKind.Boxed:
                     var gb = new GroupBox { Header = el.Title, Margin = new Thickness(0, 4, 0, 4) };
                     var bi = new StackPanel(); BuildFlow(bi, el.Children); gb.Content = bi;
-                    host.Children.Add(gb);
+                    content = gb;
                     break;
                 case TplKind.Enable:
                     BuildFlow(host, el.Children);   // conditional group, no visual of its own
-                    break;
+                    continue;
                 case TplKind.Button:
-                    host.Children.Add(new Button { Content = el.Title, HorizontalAlignment = HorizontalAlignment.Left,
-                        Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 4, 0, 4) });
+                    content = new Button { Content = el.Title, HorizontalAlignment = HorizontalAlignment.Left,
+                        Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 4, 0, 4), IsHitTestVisible = false };
                     break;
                 case TplKind.Prompt:
                     if (u.StartsWith("OPTION"))
                     {
                         var og = new GroupBox { Header = el.Title, Margin = new Thickness(0, 4, 0, 4) };
-                        var oi = new StackPanel(); og.Content = oi; host.Children.Add(og); optionGroup = oi;
+                        var oi = new StackPanel(); og.Content = oi;
+                        host.Children.Add(Selectable(og, el)); optionGroup = oi;
+                        continue;
                     }
-                    else if (u == "CHECK")
+                    if (u == "CHECK")
                     {
-                        var cb = new CheckBox { Content = el.Title, Margin = new Thickness(0, 3, 0, 3) };
-                        ApplyFont(cb, el); host.Children.Add(cb);
+                        var cb = new CheckBox { Content = el.Title, Margin = new Thickness(0, 3, 0, 3), IsHitTestVisible = false };
+                        ApplyFont(cb, el); content = cb;
                     }
-                    else host.Children.Add(BuildPromptRow(el, u));
+                    else content = BuildPromptRow(el, u);
                     break;
+                default: continue;
             }
+            host.Children.Add(Selectable(content, el));
         }
+    }
+
+    // Wrap a preview control so clicking it selects the element (Ctrl = add to selection), with a context menu.
+    FrameworkElement Selectable(FrameworkElement content, TplElement el)
+    {
+        var b = new Border
+        {
+            Child = content,
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(1),
+            BorderBrush = _selection.Contains(el) ? new SolidColorBrush(Color.FromRgb(220, 70, 60)) : Brushes.Transparent,
+            Padding = new Thickness(1),
+            Tag = el,
+            ContextMenu = BuildPreviewMenu(el)
+        };
+        b.MouseLeftButtonDown += PreviewElement_Down;
+        return b;
+    }
+
+    void PreviewElement_Down(object s, MouseButtonEventArgs e)
+    {
+        if (((FrameworkElement)s).Tag is not TplElement el) return;
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0) ToggleSelect(el); else Select(el);
+        Render();                 // rebuild the preview so the selection outline shows
+        e.Handled = true;
+    }
+
+    ContextMenu BuildPreviewMenu(TplElement el)
+    {
+        var cm = new ContextMenu();
+        cm.Items.Add(ZItem("Font && Colour…", () => EditFontDialog(el)));
+        cm.Items.Add(new Separator());
+        cm.Items.Add(ZItem("Delete", () => { if (!_selection.Contains(el)) Select(el); DeleteSelection(); }));
+        return cm;
     }
 
     FrameworkElement BuildPromptRow(TplElement el, string u)
@@ -118,7 +158,7 @@ public partial class MainWindow
         {
             var col = new StackPanel { Margin = new Thickness(0, 2, 0, 2) };
             var lab = new TextBlock { Text = el.Title }; ApplyFont(lab, el); col.Children.Add(lab);
-            col.Children.Add(new TextBox { Text = def, AcceptsReturn = true, Height = 80, Width = 340,
+            col.Children.Add(new TextBox { Text = def, AcceptsReturn = true, Height = 80, Width = 340, IsHitTestVisible = false,
                 HorizontalAlignment = HorizontalAlignment.Left, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
             return col;
         }
@@ -151,12 +191,12 @@ public partial class MainWindow
         }
         else ctrl = new TextBox { Text = def };   // @picture entry / anything else
 
-        ctrl.Height = 22; ctrl.VerticalAlignment = VerticalAlignment.Center;
+        ctrl.Height = 22; ctrl.VerticalAlignment = VerticalAlignment.Center; ctrl.IsHitTestVisible = false;
         Grid.SetColumn(ctrl, 1); g.Children.Add(ctrl);
 
         if (btn != null)
         {
-            var b = new Button { Content = btn, Width = 24, Height = 22, Margin = new Thickness(2, 0, 0, 0) };
+            var b = new Button { Content = btn, Width = 24, Height = 22, Margin = new Thickness(2, 0, 0, 0), IsHitTestVisible = false };
             Grid.SetColumn(b, 2); g.Children.Add(b);
         }
         return g;

@@ -310,6 +310,20 @@ public static class TplWriter
     /// ones into their new container — every other byte is preserved.
     /// </summary>
     static void SaveFile(TplFile file, List<TplElement> docTabs)
+        => File.WriteAllText(file.Path, string.Join(file.Newline, BuildLines(file, docTabs)));
+
+    /// <summary>The text a file WOULD have after applying all pending edits — not written to disk.</summary>
+    public static string PreviewFile(TplDocument doc, int fileIndex)
+    {
+        if (fileIndex < 0 || fileIndex >= doc.Files.Count) return "";
+        var tabs = new List<TplElement>();
+        foreach (var c in doc.Components)
+            if (c.FileIndex == fileIndex) tabs.AddRange(c.Tabs);
+        var file = doc.Files[fileIndex];
+        return string.Join(file.Newline, BuildLines(file, tabs));
+    }
+
+    static List<string> BuildLines(TplFile file, List<TplElement> docTabs)
     {
         var lines = (string[])file.Lines.Clone();
 
@@ -363,7 +377,7 @@ public static class TplWriter
         }
         if (emit.TryGetValue(lines.Length, out var tail)) kept.AddRange(tail);
 
-        File.WriteAllText(file.Path, string.Join(file.Newline, kept));
+        return kept;
     }
 
     static string Esc(string s) => (s ?? "").Replace("'", "''");

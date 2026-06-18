@@ -150,6 +150,9 @@
                                     Content="Apply" ToolTip="Write these source edits to the file and re-parse"/>
                             <Button Click="RevertSrc_Click" Padding="9,1" Margin="6,0,0,0"
                                     Content="Revert" ToolTip="Discard edits and reload from disk"/>
+                            <CheckBox x:Name="chkLive" Content="Live (pending)" VerticalAlignment="Center"
+                                      Margin="12,0,0,0" Click="LiveSrc_Changed"
+                                      ToolTip="Show the source as it would be saved, reflecting all unsaved edits (read-only)"/>
                             <TextBlock x:Name="srcHeader" VerticalAlignment="Center" Margin="10,0,0,0"
                                        FontSize="11" Foreground="#8A95A3" Text=""/>
                         </StackPanel>

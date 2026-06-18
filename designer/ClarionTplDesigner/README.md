@@ -20,8 +20,14 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
 - **Flow preview** — *View ▸ Flow preview* (or the **Preview** toolbar toggle) shows the part the way Clarion
   actually auto‑lays out a prompt window: real controls stacked top‑to‑bottom (ignoring `AT()`), in the
   caption / control / button columns — entries with a `…` button, `PROCEDURE`/`FILE`/`DROP` dropdowns, spins,
-  checkboxes, option/radio groups, multiline text, tabs and group boxes auto‑sized. Read‑only; toggle back to
-  the positioner to drag/edit. (Approach modelled on the CapeSoft *clavte* editor's previewer.)
+  checkboxes, option/radio groups, multiline text, tabs and group boxes auto‑sized. (Approach modelled on the
+  CapeSoft *clavte* editor's previewer.) **Click a control in the preview to select it** (Ctrl‑click to
+  multi‑select), then change its font/size/bold/colour/text from the Style bar or right‑click → *Font &
+  Colour…* / *Delete* — the preview updates live. (Free XY dragging stays in the positioner; in a flow layout
+  "move" means reordering, a separate operation.)
+- **Live source** — tick **Live (pending)** in the Source panel to see the file *as it would be saved*,
+  reflecting every unsaved edit (moves, styles, inserts, deletes, reparents) in real time — read‑only, nothing
+  written to disk until you Save. Untick it to hand‑edit the on‑disk source again.
 - **Whole template set** — opening a `.tpl` also follows its `#INCLUDE('…​.tpw')` files and parses **every
   component** (`#EXTENSION/#CONTROL/#PROCEDURE/#CODE/#GROUP/…`). A **Part** dropdown lists each component that
   has a prompt sheet (showing which file it's in); pick one to edit its tabs. **Save writes each file

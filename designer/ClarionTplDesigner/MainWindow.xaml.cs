@@ -59,6 +59,7 @@ public partial class MainWindow : Window
     readonly LineHighlighter _lineHi = new();   // highlights selected controls' lines in the source
     bool _srcOpen;                    // source panel visible
     bool _srcDirty, _loadingSrc;      // editor has unapplied edits / suppress TextChanged while loading
+    bool _srcLive;                    // show the would-be-saved source (all pending edits) read-only
     IHighlightingDefinition? _clarionHl;
 
     // panel layout persistence
@@ -348,6 +349,7 @@ public partial class MainWindow : Window
             if (_undo.Count > MaxUndo) _undo.RemoveAt(0);
         }
         _gestureSnap = null; _gestureChanged = false;
+        RefreshLiveSource();          // drag/resize move the chips directly (no Render) — refresh now
     }
 
     TplFile? CurrentFile()
@@ -523,9 +525,33 @@ public partial class MainWindow : Window
         catch { }
     }
 
+    void LiveSrc_Changed(object s, RoutedEventArgs e)
+    {
+        _srcLive = chkLive.IsChecked == true;
+        srcEditor.IsReadOnly = _srcLive;
+        btnApplySrc.IsEnabled = !_srcLive && _srcDirty;
+        LoadSource();
+    }
+
+    // Render the file as it WOULD be saved (all pending edits), without touching disk.
+    void RefreshLiveSource()
+    {
+        if (!_srcOpen || !_srcLive || _doc == null) return;
+        int fi = _component?.FileIndex ?? 0;
+        _loadingSrc = true;
+        try { srcEditor.Text = TplWriter.PreviewFile(_doc, fi); }
+        finally { _loadingSrc = false; }
+        _srcDirty = false; btnApplySrc.IsEnabled = false;
+        var f = CurrentFile();
+        srcHeader.Text = (f == null ? "SOURCE" : $"SOURCE — {System.IO.Path.GetFileName(f.Path)}") + "  •  live (unsaved)";
+        RefreshMinimap();
+        UpdateSourceHighlights();
+    }
+
     void LoadSource()
     {
         if (!_srcOpen) return;
+        if (_srcLive) { RefreshLiveSource(); return; }
         var f = CurrentFile();
         srcEditor.SyntaxHighlighting = ClarionHighlighting();
         _loadingSrc = true;
@@ -625,6 +651,7 @@ public partial class MainWindow : Window
     void Render()
     {
         if (!_ready) return;
+        RefreshLiveSource();          // keep the live source in step with the model
         canvas.Children.Clear();
         _chips.Clear();
         _handles.Clear();
@@ -1872,6 +1899,7 @@ public partial class MainWindow : Window
         }
         if (!e.IsRepeat) PushUndo();   // one undo per discrete press; a held key reverts as one step
         MoveElement(_sel, Math.Max(0, nx), Math.Max(0, ny));
+        RefreshLiveSource();
         e.Handled = true;
     }
 
