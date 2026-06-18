@@ -17,6 +17,11 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
 
 ## What it does
 
+- **Flow preview** — *View ▸ Flow preview* (or the **Preview** toolbar toggle) shows the part the way Clarion
+  actually auto‑lays out a prompt window: real controls stacked top‑to‑bottom (ignoring `AT()`), in the
+  caption / control / button columns — entries with a `…` button, `PROCEDURE`/`FILE`/`DROP` dropdowns, spins,
+  checkboxes, option/radio groups, multiline text, tabs and group boxes auto‑sized. Read‑only; toggle back to
+  the positioner to drag/edit. (Approach modelled on the CapeSoft *clavte* editor's previewer.)
 - **Whole template set** — opening a `.tpl` also follows its `#INCLUDE('…​.tpw')` files and parses **every
   component** (`#EXTENSION/#CONTROL/#PROCEDURE/#CODE/#GROUP/…`). A **Part** dropdown lists each component that
   has a prompt sheet (showing which file it's in); pick one to edit its tabs. **Save writes each file

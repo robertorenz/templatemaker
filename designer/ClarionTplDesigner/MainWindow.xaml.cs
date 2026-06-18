@@ -628,6 +628,7 @@ public partial class MainWindow : Window
         canvas.Children.Clear();
         _chips.Clear();
         _handles.Clear();
+        if (_preview) { RenderPreview(); return; }
         if (_tab == null) return;
 
         Layout.Run(_tab);
@@ -1426,7 +1427,7 @@ public partial class MainWindow : Window
     // ---------- canvas dragging ----------
     void Canvas_MouseDown(object s, MouseButtonEventArgs e)
     {
-        if (e.OriginalSource != canvas) return;
+        if (_preview || e.OriginalSource != canvas) return;
         Select(null);
         _marquee = true; _marqueeStart = e.GetPosition(canvas);
         _marqueeRect = new Rectangle

@@ -54,6 +54,7 @@
             <MenuItem x:Name="miMinimap"   Header="Show _minimap"   IsCheckable="True" Click="Minimap_Toggle"/>
         </MenuItem>
         <MenuItem Header="_View">
+            <MenuItem x:Name="miPreview" Header="_Flow preview (read-only)" IsCheckable="True" Click="Preview_Toggle"/>
             <MenuItem x:Name="miViewSource" Header="_Source panel" IsCheckable="True" Click="Source_Click"/>
             <Separator/>
             <MenuItem Header="_Reset panel layout" Click="ResetLayout_Click"/>
@@ -75,6 +76,9 @@
             <TextBlock VerticalAlignment="Center" Margin="4,0,2,0">Grid size</TextBlock>
             <TextBox x:Name="txtGrid" Width="32" Text="5" VerticalAlignment="Center"
                      TextChanged="GridSize_Changed"/>
+            <Separator/>
+            <ToggleButton x:Name="btnPreview" Click="Preview_Toggle" Padding="8,2"
+                          ToolTip="Flow preview — how Clarion auto-lays out the prompts (read-only)">Preview</ToggleButton>
         </ToolBar>
         <ToolBar Band="1" BandIndex="0">
             <TextBlock VerticalAlignment="Center" Margin="4,0" Foreground="#5B6878">Text:</TextBlock>
