@@ -484,6 +484,8 @@ public partial class MainWindow : Window
             if (d.TryGetValue("snapGuide", out var su)) miSnapGuide.IsChecked = su == "1";
             if (d.TryGetValue("minimap", out var mm)) miMinimap.IsChecked = mm == "1";
             if (d.TryGetValue("gridSize", out var gs) && int.TryParse(gs, out _)) txtGrid.Text = gs;
+            if (d.TryGetValue("previewWidth", out var pw) && int.TryParse(pw, out var pwv))
+            { _previewWidth = pwv == 960 ? 960 : 480; cmbPreviewWidth.SelectedIndex = _previewWidth == 960 ? 1 : 0; }
             if (d.TryGetValue("zoom", out var z) &&
                 double.TryParse(z, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var zv))
                 sldZoom.Value = zv;
@@ -508,6 +510,7 @@ public partial class MainWindow : Window
                 $"snapGuide={(miSnapGuide.IsChecked == true ? 1 : 0)}",
                 $"minimap={(miMinimap.IsChecked == true ? 1 : 0)}",
                 $"gridSize={GridStep}",
+                $"previewWidth={_previewWidth}",
                 $"zoom={sldZoom.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}",
             });
         }

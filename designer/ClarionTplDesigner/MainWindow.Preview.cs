@@ -18,6 +18,15 @@ public partial class MainWindow
     bool _previewPending = true;      // ON = current/unsaved work (interactive); OFF = the saved file on disk
     string[]? _previewLines;          // when set (saved preview), prompt defaults/drops are read from these
     int _previewTabIndex;             // remembered across the rebuild that each selection triggers
+    int _previewWidth = 480;          // prompt-window width: 480 (Clarion <=10) or 960 (Clarion 11/12)
+    double PreviewFactor => _previewWidth / 480.0;
+
+    void PreviewWidth_Changed(object s, SelectionChangedEventArgs e)
+    {
+        if (!_ready) return;
+        _previewWidth = cmbPreviewWidth.SelectedIndex == 1 ? 960 : 480;
+        if (_preview) Render();
+    }
 
     // Clarion prompt types that show a value field + a "…" lookup button.
     static readonly HashSet<string> DialogTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -78,7 +87,7 @@ public partial class MainWindow
             catch { /* unreadable saved file -> fall back to the model */ }
         }
 
-        var tabs = new TabControl { Width = 480, BorderThickness = new Thickness(1), Background = Brushes.White };
+        var tabs = new TabControl { Width = _previewWidth, BorderThickness = new Thickness(1), Background = Brushes.White };
         foreach (var tab in comp.Tabs)
         {
             var sp = new StackPanel { Margin = new Thickness(10) };
@@ -93,8 +102,8 @@ public partial class MainWindow
 
         Canvas.SetLeft(tabs, 12); Canvas.SetTop(tabs, 12);
         canvas.Children.Add(tabs);
-        tabs.Measure(new Size(480, double.PositiveInfinity));
-        canvas.Width = 480 + 30;
+        tabs.Measure(new Size(_previewWidth, double.PositiveInfinity));
+        canvas.Width = _previewWidth + 30;
         canvas.Height = Math.Max(300, tabs.DesiredSize.Height + 40);
     }
 
@@ -201,18 +210,20 @@ public partial class MainWindow
     {
         string def = PromptDefault(el);
 
+        double f = PreviewFactor;   // 1.0 at 480 (Clarion <=10), 2.0 at 960 (Clarion 11/12)
+
         if (u.StartsWith("TEXT"))   // multiline: label then a tall box
         {
             var col = new StackPanel { Margin = new Thickness(0, 2, 0, 2) };
             var lab = new TextBlock { Text = el.Title }; ApplyFont(lab, el); col.Children.Add(lab);
-            col.Children.Add(new TextBox { Text = def, AcceptsReturn = true, Height = 80, Width = 340, IsHitTestVisible = false,
+            col.Children.Add(new TextBox { Text = def, AcceptsReturn = true, Height = 80, Width = 340 * f, IsHitTestVisible = false,
                 HorizontalAlignment = HorizontalAlignment.Left, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
             return col;
         }
 
         var g = new Grid { Margin = new Thickness(0, 1, 0, 1) };
-        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
-        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200 * f) });
+        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140 * f) });
         g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var lbl = new TextBlock { Text = el.Title, VerticalAlignment = VerticalAlignment.Center,

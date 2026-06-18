@@ -82,6 +82,12 @@
                           ToolTip="Flow preview — how Clarion auto-lays out the prompts">Preview</ToggleButton>
             <ToggleButton x:Name="btnPreviewPending" Click="PreviewPending_Toggle" Padding="8,2" IsChecked="True"
                           ToolTip="ON = preview your current/unsaved work; OFF = preview the saved file on disk">Unsaved</ToggleButton>
+            <ComboBox x:Name="cmbPreviewWidth" Width="124" VerticalAlignment="Center" Margin="4,0,0,0"
+                      SelectionChanged="PreviewWidth_Changed"
+                      ToolTip="Prompt-window width: 480 (Clarion 10 and earlier) or 960 (Clarion 11.0/11.1/12)">
+                <ComboBoxItem Content="Width 480 (CW≤10)" IsSelected="True"/>
+                <ComboBoxItem Content="Width 960 (CW11/12)"/>
+            </ComboBox>
         </ToolBar>
         <ToolBar Band="1" BandIndex="0">
             <TextBlock VerticalAlignment="Center" Margin="4,0" Foreground="#5B6878">Text:</TextBlock>

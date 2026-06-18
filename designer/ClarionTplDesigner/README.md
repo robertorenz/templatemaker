@@ -21,7 +21,9 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
   actually auto‑lays out a prompt window: real controls stacked top‑to‑bottom (ignoring `AT()`), in the
   caption / control / button columns — entries with a `…` button, `PROCEDURE`/`FILE`/`DROP` dropdowns, spins,
   checkboxes, option/radio groups, multiline text, tabs and group boxes auto‑sized. (Approach modelled on the
-  CapeSoft *clavte* editor's previewer.) **Click a control in the preview to select it** (Ctrl‑click to
+  CapeSoft *clavte* editor's previewer.) A **width selector** switches the prompt window between **480**
+  (Clarion 10 and earlier) and **960** (Clarion 11.0/11.1/12), scaling the columns to match. **Click a control
+  in the preview to select it** (Ctrl‑click to
   multi‑select), then change its font/size/bold/colour/text from the Style bar or right‑click → *Font &
   Colour…* / *Delete* — the preview updates live. (Free XY dragging stays in the positioner; in a flow layout
   "move" means reordering, a separate operation.)
