@@ -92,6 +92,11 @@ public partial class MainWindow : Window
             .Select(f => f.Source).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
         cmbFont.ItemsSource = fonts;
         cmbFontBar.ItemsSource = fonts;
+        cmbPromptType.ItemsSource = new[]
+        {
+            "@s255", "@n8", "@n-12.2", "@d1", "CHECK", "SPIN(@n3,0,100)", "DROP('Item1|Item2')",
+            "FROM(%Queue)", "OPTION", "RADIO", "PROCEDURE", "EXPR", "KEYCODE", "COLOR", "FONT", "FILE('All|*.*')"
+        };
         WireSource(anchSource);
         _srcOpen = anchSource.IsVisible;
         miViewSource.IsChecked = _srcOpen;
@@ -2072,6 +2077,19 @@ public partial class MainWindow : Window
         imgRow.Visibility = isImg ? Visibility.Visible : Visibility.Collapsed;
         btnBrowseImg.IsEnabled = isImg && el!.Inserted;  // browsing changes the file name (only added images persist)
 
+        bool isPrompt = el is { Kind: TplKind.Prompt };
+        promptBox.Visibility = isPrompt ? Visibility.Visible : Visibility.Collapsed;
+        if (isPrompt)
+        {
+            cmbPromptType.Text = el!.PromptType;
+            chkReq.IsChecked = el.Req;
+            txtDefault.Text = el.DefaultExpr;
+            bool editable = el.Inserted;                  // existing prompts: changing the type rewrites their line
+            cmbPromptType.IsEnabled = chkReq.IsEnabled = txtDefault.IsEnabled = editable;
+            promptNote.Visibility = editable ? Visibility.Collapsed : Visibility.Visible;
+            promptNote.Text = editable ? "" : "Type/attributes are read-only for existing controls (edit them in the source).";
+        }
+
         bool styleable = el is { Kind: TplKind.Prompt or TplKind.Display or TplKind.Boxed };
         styleHdr.Visibility = styleGrid.Visibility = styleable ? Visibility.Visible : Visibility.Collapsed;
         if (styleable)
@@ -2105,6 +2123,34 @@ public partial class MainWindow : Window
         if (_suppressChildSel || _childList == null) return;
         int i = lstChildren.SelectedIndex;
         if (i >= 0 && i < _childList.Count) Select(_childList[i]);
+    }
+
+    // ---------- prompt type / attributes (added controls) ----------
+    void PromptType_Changed(object s, RoutedEventArgs e)
+    {
+        if (_suppressProp || _sel is not { Inserted: true, Kind: TplKind.Prompt }) return;
+        string t = cmbPromptType.Text.Trim();
+        if (t.Length == 0 || t == _sel.PromptType) return;
+        if (!_editGuard) { PushUndo(); _editGuard = true; }
+        _sel.PromptType = t;
+        _sel.Dirty = true;
+        Render();
+    }
+
+    void PromptAttr_Changed(object s, RoutedEventArgs e)
+    {
+        if (_suppressProp || _sel is not { Inserted: true, Kind: TplKind.Prompt }) return;
+        bool req = chkReq.IsChecked == true; string def = txtDefault.Text.Trim();
+        if (req == _sel.Req && def == _sel.DefaultExpr) return;
+        if (!_editGuard) { PushUndo(); _editGuard = true; }
+        _sel.Req = req; _sel.DefaultExpr = def;
+        _sel.Dirty = true;
+        Render();
+    }
+
+    void PromptDefault_KeyDown(object s, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { PromptAttr_Changed(s, e); e.Handled = true; }
     }
 
     void Text_Changed(object s, TextChangedEventArgs e)

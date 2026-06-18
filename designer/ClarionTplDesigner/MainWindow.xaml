@@ -287,6 +287,19 @@
                     <Button Click="RefreshImg_Click" Padding="6,1" Margin="6,0,0,0" Content="↻ Refresh"
                             ToolTip="Reload the image and re-render (use after typing a file name or changing the file)"/>
                 </StackPanel>
+                <StackPanel x:Name="promptBox" Visibility="Collapsed" Margin="0,0,0,8">
+                    <TextBlock Text="PROMPT TYPE" FontWeight="Bold" Foreground="#5B6878" FontSize="11" Margin="0,4,0,2"/>
+                    <ComboBox x:Name="cmbPromptType" IsEditable="True" Margin="0,0,0,4"
+                              SelectionChanged="PromptType_Changed" LostFocus="PromptType_Changed"
+                              ToolTip="The #PROMPT picture/type, e.g. @s255, @n8, CHECK, SPIN(@n3,0,100), DROP('A|B'), OPTION, PROCEDURE"/>
+                    <CheckBox x:Name="chkReq" Content="Required (REQ)" Margin="0,0,0,3" Click="PromptAttr_Changed"
+                              ToolTip="Entry must be filled in (adds the REQ attribute)"/>
+                    <TextBlock Text="Default" Foreground="#5B6878" FontSize="11" Margin="0,0,0,1"/>
+                    <TextBox x:Name="txtDefault" LostFocus="PromptAttr_Changed" KeyDown="PromptDefault_KeyDown"
+                             ToolTip="Literal placed inside DEFAULT(...) — e.g. 'AJE', 5, or %Symbol. Leave blank for none."/>
+                    <TextBlock x:Name="promptNote" Foreground="#9AA4B0" FontSize="10.5" TextWrapping="Wrap" Margin="0,3,0,0"
+                               Text="Type and attributes are editable for controls you add here." Visibility="Collapsed"/>
+                </StackPanel>
                 <UniformGrid Columns="2" x:Name="propGrid" IsEnabled="False">
                     <TextBlock Text="X" VerticalAlignment="Center"/>
                     <TextBox x:Name="txtX" Margin="0,2" TextChanged="Prop_Changed"/>

@@ -22,6 +22,8 @@ public class TplElement
     public string Title = "";      // tab name / box title / display text / prompt label / image file
     public string Symbol = "";     // %Symbol (prompts/images target a feq)
     public string PromptType = ""; // CHECK / @s255 / SPIN(..) / OPTION / RADIO / OPENDIALOG(..)
+    public bool Req;               // ,REQ attribute (entry must be filled)
+    public string DefaultExpr = "";// literal inside DEFAULT(...), e.g. '39', %Sym, 'AJE'
 
     // AT(x,y,w,h) - which slots were present, and their DLU values.
     public bool HasAt, HasX, HasY, HasW, HasH;
@@ -50,7 +52,7 @@ public class TplElement
         {
             Kind = Kind, LineIndex = LineIndex, EndLineIndex = EndLineIndex,
             Deleted = Deleted, Inserted = Inserted, Moved = Moved, MoveAnchorLine = MoveAnchorLine,
-            Title = Title, Symbol = Symbol, PromptType = PromptType,
+            Title = Title, Symbol = Symbol, PromptType = PromptType, Req = Req, DefaultExpr = DefaultExpr,
             HasAt = HasAt, HasX = HasX, HasY = HasY, HasW = HasW, HasH = HasH,
             X = X, Y = Y, W = W, H = H,
             FontName = FontName, FontSize = FontSize, FontColor = FontColor, FontStyle = FontStyle,
@@ -262,6 +264,9 @@ public static class TplParser
             if (pt.Success) e.PromptType = pt.Groups[1].Value.Trim();
             var sym = Regex.Match(line, @"\)\s*,\s*%(\w+)");
             if (sym.Success) e.Symbol = "%" + sym.Groups[1].Value;
+            if (Regex.IsMatch(line, @",\s*REQ\b", RegexOptions.IgnoreCase)) e.Req = true;
+            var def = Regex.Match(line, @"\bDEFAULT\(\s*(.*?)\s*\)\s*(?:,|$)", RegexOptions.IgnoreCase);
+            if (def.Success) e.DefaultExpr = def.Groups[1].Value.Trim();
         }
         else if (kind is TplKind.Image)
         {
@@ -500,7 +505,9 @@ public static class TplWriter
             TplKind.Image   => $"{ind}#IMAGE('{Esc(e.Title)}'),{at}",
             TplKind.Boxed   => $"{ind}#BOXED('{Esc(e.Title)}'),{at}",
             TplKind.Prompt  => $"{ind}#PROMPT('{Esc(e.Title)}',{e.PromptType}),{e.Symbol},{at}"
-                             + (e.PromptType.Equals("CHECK", StringComparison.OrdinalIgnoreCase) ? ",DEFAULT(%TRUE)" : ""),
+                             + (e.Req ? ",REQ" : "")
+                             + (e.DefaultExpr.Length > 0 ? $",DEFAULT({e.DefaultExpr})"
+                                : (e.PromptType.Equals("CHECK", StringComparison.OrdinalIgnoreCase) ? ",DEFAULT(%TRUE)" : "")),
             _ => ""
         };
     }
