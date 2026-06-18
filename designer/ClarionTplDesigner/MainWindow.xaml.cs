@@ -523,12 +523,20 @@ public partial class MainWindow : Window
                 var dock = new DockPanel { LastChildFill = true };
                 var lab = Label(); DockPanel.SetDock(lab, Dock.Left); dock.Children.Add(lab);
                 if (glyph.Length > 0) { var b2 = FauxButton(glyph); DockPanel.SetDock(b2, Dock.Right); dock.Children.Add(b2); }
-                dock.Children.Add(new Border        // faux entry field, fills the remaining width
+                var entry = new Border        // faux entry field, fills the remaining width
                 {
                     Background = new SolidColorBrush(Color.FromRgb(0xFB, 0xFC, 0xFE)),
                     BorderBrush = new SolidColorBrush(Color.FromRgb(0xC8, 0xD0, 0xDC)),
                     BorderThickness = new Thickness(1), Margin = new Thickness(0, 1, 1, 1), MinWidth = 20
-                });
+                };
+                if (u.Contains("KEYCODE") && PromptDefaultInt(el) is int kc)   // show the decoded hotkey
+                    entry.Child = new TextBlock
+                    {
+                        Text = DecodeKey(kc), FontSize = 8,
+                        Foreground = new SolidColorBrush(Color.FromRgb(0x5B, 0x68, 0x78)),
+                        VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(3, 0, 0, 0)
+                    };
+                dock.Children.Add(entry);
                 border.Child = dock;
             }
         }
@@ -590,6 +598,39 @@ public partial class MainWindow : Window
         if (u.StartsWith("RADIO"))    return ("radio button", "", false);
         if (t.StartsWith("@"))        return ($"entry  {t}", "", false);
         return (t.Length == 0 ? "entry" : t, "", false);
+    }
+
+    // Decode a Clarion keycode (Windows VK in the low byte + modifier bits) into e.g. "CtrlF10".
+    static string DecodeKey(int code)
+    {
+        string mod = "";
+        if ((code & 0x200) != 0) mod += "Ctrl";
+        if ((code & 0x100) != 0) mod += "Shift";
+        if ((code & 0x400) != 0) mod += "Alt";
+        return mod + KeyName(code & 0xFF);
+    }
+
+    static string KeyName(int b)
+    {
+        if (b >= 0x70 && b <= 0x87) return "F" + (b - 0x6F);        // F1..F24
+        if (b >= 0x41 && b <= 0x5A) return ((char)b).ToString();    // A..Z
+        if (b >= 0x30 && b <= 0x39) return ((char)b).ToString();    // 0..9
+        return b switch
+        {
+            0x08 => "Bksp", 0x09 => "Tab", 0x0D => "Enter", 0x1B => "Esc", 0x20 => "Space",
+            0x2E => "Del", 0x2D => "Ins", 0x24 => "Home", 0x23 => "End", 0x21 => "PgUp", 0x22 => "PgDn",
+            0x25 => "Left", 0x26 => "Up", 0x27 => "Right", 0x28 => "Down",
+            _ => "Key" + b
+        };
+    }
+
+    // The numeric default(...) on a prompt's source line, if any (used to decode KEYCODE prompts).
+    int? PromptDefaultInt(TplElement el)
+    {
+        var f = CurrentFile();
+        if (f == null || el.LineIndex < 0 || el.LineIndex >= f.Lines.Length) return null;
+        var m = Regex.Match(f.Lines[el.LineIndex], @"default\(\s*(\d+)\s*\)", RegexOptions.IgnoreCase);
+        return m.Success && int.TryParse(m.Groups[1].Value, out var v) ? v : null;
     }
 
     // ---------- images ----------
@@ -764,7 +805,10 @@ public partial class MainWindow : Window
         if (el is { Kind: TplKind.Prompt })
         {
             var (desc, glyph, special) = ClassifyPrompt(el.PromptType);
-            propType.Text = $"Type: {desc}."
+            string keyNote = "";
+            if (el.PromptType.ToUpperInvariant().Contains("KEYCODE") && PromptDefaultInt(el) is int kc)
+                keyNote = $"  Default key: {DecodeKey(kc)}  ({kc}).";
+            propType.Text = $"Type: {desc}.{keyNote}"
                 + (special ? $"  ⚠ Clarion auto-builds this {(glyph == "▾" ? "dropdown" : "“…” button")} next to the "
                            + "field and lays it out for you — giving this control an explicit position (e.g. “Add AT to all”) "
                            + "can move or hide that part. Prefer leaving its position to Clarion."

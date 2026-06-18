@@ -29,7 +29,8 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
   chip). Layout honours explicit `AT(x,y)`; everything else is stacked (approximate).
 - **Prompt simulation** — each prompt renders like its real row: the caption, a faux entry field, and (for
   the auto-built types) a ▾ dropdown or `…` lookup button; `CHECK` shows a checkbox. So a tab reads close to
-  the actual Clarion prompt window.
+  the actual Clarion prompt window. A `KEYCODE` prompt's `default(...)` is decoded to its hotkey (e.g.
+  `default(633)` → **CtrlF10**), shown in the field and in the Properties panel.
 - **Prompt-type awareness** — prompts that Clarion auto-builds with extra UI (a `PROCEDURE`/`FILE` dropdown,
   or a `…` lookup button for `KEYCODE`/`EXPR`/`OPENDIALOG`/font/colour pickers) render with a ▾/… affordance
   on the canvas, and the Properties panel describes the type and warns that these flow automatically — giving
