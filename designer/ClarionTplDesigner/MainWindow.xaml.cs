@@ -11,6 +11,8 @@ using System.Windows.Shapes;
 using System.Text.RegularExpressions;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
+using AvalonDock.Layout;
+using AvalonDock.Layout.Serialization;
 using Microsoft.Win32;
 
 namespace ClarionTplDesigner;
@@ -37,6 +39,8 @@ public partial class MainWindow : Window
     Guide? _dragGuide;
     Point _dragStart;
     double _elStartX, _elStartY;
+    bool _dragMoved;                  // mouse has travelled past the threshold this gesture
+    const double DragThreshold = 3;   // px before a click becomes a drag
     bool _suppressProp;
     bool _ready;          // true once XAML is fully constructed
     List<TplElement>? _childList;     // controls listed for the selected group box
@@ -51,6 +55,11 @@ public partial class MainWindow : Window
     bool _srcOpen;                    // source panel visible
     bool _srcDirty, _loadingSrc;      // editor has unapplied edits / suppress TextChanged while loading
     IHighlightingDefinition? _clarionHl;
+
+    // panel layout persistence
+    FrameworkElement? _designerContent, _sourceContent, _propsContent;
+    string? _defaultLayoutXml;
+    LayoutAnchorable? _wiredSource;
 
     sealed class Snapshot
     {
@@ -70,10 +79,18 @@ public partial class MainWindow : Window
         KeyDown += OnKeyDown;
         cmbFont.ItemsSource = System.Windows.Media.Fonts.SystemFontFamilies
             .Select(f => f.Source).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
-        anchSource.IsVisibleChanged += AnchSource_VisChanged;
+        WireSource(anchSource);
         _srcOpen = anchSource.IsVisible;
-        btnSource.IsChecked = _srcOpen;
+        miViewSource.IsChecked = _srcOpen;
         _ready = true;
+
+        // remember panel contents + the pristine layout, then restore the user's saved layout
+        _designerContent = designerHost;
+        _sourceContent = (FrameworkElement)anchSource.Content;
+        _propsContent = (FrameworkElement)anchProps.Content;
+        try { _defaultLayoutXml = SerializeLayout(); } catch { }
+        Loaded += (_, _) => TryLoadSavedLayout();
+        Closing += (_, _) => SaveLayout();
     }
 
     // ---------- file ----------
@@ -353,7 +370,7 @@ public partial class MainWindow : Window
         return _clarionHl;
     }
 
-    void Source_Click(object s, RoutedEventArgs e) => SetSource(btnSource.IsChecked == true);
+    void Source_Click(object s, RoutedEventArgs e) => SetSource(miViewSource.IsChecked == true);
 
     // Show/hide the AvalonDock Source anchorable; the rest is synced by AnchSource_VisChanged.
     void SetSource(bool show)
@@ -365,8 +382,84 @@ public partial class MainWindow : Window
     void AnchSource_VisChanged(object? s, EventArgs e)
     {
         _srcOpen = anchSource.IsVisible;
-        btnSource.IsChecked = _srcOpen;
+        miViewSource.IsChecked = _srcOpen;
         if (_srcOpen) { LoadSource(); ScrollSourceTo(_sel); }
+    }
+
+    // ---------- panel layout persistence ----------
+    void Exit_Click(object s, RoutedEventArgs e) => Close();
+
+    void ResetLayout_Click(object s, RoutedEventArgs e)
+    {
+        LoadLayout(_defaultLayoutXml);
+        status.Text = "Panel layout reset to default.";
+    }
+
+    void WireSource(LayoutAnchorable a)
+    {
+        if (_wiredSource != null) _wiredSource.IsVisibleChanged -= AnchSource_VisChanged;
+        _wiredSource = a; anchSource = a;
+        if (a != null) a.IsVisibleChanged += AnchSource_VisChanged;
+    }
+
+    string LayoutPath => System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "ClarionTemplateDesigner", "layout.xml");
+
+    string SerializeLayout()
+    {
+        var ser = new XmlLayoutSerializer(dockMgr);
+        using var sw = new System.IO.StringWriter();
+        ser.Serialize(sw);
+        return sw.ToString();
+    }
+
+    void LoadLayout(string? xml)
+    {
+        if (string.IsNullOrWhiteSpace(xml)) return;
+        try
+        {
+            var ser = new XmlLayoutSerializer(dockMgr);
+            ser.LayoutSerializationCallback += (_, e) =>
+            {
+                e.Content = e.Model.ContentId switch
+                {
+                    "designer" => _designerContent,
+                    "source" => _sourceContent,
+                    "props" => _propsContent,
+                    _ => null
+                };
+                if (e.Content == null) e.Cancel = true;
+            };
+            using var sr = new System.IO.StringReader(xml);
+            ser.Deserialize(sr);
+
+            var prp = FindAnchorable("props"); if (prp != null) anchProps = prp;
+            var src = FindAnchorable("source"); if (src != null) WireSource(src);
+            _srcOpen = anchSource?.IsVisible ?? false;
+            miViewSource.IsChecked = _srcOpen;
+        }
+        catch { /* a bad/old layout file must never break startup */ }
+    }
+
+    LayoutAnchorable? FindAnchorable(string id) =>
+        dockMgr.Layout.Descendents().OfType<LayoutAnchorable>().FirstOrDefault(a => a.ContentId == id);
+
+    void TryLoadSavedLayout()
+    {
+        try { if (System.IO.File.Exists(LayoutPath)) LoadLayout(System.IO.File.ReadAllText(LayoutPath)); }
+        catch { }
+    }
+
+    void SaveLayout()
+    {
+        try
+        {
+            var dir = System.IO.Path.GetDirectoryName(LayoutPath);
+            if (dir != null) System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.WriteAllText(LayoutPath, SerializeLayout());
+        }
+        catch { }
     }
 
     void LoadSource()
@@ -886,7 +979,7 @@ public partial class MainWindow : Window
         var el = (TplElement)b.Tag;
         Select(el);
         BeginGesture();
-        _drag = Drag.Element; _dragEl = el;
+        _drag = Drag.Element; _dragEl = el; _dragMoved = false;
         _dragStart = e.GetPosition(canvas);
         _elStartX = el.LX; _elStartY = el.LY;
         canvas.CaptureMouse();
@@ -1137,6 +1230,13 @@ public partial class MainWindow : Window
         hRuler.MouseDlu = p.X / Scale; vRuler.MouseDlu = p.Y / Scale;
         hRuler.InvalidateVisual(); vRuler.InvalidateVisual();
 
+        // A plain click must only select — don't move/resize until the mouse really travels.
+        if ((_drag == Drag.Element || _drag == Drag.Resize) && !_dragMoved)
+        {
+            if (Math.Abs(p.X - _dragStart.X) <= DragThreshold && Math.Abs(p.Y - _dragStart.Y) <= DragThreshold) return;
+            _dragMoved = true;
+        }
+
         if (_drag == Drag.Element && _dragEl != null)
         {
             double nx = _elStartX + (p.X - _dragStart.X) / Scale;
@@ -1351,7 +1451,7 @@ public partial class MainWindow : Window
         if (_sel == null) return;
         BeginGesture();
         _resizeEdge = (Edge)((Rectangle)s).Tag;
-        _drag = Drag.Resize;
+        _drag = Drag.Resize; _dragMoved = false;
         _dragStart = e.GetPosition(canvas);
         _rStartX = _sel.LX; _rStartY = _sel.LY; _rStartW = _sel.LW; _rStartH = _sel.LH;
         canvas.CaptureMouse();

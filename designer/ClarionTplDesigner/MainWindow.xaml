@@ -7,16 +7,52 @@
         Title="Clarion Template Designer" Height="780" Width="1180"
         FontFamily="Segoe UI" UseLayoutRounding="True">
     <DockPanel>
-      <ToolBarTray DockPanel.Dock="Top">
-        <ToolBar Band="0" BandIndex="0">
-            <Button Click="Open_Click" Padding="8,2">Open .tpl…</Button>
-            <Button Click="Save_Click" Padding="8,2">Save</Button>
-            <ToggleButton x:Name="btnSource" Click="Source_Click" Padding="8,2"
-                          ToolTip="Show/hide the colour-coded template source at the bottom">View Source</ToggleButton>
-            <Button Click="Undo_Click" Padding="8,2" ToolTip="Undo last change (Ctrl+Z)">↶ Undo</Button>
-            <Button Click="MaterializeAll_Click" Padding="8,2"
-                    ToolTip="Give every control an explicit AT(x,y,w,h) from the current layout, so they can all be dragged">Add AT to all</Button>
+      <Menu DockPanel.Dock="Top">
+        <MenuItem Header="_File">
+            <MenuItem Header="_Open .tpl…" Click="Open_Click"/>
+            <MenuItem Header="_Save" Click="Save_Click" InputGestureText="Ctrl+S"/>
             <Separator/>
+            <MenuItem Header="E_xit" Click="Exit_Click"/>
+        </MenuItem>
+        <MenuItem Header="_Edit">
+            <MenuItem Header="_Undo" Click="Undo_Click" InputGestureText="Ctrl+Z"/>
+            <Separator/>
+            <MenuItem Header="Add _AT to all controls" Click="MaterializeAll_Click"/>
+        </MenuItem>
+        <MenuItem Header="_Insert">
+            <MenuItem Header="_Label" Click="Add_Label_Click"/>
+            <MenuItem Header="_String entry" Click="Add_String_Click"/>
+            <MenuItem Header="_Number entry" Click="Add_Number_Click"/>
+            <MenuItem Header="S_pin" Click="Add_Spin_Click"/>
+            <MenuItem Header="_Check box" Click="Add_Check_Click"/>
+            <MenuItem Header="_Image" Click="Add_Image_Click"/>
+            <MenuItem Header="_Group box" Click="Add_Group_Click"/>
+        </MenuItem>
+        <MenuItem Header="_Arrange">
+            <MenuItem Header="Bring to _Front" Click="Front_Click"/>
+            <MenuItem Header="Bring F_orward" Click="Forward_Click"/>
+            <MenuItem Header="Send _Backward" Click="Backward_Click"/>
+            <MenuItem Header="Send to Bac_k" Click="Back_Click"/>
+        </MenuItem>
+        <MenuItem Header="St_yle">
+            <MenuItem Header="_Font &amp; Colour…" Click="StyleFont_Click"/>
+            <MenuItem Header="_Colour…" Click="StyleColor_Click"/>
+            <MenuItem Header="_Bold" Click="StyleBold_Click"/>
+            <MenuItem Header="_Larger" Click="StyleBigger_Click"/>
+            <MenuItem Header="_Smaller" Click="StyleSmaller_Click"/>
+        </MenuItem>
+        <MenuItem Header="_Guides">
+            <MenuItem Header="Add _Vertical guide" Click="AddVGuide_Click"/>
+            <MenuItem Header="Add _Horizontal guide" Click="AddHGuide_Click"/>
+            <MenuItem Header="_Clear guides" Click="ClearGuides_Click"/>
+        </MenuItem>
+        <MenuItem Header="_View">
+            <MenuItem x:Name="miViewSource" Header="_Source panel" IsCheckable="True" Click="Source_Click"/>
+            <Separator/>
+            <MenuItem Header="_Reset panel layout" Click="ResetLayout_Click"/>
+        </MenuItem>
+      </Menu>
+      <ToolBar DockPanel.Dock="Top">
             <TextBlock VerticalAlignment="Center" Margin="4,0">Part:</TextBlock>
             <ComboBox x:Name="cmbParts" Width="220" SelectionChanged="Part_Changed"
                       ToolTip="The template component to edit (extension / control / procedure / …), across the .tpl and its .tpw includes"/>
@@ -32,35 +68,7 @@
             <TextBlock VerticalAlignment="Center" Margin="6,0,2,0">size</TextBlock>
             <TextBox x:Name="txtGrid" Width="32" Text="5" VerticalAlignment="Center"/>
             <CheckBox x:Name="chkSnapGuide" IsChecked="True" VerticalAlignment="Center" Margin="8,0">Snap guides</CheckBox>
-            <Separator/>
-            <Button Click="AddVGuide_Click" Padding="6,2">+ V guide</Button>
-            <Button Click="AddHGuide_Click" Padding="6,2">+ H guide</Button>
-            <Button Click="ClearGuides_Click" Padding="6,2">Clear guides</Button>
-            <Separator/>
-            <TextBlock VerticalAlignment="Center" Margin="4,0">Order:</TextBlock>
-            <Button Click="Front_Click"    Padding="6,2" ToolTip="Bring selected control to front">⤒ Front</Button>
-            <Button Click="Forward_Click"  Padding="6,2" ToolTip="Bring forward one step">↑</Button>
-            <Button Click="Backward_Click" Padding="6,2" ToolTip="Send backward one step">↓</Button>
-            <Button Click="Back_Click"     Padding="6,2" ToolTip="Send selected control to back">⤓ Back</Button>
-        </ToolBar>
-        <ToolBar Band="1" BandIndex="0">
-            <TextBlock VerticalAlignment="Center" Margin="4,0" FontWeight="SemiBold" Foreground="#5B6878">Add:</TextBlock>
-            <Button Click="Add_Label_Click"  Padding="7,2" ToolTip="Add a static text label (#DISPLAY)">Label</Button>
-            <Button Click="Add_String_Click" Padding="7,2" ToolTip="Add a string entry (#PROMPT @s255)">String</Button>
-            <Button Click="Add_Number_Click" Padding="7,2" ToolTip="Add a numeric entry (#PROMPT @n8)">Number</Button>
-            <Button Click="Add_Spin_Click"   Padding="7,2" ToolTip="Add a spin control (#PROMPT SPIN)">Spin</Button>
-            <Button Click="Add_Check_Click"  Padding="7,2" ToolTip="Add a checkbox (#PROMPT CHECK)">Check</Button>
-            <Button Click="Add_Image_Click"  Padding="7,2" ToolTip="Add an image (#IMAGE)">Image</Button>
-            <Button Click="Add_Group_Click"  Padding="7,2" ToolTip="Add a group box (#BOXED … #ENDBOXED)">Group box</Button>
-            <Separator/>
-            <TextBlock VerticalAlignment="Center" Margin="8,0,4,0" FontWeight="SemiBold" Foreground="#5B6878">Style:</TextBlock>
-            <Button Click="StyleFont_Click"    Padding="7,2" ToolTip="Font, style &amp; colour of the selected control…">Font &amp; Colour…</Button>
-            <Button Click="StyleColor_Click"   Padding="7,2" ToolTip="Colour of the selected control…">Colour…</Button>
-            <Button Click="StyleBold_Click"    Padding="9,2" ToolTip="Toggle bold" FontWeight="Bold">B</Button>
-            <Button Click="StyleBigger_Click"  Padding="7,2" ToolTip="Increase font size">A▲</Button>
-            <Button Click="StyleSmaller_Click" Padding="7,2" ToolTip="Decrease font size">A▼</Button>
-        </ToolBar>
-      </ToolBarTray>
+      </ToolBar>
 
         <StatusBar DockPanel.Dock="Bottom">
             <TextBlock x:Name="status" Text="Open a .tpl to begin.  Drag from a ruler to add a guide; double-click a guide to delete it."/>

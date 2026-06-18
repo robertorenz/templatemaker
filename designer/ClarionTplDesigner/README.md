@@ -80,7 +80,13 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
   **Revert** reloads from disk. (Applying re-reads the file, so save canvas edits first.)
 - **Dockable panels** — the **Source** and **Properties** panels are full **AvalonDock** panels: drag a panel's
   header to dock it on any edge of the designer, drop it onto another panel to tab them, or tear it off into a
-  **floating window**; resize with the splitters. The *View Source* button shows/hides the Source panel.
+  **floating window**; resize with the splitters. *View ▸ Source panel* shows/hides the Source panel. The
+  layout is **remembered between sessions** (saved on close); *View ▸ Reset panel layout* restores the default.
+- **Menus** — a **File / Edit / Insert / Arrange / Style / Guides / View** menu bar holds the one‑click actions
+  (open/save, undo, add‑AT, insert controls, z‑order, font/colour, guides, source/layout); the slim toolbar
+  keeps the live controls (Part, Tab, Zoom, snap grid/guides).
+- **Click vs. drag** — clicking a control only *selects* it; it moves only once you actually drag past a few
+  pixels (so snap‑to‑grid no longer nudges a control on a plain click).
 - **Undo** — **Ctrl+Z** (or the *↶ Undo* button) reverts the last change, step by step, all the way back:
   moves, resizes, reparents, adds, deletes, z-order, text/coord edits, and guide changes. History is kept
   per editing session and cleared when you open a file or after a structural save.
