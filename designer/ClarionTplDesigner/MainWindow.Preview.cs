@@ -15,8 +15,8 @@ namespace ClarionTplDesigner;
 public partial class MainWindow
 {
     bool _preview;
-    bool _previewPending;             // build the preview from the live/pending source, not the saved file
-    string[]? _previewLines;          // when set, prompt defaults/drops are read from these (the pending text)
+    bool _previewPending = true;      // ON = current/unsaved work (interactive); OFF = the saved file on disk
+    string[]? _previewLines;          // when set (saved preview), prompt defaults/drops are read from these
 
     // Clarion prompt types that show a value field + a "…" lookup button.
     static readonly HashSet<string> DialogTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -45,37 +45,36 @@ public partial class MainWindow
         if (_previewPending && !_preview) { _preview = true; miPreview.IsChecked = true; btnPreview.IsChecked = true; }
         Render();
         status.Text = _previewPending
-            ? "Preview is reading the LIVE pending source (unsaved edits included)."
-            : "Preview is reading the current model.";
+            ? "Preview: your current, unsaved work (editable)."
+            : "Preview: the saved file on disk (read-only).";
     }
 
-    // The source text that includes every pending edit (un-applied hand edits, or the model's would-be save).
-    string PendingSourceText(int fi)
+    // The on-disk saved text (for the "saved" preview), independent of unsaved edits.
+    string SavedText(int fi)
     {
-        if (_doc == null) return "";
-        if (_srcOpen && _srcDirty && !_srcLive && fi == (_component?.FileIndex ?? 0))
-            return srcEditor.Text;                       // un-applied hand edits in the source panel
-        return TplWriter.PreviewFile(_doc, fi);          // model's would-be-saved text
+        var f = _doc!.Files[fi];
+        try { return System.IO.File.ReadAllText(f.Path); }
+        catch { return string.Join(f.Newline, f.Lines); }
     }
 
     void RenderPreview()
     {
         if (_component == null) { canvas.Width = canvas.Height = 10; return; }
 
-        TplComponent comp = _component;
+        TplComponent comp = _component;     // ON: live model (interactive, reflects unsaved edits)
         _previewLines = null;
-        if (_previewPending)
+        if (!_previewPending)               // OFF: render the saved file on disk (read-only)
         {
             try
             {
                 int fi = _component.FileIndex;
-                var temp = TplParser.ParseText(PendingSourceText(fi), _doc!.Files[fi].Path);
+                var temp = TplParser.ParseText(SavedText(fi), _doc!.Files[fi].Path);
                 var match = temp.Components.FirstOrDefault(c => c.HasSheet
                                 && c.Kind == _component.Kind && c.Name == _component.Name)
                             ?? temp.Components.FirstOrDefault(c => c.HasSheet);
                 if (match != null) { comp = match; _previewLines = temp.Files[0].Lines; }
             }
-            catch { /* broken pending source -> fall back to the model */ }
+            catch { /* unreadable saved file -> fall back to the model */ }
         }
 
         var tabs = new TabControl { Width = 480, BorderThickness = new Thickness(1), Background = Brushes.White };
@@ -160,7 +159,7 @@ public partial class MainWindow
     // Wrap a preview control so clicking it selects the element (Ctrl = add to selection), with a context menu.
     FrameworkElement Selectable(FrameworkElement content, TplElement el)
     {
-        if (_previewPending)        // pending preview is read-only (its elements aren't the live model)
+        if (!_previewPending)       // the "saved" preview is read-only (its elements aren't the live model)
             return new Border { Child = content, Padding = new Thickness(1), BorderThickness = new Thickness(1),
                                 BorderBrush = Brushes.Transparent };
         var b = new Border
