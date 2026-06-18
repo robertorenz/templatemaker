@@ -17,6 +17,7 @@ public partial class MainWindow
     bool _preview;
     bool _previewPending = true;      // ON = current/unsaved work (interactive); OFF = the saved file on disk
     string[]? _previewLines;          // when set (saved preview), prompt defaults/drops are read from these
+    int _previewTabIndex;             // remembered across the rebuild that each selection triggers
 
     // Clarion prompt types that show a value field + a "…" lookup button.
     static readonly HashSet<string> DialogTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -86,6 +87,9 @@ public partial class MainWindow
         }
         _previewLines = null;
         if (tabs.Items.Count == 0) { canvas.Width = canvas.Height = 10; return; }
+
+        tabs.SelectedIndex = Math.Min(Math.Max(0, _previewTabIndex), tabs.Items.Count - 1);
+        tabs.SelectionChanged += (_, e) => { if (e.OriginalSource is TabControl tc) _previewTabIndex = tc.SelectedIndex; };
 
         Canvas.SetLeft(tabs, 12); Canvas.SetTop(tabs, 12);
         canvas.Children.Add(tabs);

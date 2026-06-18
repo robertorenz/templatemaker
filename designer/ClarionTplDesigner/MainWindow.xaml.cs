@@ -630,6 +630,7 @@ public partial class MainWindow : Window
     {
         if (_doc == null || cmbParts.SelectedIndex < 0 || cmbParts.SelectedIndex >= _parts.Count) return;
         _component = _parts[cmbParts.SelectedIndex];
+        _previewTabIndex = 0;
         Select(null);
         LoadSource();           // current part may live in a different file
         cmbTabs.ItemsSource = _component.Tabs.Select(t => t.Title).ToList();
