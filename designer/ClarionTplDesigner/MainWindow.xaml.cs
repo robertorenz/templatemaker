@@ -381,16 +381,26 @@ public partial class MainWindow : Window
             else if (chkSnapGrid.IsChecked == true) v = Math.Round(v / GridStep) * GridStep;
             _dragGuide.Dlu = Math.Max(0, Math.Round(v));
             PositionGuide(_dragGuide);
-            status.Text = $"{(_dragGuide.Vertical ? "V" : "H")} guide @ {_dragGuide.Dlu} DLU"
-                        + (ctrl ? $"  (snap {seg})" : "");
+
+            bool kill = InRulerZone(e.GetPosition(scroller));           // dragged back onto a ruler -> will delete
+            _dragGuide.Visual.Stroke = kill ? GuideKillBrush : GuideBrush;
+            status.Text = kill
+                ? "Release over the ruler to delete this guide"
+                : $"{(_dragGuide.Vertical ? "V" : "H")} guide @ {_dragGuide.Dlu} DLU" + (ctrl ? $"  (snap {seg})" : "");
         }
     }
 
     void Canvas_MouseUp(object s, MouseButtonEventArgs e)
     {
+        if (_drag == Drag.Guide && _dragGuide != null && InRulerZone(e.GetPosition(scroller)))
+            DeleteGuide(_dragGuide);
         canvas.ReleaseMouseCapture();
         _drag = Drag.None; _dragEl = null; _dragGuide = null;
     }
+
+    // The pointer is "over a ruler" when it leaves the canvas viewport to the top or left,
+    // i.e. scroller-relative coords go negative (the rulers sit above/left of the scroller).
+    bool InRulerZone(Point scrollerPt) => scrollerPt.X < 0 || scrollerPt.Y < 0;
 
     void MoveElement(TplElement el, double lx, double ly)
     {
@@ -554,7 +564,7 @@ public partial class MainWindow : Window
     {
         var line = new Line
         {
-            Stroke = new SolidColorBrush(Color.FromRgb(0, 150, 200)),
+            Stroke = GuideBrush,
             StrokeThickness = 1,
             StrokeDashArray = new DoubleCollection { 4, 3 },
             Tag = g, Cursor = g.Vertical ? Cursors.SizeWE : Cursors.SizeNS
@@ -576,11 +586,21 @@ public partial class MainWindow : Window
     void Guide_Down(object s, MouseButtonEventArgs e)
     {
         var g = (Guide)((Line)s).Tag;
-        if (e.ClickCount == 2) { canvas.Children.Remove(g.Visual); _guides.Remove(g); e.Handled = true; return; }
+        if (e.ClickCount == 2) { DeleteGuide(g); e.Handled = true; return; }
         _drag = Drag.Guide; _dragGuide = g;
         canvas.CaptureMouse();
         e.Handled = true;
     }
+
+    void DeleteGuide(Guide g)
+    {
+        canvas.Children.Remove(g.Visual);
+        _guides.Remove(g);
+        status.Text = $"Deleted {(g.Vertical ? "vertical" : "horizontal")} guide.";
+    }
+
+    static readonly Brush GuideBrush = new SolidColorBrush(Color.FromRgb(0, 150, 200));
+    static readonly Brush GuideKillBrush = new SolidColorBrush(Color.FromRgb(220, 70, 60));
 
     // ---------- misc ----------
     void Scroller_Scroll(object s, ScrollChangedEventArgs e)
