@@ -3,12 +3,12 @@
 #!            Made by ALEJANDRO J. ELIAS 
 #!
 #! *****************************************************************************************************
-#Template(AJEBackupAPP,'Automatically Generate a Backup APP After Compile Legacy/ABC/IPServer/NT v6.0a '),FAMILY('CW20'),FAMILY('ABC'),Family('IPServer')
+#Template(AJEBackupAPP,'Automatically Generate a Backup APP After Compile Legacy/ABC/IPServer/NT v6.01a '),FAMILY('CW20'),FAMILY('ABC'),Family('IPServer')
  #SYSTEM
  
 #!=====================================================================================================
-#EXTENSION(AJE_BACKUP,'AJE: Automatically Generate a Backup APP After Compile Legacy/ABC/IPServer/NT v6.0a  - Global Extension'),Application(AJEExtBackupAPP(AJEBackupAPP))
-#DISPLAY('  Automatic Backup APP         v6.0a'),AT(3,1,320,16),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontSize,15),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontStyle,700)
+#EXTENSION(AJE_BACKUP,'AJE: Automatically Generate a Backup APP After Compile Legacy/ABC/IPServer/NT v6.01a  - Global Extension'),Application(AJEExtBackupAPP(AJEBackupAPP))
+#DISPLAY('  Automatic Backup APP         v6.01a'),AT(3,1,320,16),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontSize,15),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontStyle,700)
 #PREPARE
 #CALL(%AJEReadVersion)
 #ENDPREPARE
@@ -23,7 +23,7 @@
    #BOXED('Automatic Backup for Clarion'),SECTION
    #IMAGE('Box Automatic Backup APP.png'),AT(9,0)
    #DISPLAY('    Automatic Backup for Clarion'),AT(65,28),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,11),PROP(PROP:Font,'Segoe UI')
-   #DISPLAY('    Version 6.0a'),AT(65,43),PROP(PROP:FontStyle,700),PROP(PROP:Font,'Segoe UI')
+   #DISPLAY('    Version 6.01a'),AT(65,43),PROP(PROP:FontStyle,700),PROP(PROP:Font,'Segoe UI')
    #DISPLAY('    Copyright 2022'),AT(65,54),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI')
    #DISPLAY('    www.DeveloperTeam.com.ar'),AT(65,64),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI')
    #DISPLAY(''),AT(65,76)
