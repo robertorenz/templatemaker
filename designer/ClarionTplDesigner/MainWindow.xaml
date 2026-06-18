@@ -35,6 +35,25 @@
             <MenuItem Header="Bring F_orward" Click="Forward_Click"/>
             <MenuItem Header="Send _Backward" Click="Backward_Click"/>
             <MenuItem Header="Send to Bac_k" Click="Back_Click"/>
+            <Separator/>
+            <MenuItem Header="_Align">
+                <MenuItem Header="Align _Left"            Click="Align_Click" Tag="left"/>
+                <MenuItem Header="Align _Centre (horiz.)" Click="Align_Click" Tag="hcenter"/>
+                <MenuItem Header="Align _Right"           Click="Align_Click" Tag="right"/>
+                <Separator/>
+                <MenuItem Header="Align _Top"             Click="Align_Click" Tag="top"/>
+                <MenuItem Header="Align _Middle (vert.)"  Click="Align_Click" Tag="vcenter"/>
+                <MenuItem Header="Align _Bottom"          Click="Align_Click" Tag="bottom"/>
+            </MenuItem>
+            <MenuItem Header="_Same size">
+                <MenuItem Header="Same _Width"  Click="SameSize_Click" Tag="w"/>
+                <MenuItem Header="Same _Height" Click="SameSize_Click" Tag="h"/>
+                <MenuItem Header="Same _Both"   Click="SameSize_Click" Tag="both"/>
+            </MenuItem>
+            <MenuItem Header="_Distribute">
+                <MenuItem Header="Distribute _Horizontally" Click="Distribute_Click" Tag="h"/>
+                <MenuItem Header="Distribute _Vertically"   Click="Distribute_Click" Tag="v"/>
+            </MenuItem>
         </MenuItem>
         <MenuItem Header="St_yle">
             <MenuItem Header="_Font &amp; Colour…" Click="StyleFont_Click"/>

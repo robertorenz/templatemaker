@@ -1491,6 +1491,73 @@ public partial class MainWindow : Window
     void Backward_Click(object s, RoutedEventArgs e) { if (_sel != null) ZBackward(_sel); }
     void Back_Click(object s, RoutedEventArgs e) { if (_sel != null) ZBack(_sel); }
 
+    // ---------- align / distribute / same-size ----------
+    List<TplElement> AlignTargets() => _selection.Where(e => e.IsPositionable && !e.Deleted).ToList();
+
+    void Align_Click(object s, RoutedEventArgs e)
+    {
+        if (s is not MenuItem mi || mi.Tag is not string mode) return;
+        var items = AlignTargets();
+        if (items.Count < 2) { status.Text = "Select two or more controls to align (Ctrl/Shift-click)."; return; }
+        PushUndo();
+        double minX = items.Min(e2 => e2.LX), maxR = items.Max(e2 => e2.LX + e2.LW);
+        double minY = items.Min(e2 => e2.LY), maxB = items.Max(e2 => e2.LY + e2.LH);
+        double cx = (minX + maxR) / 2, cy = (minY + maxB) / 2;
+        foreach (var el in items)
+            switch (mode)
+            {
+                case "left":    MoveElement(el, minX, el.LY); break;
+                case "right":   MoveElement(el, maxR - el.LW, el.LY); break;
+                case "hcenter": MoveElement(el, cx - el.LW / 2, el.LY); break;
+                case "top":     MoveElement(el, el.LX, minY); break;
+                case "bottom":  MoveElement(el, el.LX, maxB - el.LH); break;
+                case "vcenter": MoveElement(el, el.LX, cy - el.LH / 2); break;
+            }
+        AfterBulkLayout($"Aligned {items.Count} controls.");
+    }
+
+    void SameSize_Click(object s, RoutedEventArgs e)
+    {
+        if (s is not MenuItem mi || mi.Tag is not string which) return;
+        var items = AlignTargets();
+        if (items.Count < 2) { status.Text = "Select two or more controls to size together."; return; }
+        PushUndo();
+        double w = items.Max(e2 => e2.LW), h = items.Max(e2 => e2.LH);
+        foreach (var el in items)
+            ResizeElement(el, el.LX, el.LY, which == "h" ? el.LW : w, which == "w" ? el.LH : h);
+        AfterBulkLayout($"Sized {items.Count} controls.");
+    }
+
+    void Distribute_Click(object s, RoutedEventArgs e)
+    {
+        if (s is not MenuItem mi || mi.Tag is not string dir) return;
+        var items = AlignTargets();
+        if (items.Count < 3) { status.Text = "Select three or more controls to distribute."; return; }
+        PushUndo();
+        bool horiz = dir == "h";
+        items = (horiz ? items.OrderBy(e2 => e2.LX) : items.OrderBy(e2 => e2.LY)).ToList();
+        double start = horiz ? items[0].LX : items[0].LY;
+        var last = items[^1];
+        double end = horiz ? last.LX + last.LW : last.LY + last.LH;
+        double sum = items.Sum(e2 => horiz ? e2.LW : e2.LH);
+        double gap = (end - start - sum) / (items.Count - 1);
+        double p = start;
+        foreach (var el in items)
+        {
+            if (horiz) MoveElement(el, p, el.LY); else MoveElement(el, el.LX, p);
+            p += (horiz ? el.LW : el.LH) + gap;
+        }
+        AfterBulkLayout($"Distributed {items.Count} controls {(horiz ? "horizontally" : "vertically")}.");
+    }
+
+    void AfterBulkLayout(string msg)
+    {
+        Render();
+        RefreshSelectionVisual();
+        RefreshLiveSource();
+        status.Text = msg + "  Save to write the new AT() values.";
+    }
+
     // A small bordered button simulating Clarion's auto-built dropdown (▾) / lookup (…) control.
     static Border FauxButton(string glyph) => new()
     {
