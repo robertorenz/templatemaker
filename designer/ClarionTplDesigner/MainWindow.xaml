@@ -86,6 +86,11 @@
                     <TextBlock Text="H" VerticalAlignment="Center"/>
                     <TextBox x:Name="txtH" Margin="0,2" TextChanged="Prop_Changed"/>
                 </UniformGrid>
+                <TextBlock x:Name="srcHdr" Text="SOURCE" FontWeight="Bold" Foreground="#5B6878" FontSize="11"
+                           Margin="0,14,0,2" Visibility="Collapsed"/>
+                <TextBox x:Name="propSource" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas"
+                         FontSize="11" Background="#F4F6F9" BorderBrush="#DDE2E8" Padding="4"
+                         MaxHeight="130" VerticalScrollBarVisibility="Auto" Visibility="Collapsed"/>
                 <TextBlock x:Name="childHdr" Text="CONTROLS IN GROUP" FontWeight="Bold" Foreground="#5B6878"
                            FontSize="11" Margin="0,14,0,2" Visibility="Collapsed"/>
                 <ListBox x:Name="lstChildren" Height="150" FontSize="11" Visibility="Collapsed"

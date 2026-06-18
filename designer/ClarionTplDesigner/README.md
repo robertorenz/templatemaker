@@ -69,7 +69,9 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
   ruler's labelled segments. Drag a guide to reposition; **drag it back onto a ruler to delete it** (it turns
   red as you hover the ruler), or double‑click it.
 - **Snapping** — to the grid (configurable size) and to guides; toggle each independently.
-- **Properties panel** — edit X/Y/W/H directly; arrow keys nudge (Shift = ×5).
+- **Properties panel** — edit X/Y/W/H directly (arrow keys nudge, Shift = ×5); for prompts it names the
+  type, and a read-only **Source** box shows the control's raw directive line so you can see its full
+  definition (`default(...)`, `req`, `prop(...)`, `at(10)`, …).
 - **Save** rewrites each moved control's `AT()` in place; every other byte (PROPs, symbols, and the whole
   `#AT/#GROUP/#RUN` generation half) is preserved.
 

@@ -216,6 +216,21 @@ public partial class MainWindow : Window
                 foreach (var e in Flat(t)) yield return e;
     }
 
+    // The raw source line(s) of a control, so the panel shows its full definition
+    // (default(...), req, prop(...), at(10), etc.) — read-only.
+    string SourceOf(TplElement? el)
+    {
+        if (el == null) return "";
+        if (el.Inserted) return "(new control — written to the template on Save)";
+        var f = CurrentFile();
+        if (f == null || el.LineIndex < 0 || el.LineIndex >= f.Lines.Length) return "";
+        string s = f.Lines[el.LineIndex].Trim();
+        if (el.EndLineIndex > el.LineIndex)            // container: note the span
+            s += $"\n…\n{f.Lines[Math.Min(el.EndLineIndex, f.Lines.Length - 1)].Trim()}"
+               + $"   ({el.EndLineIndex - el.LineIndex + 1} lines)";
+        return s;
+    }
+
     TplFile? CurrentFile()
     {
         if (_doc == null || _doc.Files.Count == 0) return null;
@@ -642,6 +657,10 @@ public partial class MainWindow : Window
             propTypeBox.Visibility = Visibility.Visible;
         }
         else propTypeBox.Visibility = Visibility.Collapsed;
+
+        string src = SourceOf(el);
+        propSource.Text = src;
+        srcHdr.Visibility = propSource.Visibility = src.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         _suppressProp = true;
         txtX.Text = el?.X.ToString() ?? ""; txtY.Text = el?.Y.ToString() ?? "";
         txtW.Text = el?.W.ToString() ?? ""; txtH.Text = el?.H.ToString() ?? "";
