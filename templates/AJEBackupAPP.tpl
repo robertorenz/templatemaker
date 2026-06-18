@@ -8,13 +8,16 @@
  
 #!=====================================================================================================
 #EXTENSION(AJE_BACKUP,'AJE: Automatically Generate a Backup APP After Compile Legacy/ABC/IPServer/NT v6.0a  - Global Extension'),Application(AJEExtBackupAPP(AJEBackupAPP))
-#DISPLAY('  Automatic Backup APP    -    v6.0a'),AT(3,1,240,14),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontSize,13),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontStyle,700)
+#DISPLAY('  Automatic Backup APP         v6.0a'),AT(3,1,320,16),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontSize,15),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontStyle,700)
 #PREPARE
 #CALL(%AJEReadVersion)
 #ENDPREPARE
 #SHEET,HSCROLL
 #!===========================================================================
  #TAB('About')
+   #DISPLAY('Welcome'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,12),PROP(PROP:Font,'Segoe UI')
+   #DISPLAY('Automatic, versioned backups every time you compile.'),PROP(PROP:FontColor,06E6E6EH),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
+   #DISPLAY('')
    #BOXED('Automatic Backup for Clarion'),SECTION
    #IMAGE('Box Automatic Backup APP.png'),AT(9,0)
    #DISPLAY('    Automatic Backup for Clarion'),AT(65,28),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,11),PROP(PROP:Font,'Segoe UI')
@@ -26,6 +29,9 @@
    #DISPLAY('Tip: open the Instructions tab to get started.'),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontSize,8)
    #ENDTAB
   #TAB('Configuration')
+    #DISPLAY('Configuration'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,12),PROP(PROP:Font,'Segoe UI')
+    #DISPLAY('Choose where and what to back up after each compile.'),PROP(PROP:FontColor,06E6E6EH),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
+    #DISPLAY('')
     #BOXED('Activation'),SECTION
       #PROMPT('Enable Backup APP',CHECK),%AJEActivaBA,AT(10),DEFAULT(%TRUE)
       #ENABLE(%AJEActivaBA)
@@ -46,13 +52,14 @@
         #DISPLAY
         #ENDBUTTON
         #BOXED('Exports')
+            #DISPLAY('What to include in each backup:'),PROP(PROP:FontColor,0327D2EH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
             #PROMPT('Export Txa'     ,CHECK),%AJEActivaExportTXA,AT(10),DEFAULT(%TRUE)
             #PROMPT('Export Dctx'    ,CHECK),%AJEActivaExportDCTX,AT(10),DEFAULT(%TRUE)
             #PROMPT('Copy Dct'       ,CHECK),%AJEActivaCopyDct,AT(10),DEFAULT(%TRUE)
             #PROMPT('Zip Files'      ,CHECK),%AJEActivaZipFiles,AT(10),DEFAULT(%FALSE)
             #PROMPT('Include PC Name',CHECK),%AJEIncludePCName,AT(10),DEFAULT(%FALSE)
             #PROMPT('Delete older than (#) days',SPIN(@n2,0,10)),%AJEDeleteBeforeDays,DEFAULT(5)
-            #DISPLAY('Note: It always retains the last ten versions regardless of number of days!'),PROP(PROP:FontColor,0808080H),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
+            #DISPLAY('Note: It always keeps the last ten versions, regardless of the days above.'),PROP(PROP:FontColor,00078C8H),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
         #ENDBOXED
         #BOXED('Google Analytics')
             #PROMPT('Tracking Code:',@S100),%AJETrackingCodeGA
@@ -64,6 +71,9 @@
         #DISPLAY('From Alejandro J. Elias    -    www.DeveloperTeam.com.ar'),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontSize,8)
         #ENDTAB
   #TAB('Other Files')
+    #DISPLAY('Other Files'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,12),PROP(PROP:Font,'Segoe UI')
+    #DISPLAY('Extra files to include in every backup (icons, configs, ...).'),PROP(PROP:FontColor,06E6E6EH),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
+    #DISPLAY('')
     #BOXED('Extra Files to Back Up'),SECTION
       #ENABLE(%AJEActivaBA)
         #BUTTON('Others Files: ' & %AJEOtherFilesName),MULTI(%AJEOtherFiles,%AJEOtherFiles&'<9>'&%AJEPathBackupsFolder&'<9>'&%AJEOtherFilesName),INLINE,PROP(PROP:Hscroll),PROP(PROP:Format,'10L(1)|M~Order~30L(1)|M~Folder~200L(1)|M~FileName~')
@@ -81,6 +91,9 @@
     #DISPLAY('From Alejandro J. Elias    -    www.DeveloperTeam.com.ar'),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontSize,8)
   #ENDTAB
   #TAB('Settings')
+    #DISPLAY('Settings'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,12),PROP(PROP:Font,'Segoe UI')
+    #DISPLAY('History window, database type and an optional REST API.'),PROP(PROP:FontColor,06E6E6EH),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
+    #DISPLAY('')
     #BOXED('General'),SECTION
       #PROMPT('Show History Window',CHECK),%AJEHistoryWindow,DEFAULT(%TRUE)
       #PROMPT('DataBase Type:',OPTION),%AJEDataBaseType
@@ -96,6 +109,9 @@
     #DISPLAY('From Alejandro J. Elias    -    www.DeveloperTeam.com.ar'),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontSize,8)
   #ENDTAB
   #TAB('License')
+    #DISPLAY('License'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,12),PROP(PROP:Font,'Segoe UI')
+    #DISPLAY('Enter your registration details.'),PROP(PROP:FontColor,06E6E6EH),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
+    #DISPLAY('')
     #BOXED('License'),SECTION
       #PROMPT('User Name:',EXPR),%AJEUserName
       #PROMPT('Serial Number:',EXPR),%AJESerialNumber
@@ -108,7 +124,7 @@
       #DISPLAY('After each successful compile it makes a versioned backup of your')
       #DISPLAY('APP, DCT, DCTX and TXA (plus any extra files) into your backup folders.')
       #DISPLAY('')
-      #DISPLAY('Setup'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:Font,'Segoe UI')
+      #DISPLAY('Setup'),PROP(PROP:FontColor,0808000H),PROP(PROP:FontStyle,700),PROP(PROP:Font,'Segoe UI')
       #DISPLAY('1. Add this Global Extension to the application (once).')
       #DISPLAY('2. Configuration tab: tick Enable Backup APP, set the General Path,')
       #DISPLAY('   and add one or more destinations under Path For Backups.')
@@ -117,7 +133,7 @@
       #DISPLAY('5. Settings tab: history window, database type, optional REST API URL.')
       #DISPLAY('6. License tab: enter your User Name and Serial Number.')
       #DISPLAY('')
-      #DISPLAY('Notes'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:Font,'Segoe UI')
+      #DISPLAY('Notes'),PROP(PROP:FontColor,00078C8H),PROP(PROP:FontStyle,700),PROP(PROP:Font,'Segoe UI')
       #DISPLAY('- The build number increases automatically on every compile.')
       #DISPLAY('- It always keeps the last ten versions, regardless of the days setting.')
       #DISPLAY('- The backup runs after the application is generated and compiled.')
