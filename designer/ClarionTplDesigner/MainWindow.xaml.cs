@@ -94,8 +94,9 @@ public partial class MainWindow : Window
         _sourceContent = (FrameworkElement)anchSource.Content;
         _propsContent = (FrameworkElement)anchProps.Content;
         try { _defaultLayoutXml = SerializeLayout(); } catch { }
+        LoadPrefs();
         Loaded += (_, _) => TryLoadSavedLayout();
-        Closing += (_, _) => SaveLayout();
+        Closing += (_, _) => { SaveLayout(); SavePrefs(); };
     }
 
     // ---------- file ----------
@@ -453,6 +454,56 @@ public partial class MainWindow : Window
     void TryLoadSavedLayout()
     {
         try { if (System.IO.File.Exists(LayoutPath)) LoadLayout(System.IO.File.ReadAllText(LayoutPath)); }
+        catch { }
+    }
+
+    string PrefsPath => System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "ClarionTemplateDesigner", "prefs.txt");
+
+    void LoadPrefs()
+    {
+        try
+        {
+            if (!System.IO.File.Exists(PrefsPath)) return;
+            var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var line in System.IO.File.ReadAllLines(PrefsPath))
+            {
+                int i = line.IndexOf('=');
+                if (i > 0) d[line[..i].Trim()] = line[(i + 1)..].Trim();
+            }
+            if (d.TryGetValue("showGrid", out var sg)) miShowGrid.IsChecked = sg == "1";
+            if (d.TryGetValue("snapGrid", out var sn)) miSnapGrid.IsChecked = sn == "1";
+            if (d.TryGetValue("snapGuide", out var su)) miSnapGuide.IsChecked = su == "1";
+            if (d.TryGetValue("minimap", out var mm)) miMinimap.IsChecked = mm == "1";
+            if (d.TryGetValue("gridSize", out var gs) && int.TryParse(gs, out _)) txtGrid.Text = gs;
+            if (d.TryGetValue("zoom", out var z) &&
+                double.TryParse(z, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var zv))
+                sldZoom.Value = zv;
+
+            // apply the toggles that need more than their checked state
+            srcMap.Visibility = miMinimap.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            mapCol.Width = miMinimap.IsChecked == true ? new GridLength(92) : new GridLength(0);
+        }
+        catch { }
+    }
+
+    void SavePrefs()
+    {
+        try
+        {
+            var dir = System.IO.Path.GetDirectoryName(PrefsPath);
+            if (dir != null) System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.WriteAllLines(PrefsPath, new[]
+            {
+                $"showGrid={(miShowGrid.IsChecked == true ? 1 : 0)}",
+                $"snapGrid={(miSnapGrid.IsChecked == true ? 1 : 0)}",
+                $"snapGuide={(miSnapGuide.IsChecked == true ? 1 : 0)}",
+                $"minimap={(miMinimap.IsChecked == true ? 1 : 0)}",
+                $"gridSize={GridStep}",
+                $"zoom={sldZoom.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}",
+            });
+        }
         catch { }
     }
 

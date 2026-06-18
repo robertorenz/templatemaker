@@ -85,7 +85,7 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
 - **Menus** — a **File / Edit / Insert / Arrange / Style / Guides / Preferences / View** menu bar holds the
   one‑click actions; the slim toolbar keeps the live controls (Part, Tab, Zoom, grid size). **Preferences** has
   checkable toggles: **Show grid** (draws the snap grid on the canvas), **Snap to grid**, **Snap to guides**,
-  and **Show minimap**.
+  and **Show minimap**. These (plus zoom and grid size) are **remembered between sessions**.
 - **Minimap** — a code‑overview strip beside the source (each line a coloured bar — comments/directives/symbols
   — with a viewport box); click or drag it to jump the editor. Toggle via *Preferences ▸ Show minimap*.
 - **Click vs. drag** — clicking a control only *selects* it; it moves only once you actually drag past a few
