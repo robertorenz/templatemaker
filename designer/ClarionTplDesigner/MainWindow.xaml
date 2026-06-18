@@ -44,6 +44,10 @@
                 <TextBlock Text="PROPERTIES" FontWeight="Bold" Foreground="#5B6878" FontSize="11"/>
                 <TextBlock x:Name="propTitle" TextWrapping="Wrap" Margin="0,6,0,2" FontWeight="SemiBold"/>
                 <TextBlock x:Name="propKind" Foreground="#8A95A3" FontSize="11" Margin="0,0,0,8"/>
+                <Border x:Name="propRefsBox" Background="#FCEEEC" BorderBrush="#E7B4AE" BorderThickness="1"
+                        CornerRadius="3" Padding="6,4" Margin="0,0,0,8" Visibility="Collapsed">
+                    <TextBlock x:Name="propRefs" Foreground="#B23A2E" FontSize="11" TextWrapping="Wrap"/>
+                </Border>
                 <UniformGrid Columns="2" x:Name="propGrid" IsEnabled="False">
                     <TextBlock Text="X" VerticalAlignment="Center"/>
                     <TextBox x:Name="txtX" Margin="0,2" TextChanged="Prop_Changed"/>

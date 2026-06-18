@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
 namespace ClarionTplDesigner;
@@ -151,12 +152,65 @@ public partial class MainWindow : Window
 
     void DeleteControl(TplElement el)
     {
+        var refs = ExternalReferences(el);
+        if (refs.Count > 0)
+        {
+            string detail = string.Join("\n", refs.Select(r =>
+            {
+                var ln = r.Lines.Take(8).Select(n => (n + 1).ToString());
+                return $"   {r.Symbol}  —  line {string.Join(", ", ln)}{(r.Lines.Count > 8 ? ", …" : "")}";
+            }));
+            int total = refs.Sum(r => r.Lines.Count);
+            var msg = $"This control's symbol{(refs.Count > 1 ? "s are" : " is")} referenced "
+                    + $"{total} other place(s) in this template:\n\n{detail}\n\n"
+                    + "Those references are usually the template's generation/logic code. Deleting this "
+                    + "control removes where the symbol is set, leaving them dangling — which can break code "
+                    + "generation.\n\nDelete anyway?";
+            if (MessageBox.Show(msg, "Symbol is referenced — deleting is risky",
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
+            {
+                status.Text = $"Delete cancelled — {el.Display} is referenced elsewhere in the template.";
+                return;
+            }
+        }
+
         el.Deleted = true;
         if (_sel == el) Select(null);
         Render();
         bool block = el.EndLineIndex >= 0;
         status.Text = $"Deleted {el.Display}"
                     + (block ? " and its contents" : "") + ".  Save to write the change (re-open to undo).";
+    }
+
+    // Symbols defined within this control's subtree (a #BOXED carries its child prompts' symbols).
+    static IEnumerable<string> SubtreeSymbols(TplElement el)
+    {
+        if (!string.IsNullOrEmpty(el.Symbol)) yield return el.Symbol;
+        foreach (var c in el.Children)
+            foreach (var s in SubtreeSymbols(c)) yield return s;
+    }
+
+    // Lines OUTSIDE this control's own source range that reference any of its symbols.
+    List<(string Symbol, List<int> Lines)> ExternalReferences(TplElement el)
+    {
+        var result = new List<(string, List<int>)>();
+        if (_doc == null) return result;
+        var lines = _doc.Lines;
+        int start = el.LineIndex, end = el.EndLineIndex >= 0 ? el.EndLineIndex : el.LineIndex;
+
+        foreach (var sym in SubtreeSymbols(el).Distinct())
+        {
+            // match %Symbol not followed by another identifier char (so %Foo doesn't match %FooBar)
+            var rx = new Regex(Regex.Escape(sym) + @"(?![A-Za-z0-9_])");
+            var hits = new List<int>();
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (i >= start && i <= end) continue;
+                if (rx.IsMatch(lines[i])) hits.Add(i);
+            }
+            if (hits.Count > 0) result.Add((sym, hits));
+        }
+        return result;
     }
 
     void AddChip(TplElement el)
@@ -334,6 +388,16 @@ public partial class MainWindow : Window
         propGrid.IsEnabled = el != null;
         propTitle.Text = el?.Display ?? "(none)";
         propKind.Text = el == null ? "" : $"{el.Kind}   line {el.LineIndex + 1}";
+
+        var refs = el == null ? new List<(string Symbol, List<int> Lines)>() : ExternalReferences(el);
+        if (refs.Count > 0)
+        {
+            int total = refs.Sum(r => r.Lines.Count);
+            propRefs.Text = $"⚠ {string.Join(", ", refs.Select(r => r.Symbol))} referenced in "
+                          + $"{total} other place(s). Deleting this control may break generation.";
+            propRefsBox.Visibility = Visibility.Visible;
+        }
+        else propRefsBox.Visibility = Visibility.Collapsed;
         _suppressProp = true;
         txtX.Text = el?.X.ToString() ?? ""; txtY.Text = el?.Y.ToString() ?? "";
         txtW.Text = el?.W.ToString() ?? ""; txtH.Text = el?.H.ToString() ?? "";

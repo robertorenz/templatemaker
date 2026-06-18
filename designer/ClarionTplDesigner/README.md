@@ -34,8 +34,11 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
   the generated source.
 - **Delete** — select a control and press **Delete** (or right-click → *Delete*) to remove it. On **Save**
   the control's source line is dropped; deleting a `#BOXED` removes the whole block through its `#ENDBOXED`.
-  Nothing is written until you Save, so re-opening the file undoes a delete. (As with any edit, if the removed
-  prompt's `%symbol` is referenced by the template's generation code you'll need to fix that up in the IDE.)
+  Nothing is written until you Save, so re-opening the file undoes a delete.
+- **Symbol‑reference safety** — if a control's `%symbol` is used elsewhere in the template (the generation
+  /logic code, an `#ENABLE(%sym)`, a `#BUTTON` format…), the Properties panel shows a ⚠ banner naming the
+  symbol and how many other lines use it, and deleting pops a confirmation listing those exact line numbers
+  so you don't silently break code generation.
 - **Rulers** (top + left) in dialog units, with a live cursor marker.
 - **Guides** — drag *down* from the top ruler for a horizontal guide, *right* from the left ruler for a
   vertical guide (or use the *+ V/H guide* buttons). Hold **Ctrl** while dragging to snap the guide to the
