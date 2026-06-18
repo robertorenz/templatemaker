@@ -26,7 +26,6 @@ public partial class MainWindow : Window
     const double SnapPx = 6;                 // snap threshold in pixels
 
     readonly Dictionary<TplElement, Border> _chips = new();
-    readonly Dictionary<TplElement, int> _z = new();        // per-element z-order overrides
     readonly Dictionary<string, BitmapImage?> _imgCache = new(StringComparer.OrdinalIgnoreCase);
     readonly List<Guide> _guides = new();
 
@@ -40,6 +39,19 @@ public partial class MainWindow : Window
     bool _ready;          // true once XAML is fully constructed
     List<TplElement>? _childList;     // controls listed for the selected group box
     bool _suppressChildSel;
+
+    // ---- undo (snapshot history) ----
+    readonly List<Snapshot> _undo = new();
+    Snapshot? _gestureSnap;           // captured at a drag/resize start, committed on end if it changed anything
+    bool _gestureChanged;
+    bool _editGuard;                  // one undo entry per X/Y/W/H or text editing burst
+    const int MaxUndo = 100;
+
+    sealed class Snapshot
+    {
+        public readonly List<List<TplElement>> Tabs = new();    // deep-cloned trees, parallel to doc.Components
+        public List<(bool V, double Dlu)> Guides = new();
+    }
 
     [Flags] enum Edge { None = 0, Left = 1, Right = 2, Top = 4, Bottom = 8 }
     Edge _resizeEdge;
@@ -62,6 +74,7 @@ public partial class MainWindow : Window
         try
         {
             _doc = TplParser.Parse(dlg.FileName);
+            _undo.Clear();
             Title = "Clarion Template Designer — " + System.IO.Path.GetFileName(dlg.FileName);
             PopulateParts(0, 0);
             int files = _doc.Files.Count, comps = _doc.Components.Count;
@@ -106,7 +119,8 @@ public partial class MainWindow : Window
         if (_doc == null) return;
         int partIdx = cmbParts.SelectedIndex, tabIdx = cmbTabs.SelectedIndex;
         _doc = TplParser.Parse(_doc.Path);
-        _sel = null; _z.Clear();
+        _undo.Clear();           // line indices changed on disk; old snapshots no longer apply
+        _sel = null;
         PopulateParts(partIdx, tabIdx);
     }
 
@@ -131,6 +145,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        PushUndo();
         int n = 0, skipped = 0;
         foreach (var tab in _component.Tabs)
         {
@@ -179,6 +194,7 @@ public partial class MainWindow : Window
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
+        PushUndo();
         var el = new TplElement
         {
             Kind = kind, Inserted = true, Dirty = true, Parent = _tab,
@@ -229,6 +245,69 @@ public partial class MainWindow : Window
             s += $"\n…\n{f.Lines[Math.Min(el.EndLineIndex, f.Lines.Length - 1)].Trim()}"
                + $"   ({el.EndLineIndex - el.LineIndex + 1} lines)";
         return s;
+    }
+
+    // ---------- undo ----------
+    Snapshot Capture()
+    {
+        var s = new Snapshot();
+        if (_doc != null)
+            foreach (var c in _doc.Components)
+                s.Tabs.Add(c.Tabs.Select(t => t.Clone()).ToList());
+        s.Guides = _guides.Select(g => (g.Vertical, g.Dlu)).ToList();
+        return s;
+    }
+
+    void PushUndo()
+    {
+        if (_doc == null) return;
+        _undo.Add(Capture());
+        if (_undo.Count > MaxUndo) _undo.RemoveAt(0);
+    }
+
+    void Undo_Click(object s, RoutedEventArgs e) => Undo();
+
+    void Undo()
+    {
+        if (_undo.Count == 0) { status.Text = "Nothing to undo."; return; }
+        var snap = _undo[^1];
+        _undo.RemoveAt(_undo.Count - 1);
+        Restore(snap);
+        status.Text = $"Undid last change.  ({_undo.Count} more in history)";
+    }
+
+    void Restore(Snapshot snap)
+    {
+        if (_doc == null) return;
+        for (int i = 0; i < _doc.Components.Count && i < snap.Tabs.Count; i++)
+        {
+            _doc.Components[i].Tabs.Clear();
+            _doc.Components[i].Tabs.AddRange(snap.Tabs[i]);
+        }
+        _guides.Clear();
+        foreach (var (v, d) in snap.Guides) _guides.Add(new Guide { Vertical = v, Dlu = d });
+
+        _sel = null;
+        if (_component != null)
+        {
+            int ti = cmbTabs.SelectedIndex;
+            _tab = ti >= 0 && ti < _component.Tabs.Count ? _component.Tabs[ti]
+                 : (_component.Tabs.Count > 0 ? _component.Tabs[0] : null);
+        }
+        Render();
+        Select(null);
+    }
+
+    // Drag/resize gestures: capture once at the start, commit only if something actually changed.
+    void BeginGesture() { _gestureSnap = Capture(); _gestureChanged = false; }
+    void CommitGesture()
+    {
+        if (_gestureChanged && _gestureSnap != null)
+        {
+            _undo.Add(_gestureSnap);
+            if (_undo.Count > MaxUndo) _undo.RemoveAt(0);
+        }
+        _gestureSnap = null; _gestureChanged = false;
     }
 
     TplFile? CurrentFile()
@@ -329,6 +408,7 @@ public partial class MainWindow : Window
             }
         }
 
+        PushUndo();
         el.Deleted = true;
         if (_sel == el) Select(null);
         Render();
@@ -457,7 +537,7 @@ public partial class MainWindow : Window
         }
         Canvas.SetLeft(border, el.LX * Scale);
         Canvas.SetTop(border, el.LY * Scale);
-        Panel.SetZIndex(border, _z.TryGetValue(el, out var zo) ? zo : (box ? 0 : 5));
+        Panel.SetZIndex(border, el.HasZ ? el.Z : (box ? 0 : 5));
         border.ContextMenu = BuildChipMenu(el);
         border.MouseLeftButtonDown += Chip_Down;
         canvas.Children.Add(border);
@@ -594,7 +674,8 @@ public partial class MainWindow : Window
 
     void SetZ(TplElement el, int z)
     {
-        _z[el] = z;
+        PushUndo();
+        el.HasZ = true; el.Z = z;
         if (_chips.TryGetValue(el, out var b)) Panel.SetZIndex(b, z);
         Select(el);
         status.Text = $"{el.Display}  →  z-order {z}";
@@ -615,6 +696,7 @@ public partial class MainWindow : Window
         var b = (Border)s;
         var el = (TplElement)b.Tag;
         Select(el);
+        BeginGesture();
         _drag = Drag.Element; _dragEl = el;
         _dragStart = e.GetPosition(canvas);
         _elStartX = el.LX; _elStartY = el.LY;
@@ -624,6 +706,7 @@ public partial class MainWindow : Window
 
     void Select(TplElement? el)
     {
+        _editGuard = false;          // next X/Y/W/H or text edit starts a fresh undo entry
         if (_sel != null && _chips.TryGetValue(_sel, out var old)) Highlight(old, false);
         _sel = el;
         if (el != null && _chips.TryGetValue(el, out var b)) Highlight(b, true);
@@ -698,6 +781,7 @@ public partial class MainWindow : Window
     void Text_Changed(object s, TextChangedEventArgs e)
     {
         if (_suppressProp || _sel == null || !_sel.Inserted) return;
+        if (!_editGuard) { PushUndo(); _editGuard = true; }
         _sel.Title = txtText.Text;
         _sel.Dirty = true;
         if (_chips.TryGetValue(_sel, out var b) && b.Child is TextBlock tb)
@@ -713,6 +797,7 @@ public partial class MainWindow : Window
     void Prop_Changed(object s, TextChangedEventArgs e)
     {
         if (_suppressProp || _sel == null) return;
+        if (!_editGuard) { PushUndo(); _editGuard = true; }
         if (int.TryParse(txtX.Text, out var x)) _sel.X = x;
         if (int.TryParse(txtY.Text, out var y)) _sel.Y = y;
         if (int.TryParse(txtW.Text, out var w)) _sel.W = w;
@@ -775,8 +860,10 @@ public partial class MainWindow : Window
             DeleteGuide(_dragGuide);
         else if (_drag == Drag.Element && _dragEl != null && !_dragEl.IsContainer)
             TryReparent(_dragEl);            // dropping a control may move it in/out of a group box
+        bool wasElementGesture = _drag is Drag.Element or Drag.Resize;
         canvas.ReleaseMouseCapture();
         _drag = Drag.None; _dragEl = null; _dragGuide = null;
+        if (wasElementGesture) CommitGesture();
     }
 
     // ---------- group containment ----------
@@ -812,6 +899,7 @@ public partial class MainWindow : Window
 
     void Reparent(TplElement el, TplElement newParent)
     {
+        _gestureChanged = true;
         el.Parent?.Children.Remove(el);
         newParent.Children.Add(el);
         el.Parent = newParent;
@@ -832,6 +920,7 @@ public partial class MainWindow : Window
 
     void MoveElement(TplElement el, double lx, double ly)
     {
+        _gestureChanged = true;
         lx = Math.Max(0, lx); ly = Math.Max(0, ly);
         double dX = lx - el.LX, dY = ly - el.LY;       // incremental shift for any contents
         el.LX = lx; el.LY = ly;
@@ -942,6 +1031,7 @@ public partial class MainWindow : Window
     void Handle_Down(object s, MouseButtonEventArgs e)
     {
         if (_sel == null) return;
+        BeginGesture();
         _resizeEdge = (Edge)((Rectangle)s).Tag;
         _drag = Drag.Resize;
         _dragStart = e.GetPosition(canvas);
@@ -952,6 +1042,7 @@ public partial class MainWindow : Window
 
     void ResizeElement(TplElement el, double lx, double ly, double lw, double lh)
     {
+        _gestureChanged = true;
         lw = Math.Max(MinDlu, lw); lh = Math.Max(MinDlu, lh);
         lx = Math.Max(0, lx); ly = Math.Max(0, ly);
         el.LX = lx; el.LY = ly; el.LW = lw; el.LH = lh;
@@ -1005,6 +1096,7 @@ public partial class MainWindow : Window
 
     void StartGuide(bool vertical, double dlu)
     {
+        PushUndo();
         var g = new Guide { Vertical = vertical, Dlu = Math.Max(0, Math.Round(dlu)) };
         AddGuideVisual(g);
         _guides.Add(g);
@@ -1039,6 +1131,7 @@ public partial class MainWindow : Window
     {
         var g = (Guide)((Line)s).Tag;
         if (e.ClickCount == 2) { DeleteGuide(g); e.Handled = true; return; }
+        PushUndo();
         _drag = Drag.Guide; _dragGuide = g;
         canvas.CaptureMouse();
         e.Handled = true;
@@ -1046,6 +1139,7 @@ public partial class MainWindow : Window
 
     void DeleteGuide(Guide g)
     {
+        PushUndo();
         canvas.Children.Remove(g.Visual);
         _guides.Remove(g);
         status.Text = $"Deleted {(g.Vertical ? "vertical" : "horizontal")} guide.";
@@ -1071,6 +1165,11 @@ public partial class MainWindow : Window
 
     void OnKeyDown(object s, KeyEventArgs e)
     {
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && e.Key == Key.Z)
+        {
+            if (Keyboard.FocusedElement is TextBox) return;   // let the editor's own undo run
+            Undo(); e.Handled = true; return;
+        }
         if (_sel == null) return;
         if (e.Key is Key.Delete or Key.Back)
         {
@@ -1087,6 +1186,7 @@ public partial class MainWindow : Window
             case Key.Down: ny += d; break;
             default: return;
         }
+        if (!e.IsRepeat) PushUndo();   // one undo per discrete press; a held key reverts as one step
         MoveElement(_sel, Math.Max(0, nx), Math.Max(0, ny));
         e.Handled = true;
     }

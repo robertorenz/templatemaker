@@ -69,6 +69,9 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
   ruler's labelled segments. Drag a guide to reposition; **drag it back onto a ruler to delete it** (it turns
   red as you hover the ruler), or double‑click it.
 - **Snapping** — to the grid (configurable size) and to guides; toggle each independently.
+- **Undo** — **Ctrl+Z** (or the *↶ Undo* button) reverts the last change, step by step, all the way back:
+  moves, resizes, reparents, adds, deletes, z-order, text/coord edits, and guide changes. History is kept
+  per editing session and cleared when you open a file or after a structural save.
 - **Properties panel** — edit X/Y/W/H directly (arrow keys nudge, Shift = ×5); for prompts it names the
   type, and a read-only **Source** box shows the control's raw directive line so you can see its full
   definition (`default(...)`, `req`, `prop(...)`, `at(10)`, …).

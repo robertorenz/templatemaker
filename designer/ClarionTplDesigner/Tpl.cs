@@ -35,9 +35,28 @@ public class TplElement
     // computed absolute layout (DLU, tab-relative) used by the designer
     public double LX, LY, LW, LH;
     public bool Dirty;              // moved/resized -> rewrite its AT on save
+    public bool HasZ; public int Z; // z-order override (view aid only)
 
     public TplElement? Parent;
     public readonly List<TplElement> Children = new();
+
+    /// <summary>Deep copy (subtree), used for undo snapshots.</summary>
+    public TplElement Clone(TplElement? parent = null)
+    {
+        var c = new TplElement
+        {
+            Kind = Kind, LineIndex = LineIndex, EndLineIndex = EndLineIndex,
+            Deleted = Deleted, Inserted = Inserted, Moved = Moved,
+            Title = Title, Symbol = Symbol, PromptType = PromptType,
+            HasAt = HasAt, HasX = HasX, HasY = HasY, HasW = HasW, HasH = HasH,
+            X = X, Y = Y, W = W, H = H,
+            FontName = FontName, FontSize = FontSize, FontColor = FontColor, Bold = Bold,
+            LX = LX, LY = LY, LW = LW, LH = LH, Dirty = Dirty, HasZ = HasZ, Z = Z,
+            Parent = parent
+        };
+        foreach (var ch in Children) c.Children.Add(ch.Clone(c));
+        return c;
+    }
 
     public bool IsContainer => Kind is TplKind.Tab or TplKind.Boxed or TplKind.Button or TplKind.Enable;
     public bool IsPositionable => Kind is TplKind.Prompt or TplKind.Display or TplKind.Image or TplKind.Boxed;
