@@ -56,6 +56,10 @@
                 <TextBlock Text="PROPERTIES" FontWeight="Bold" Foreground="#5B6878" FontSize="11"/>
                 <TextBlock x:Name="propTitle" TextWrapping="Wrap" Margin="0,6,0,2" FontWeight="SemiBold"/>
                 <TextBlock x:Name="propKind" Foreground="#8A95A3" FontSize="11" Margin="0,0,0,8"/>
+                <Border x:Name="propTypeBox" Background="#FFF7E8" BorderBrush="#EAD9A6" BorderThickness="1"
+                        CornerRadius="3" Padding="6,4" Margin="0,0,0,8" Visibility="Collapsed">
+                    <TextBlock x:Name="propType" Foreground="#7A5C12" FontSize="11" TextWrapping="Wrap"/>
+                </Border>
                 <Border x:Name="propRefsBox" Background="#FCEEEC" BorderBrush="#E7B4AE" BorderThickness="1"
                         CornerRadius="3" Padding="6,4" Margin="0,0,0,8" Visibility="Collapsed">
                     <TextBlock x:Name="propRefs" Foreground="#B23A2E" FontSize="11" TextWrapping="Wrap"/>

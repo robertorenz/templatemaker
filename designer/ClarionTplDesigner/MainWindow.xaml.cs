@@ -98,6 +98,21 @@ public partial class MainWindow : Window
     void MaterializeAll_Click(object s, RoutedEventArgs e)
     {
         if (_doc == null) { status.Text = "Open a template first."; return; }
+
+        int special = AllElements().Count(el => el.Kind == TplKind.Prompt && !el.Deleted
+                                                && !(el.HasX && el.HasY) && ClassifyPrompt(el.PromptType).Special);
+        var msg = "“Add AT to all” gives every control an explicit AT(x,y,w,h) from the designer’s "
+                + "APPROXIMATE layout. Clarion normally auto-positions prompts, so this can shift controls and — "
+                + "for prompts that show a dropdown or “…” button — misplace the part Clarion builds automatically.\n\n"
+                + (special > 0 ? $"{special} prompt(s) here have such auto-built UI and are most at risk.\n\n" : "")
+                + "It’s usually safer to move only the few controls you need. Add AT to ALL controls anyway?";
+        if (MessageBox.Show(msg, "Add AT to all — affects every control",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
+        {
+            status.Text = "“Add AT to all” cancelled.";
+            return;
+        }
+
         int n = 0;
         foreach (var tab in _doc.Tabs)
         {
@@ -333,7 +348,7 @@ public partial class MainWindow : Window
         {
             var fg = el.FontColor is uint c ? FromColorRef(c) : Brushes.Black;
             string txt = el.Kind == TplKind.Image ? "🖼 " + el.Display : el.Display;   // missing image -> show filename
-            border.Child = new TextBlock
+            var label = new TextBlock
             {
                 Text = txt,
                 Foreground = el.Kind == TplKind.Image && el.FontColor is null
@@ -344,6 +359,33 @@ public partial class MainWindow : Window
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 VerticalAlignment = VerticalAlignment.Center
             };
+
+            string glyph = el.Kind == TplKind.Prompt ? ClassifyPrompt(el.PromptType).Glyph : "";
+            if (glyph.Length > 0)
+            {
+                // simulate the auto-generated companion control (dropdown ▾ / lookup … button)
+                var dock = new DockPanel { LastChildFill = true };
+                var btn = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromRgb(0xEC, 0xEF, 0xF3)),
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(0xB8, 0xC0, 0xCC)),
+                    BorderThickness = new Thickness(1),
+                    Margin = new Thickness(2, 1, 1, 1),
+                    Child = new TextBlock
+                    {
+                        Text = glyph, FontSize = 9,
+                        Foreground = new SolidColorBrush(Color.FromRgb(0x5B, 0x68, 0x78)),
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Margin = new Thickness(3, 0, 3, 0)
+                    }
+                };
+                DockPanel.SetDock(btn, Dock.Right);
+                dock.Children.Add(btn);
+                dock.Children.Add(label);
+                border.Child = dock;
+            }
+            else border.Child = label;
         }
         else
         {
@@ -360,6 +402,33 @@ public partial class MainWindow : Window
         border.MouseLeftButtonDown += Chip_Down;
         canvas.Children.Add(border);
         _chips[el] = border;
+    }
+
+    // ---------- prompt-type awareness ----------
+    // Classify a #PROMPT type into a friendly description, an affordance glyph, and whether Clarion
+    // auto-builds a companion control (dropdown / lookup button) that the designer can't reposition.
+    static (string Desc, string Glyph, bool Special) ClassifyPrompt(string promptType)
+    {
+        string t = (promptType ?? "").Trim();
+        string u = t.ToUpperInvariant();
+        bool Has(string s) => u.Contains(s);
+
+        if (u.StartsWith("PROCEDURE")) return ("procedure dropdown", "▾", true);
+        if (Has("KEYCODE"))           return ("key picker (Input Key dialog)", "…", true);
+        if (Has("OPENDIALOG") || Has("SAVEDIALOG") || Has("FILEDIALOG")) return ("file picker", "…", true);
+        if (Has("FONTDIALOG") || u == "FONT")   return ("font picker", "…", true);
+        if (Has("COLORDIALOG") || u == "COLOR") return ("colour picker", "…", true);
+        if (u.StartsWith("EXPR"))     return ("expression editor", "…", true);
+        if (u.StartsWith("FILE"))     return ("table dropdown", "▾", true);
+        if (u.StartsWith("FIELD") || u.StartsWith("KEY") || u.StartsWith("COMPONENT"))
+                                      return ("field/key dropdown", "▾", true);
+        if (u.StartsWith("DROP") || u.StartsWith("FROM")) return ("drop-down list", "▾", true);
+        if (u.StartsWith("SPIN"))     return ("spin entry", "⇅", false);
+        if (u == "CHECK")             return ("checkbox", "", false);
+        if (u.StartsWith("OPTION"))   return ("option group", "", false);
+        if (u.StartsWith("RADIO"))    return ("radio button", "", false);
+        if (t.StartsWith("@"))        return ($"entry  {t}", "", false);
+        return (t.Length == 0 ? "entry" : t, "", false);
     }
 
     // ---------- images ----------
@@ -512,6 +581,22 @@ public partial class MainWindow : Window
             propRefsBox.Visibility = Visibility.Visible;
         }
         else propRefsBox.Visibility = Visibility.Collapsed;
+
+        if (el is { Kind: TplKind.Prompt })
+        {
+            var (desc, glyph, special) = ClassifyPrompt(el.PromptType);
+            propType.Text = $"Type: {desc}."
+                + (special ? $"  ⚠ Clarion auto-builds this {(glyph == "▾" ? "dropdown" : "“…” button")} next to the "
+                           + "field and lays it out for you — giving this control an explicit position (e.g. “Add AT to all”) "
+                           + "can move or hide that part. Prefer leaving its position to Clarion."
+                           : "");
+            propType.Foreground = special ? new SolidColorBrush(Color.FromRgb(0x7A, 0x5C, 0x12))
+                                          : new SolidColorBrush(Color.FromRgb(0x6E, 0x78, 0x85));
+            propTypeBox.Background = special ? new SolidColorBrush(Color.FromRgb(0xFF, 0xF7, 0xE8))
+                                             : new SolidColorBrush(Color.FromRgb(0xF4, 0xF6, 0xF9));
+            propTypeBox.Visibility = Visibility.Visible;
+        }
+        else propTypeBox.Visibility = Visibility.Collapsed;
         _suppressProp = true;
         txtX.Text = el?.X.ToString() ?? ""; txtY.Text = el?.Y.ToString() ?? "";
         txtW.Text = el?.W.ToString() ?? ""; txtH.Text = el?.H.ToString() ?? "";
