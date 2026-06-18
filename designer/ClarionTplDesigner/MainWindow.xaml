@@ -91,6 +91,15 @@
             <Button Click="StyleSmaller_Click" Padding="7,2" ToolTip="Smaller">A▼</Button>
             <Button Click="StyleColor_Click"   Padding="7,2" ToolTip="Colour…">Colour…</Button>
             <Button Click="StyleFont_Click"    Padding="7,2" ToolTip="Font, style &amp; colour…">Font…</Button>
+            <Separator/>
+            <TextBlock VerticalAlignment="Center" Margin="4,0" Foreground="#5B6878">Add:</TextBlock>
+            <Button Click="Add_Label_Click"  Padding="6,2" ToolTip="Add a static text label (#DISPLAY)">Label</Button>
+            <Button Click="Add_String_Click" Padding="6,2" ToolTip="Add a string entry (#PROMPT @s255)">String</Button>
+            <Button Click="Add_Number_Click" Padding="6,2" ToolTip="Add a numeric entry (#PROMPT @n8)">Number</Button>
+            <Button Click="Add_Spin_Click"   Padding="6,2" ToolTip="Add a spin control (#PROMPT SPIN)">Spin</Button>
+            <Button Click="Add_Check_Click"  Padding="6,2" ToolTip="Add a checkbox (#PROMPT CHECK)">Check</Button>
+            <Button Click="Add_Image_Click"  Padding="6,2" ToolTip="Add an image (#IMAGE)">Image</Button>
+            <Button Click="Add_Group_Click"  Padding="6,2" ToolTip="Add a group box (#BOXED … #ENDBOXED)">Group</Button>
         </ToolBar>
       </ToolBarTray>
 
