@@ -53,6 +53,7 @@ Source: "..\agents\*";    DestDir: "{app}\agents";    Flags: ignoreversion recur
 Source: "..\skills\*";    DestDir: "{app}\skills";    Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\README.md";   DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE";     DestDir: "{app}"; Flags: ignoreversion
+Source: "..\docs\*";      DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; --- optional: drop the .tpl/.png straight into a detected Clarion install ---
 Source: "..\templates\*.tpl";              DestDir: "{#ClarionTpl}"; Tasks: clarion; Check: ClarionExists; Flags: ignoreversion
@@ -69,6 +70,8 @@ Source: "..\agents\*"; DestDir: "{%USERPROFILE}\.claude\agents"; Tasks: claude; 
 Name: "{group}\Clarion Template Designer"; Filename: "{app}\{#AppExe}"
 Name: "{group}\Templates folder";          Filename: "{app}\templates"
 Name: "{group}\Read me";                   Filename: "{app}\README.md"
+Name: "{group}\User Manual";               Filename: "{app}\docs\user-manual.html"
+Name: "{group}\Programmer's Reference";    Filename: "{app}\docs\programmers-reference.html"
 Name: "{autodesktop}\Clarion Template Designer"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [Run]

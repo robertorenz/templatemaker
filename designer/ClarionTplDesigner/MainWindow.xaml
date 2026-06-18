@@ -60,6 +60,12 @@
             <Separator/>
             <MenuItem Header="_Reset panel layout" Click="ResetLayout_Click"/>
         </MenuItem>
+        <MenuItem Header="_Help">
+            <MenuItem Header="_User Manual" Click="UserManual_Click" InputGestureText="F1"/>
+            <MenuItem Header="_Programmer's Reference" Click="ProgRef_Click"/>
+            <Separator/>
+            <MenuItem Header="_About Clarion Template Designer" Click="About_Click"/>
+        </MenuItem>
       </Menu>
       <ToolBarTray DockPanel.Dock="Top">
         <ToolBar Band="0" BandIndex="0">

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clarion Template Designer — User Manual</title>
+<style>
+  :root{
+    --blue:#0A66C2; --blue-d:#084d93; --navy:#0E1A2B; --navy-2:#16263c;
+    --ink:#22303f; --muted:#6b7785; --line:#e3e8ef; --bg:#f5f7fa;
+    --card:#ffffff; --green:#1e7c5a; --amber:#9a6a12; --amber-bg:#fff7e8;
+    --green-bg:#eef8f3; --blue-bg:#eef4fc;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:15px/1.65 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg)}
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{display:flex;min-height:100vh}
+  /* sidebar */
+  nav{width:268px;flex:0 0 268px;background:linear-gradient(180deg,var(--navy),var(--navy-2));
+    color:#cdd8e6;position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 0}
+  nav .brand{padding:0 22px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+  nav .brand h1{font-size:16px;margin:0;color:#fff;letter-spacing:.2px}
+  nav .brand span{font-size:12px;color:#8aa0bb}
+  nav a{display:block;color:#b9c7d8;padding:6px 22px;font-size:13.5px;border-left:3px solid transparent}
+  nav a:hover{background:rgba(255,255,255,.05);color:#fff;text-decoration:none}
+  nav a.h2{padding-left:34px;font-size:13px;color:#9fb2c8}
+  nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#6e85a1;
+    padding:14px 22px 4px;font-weight:700}
+  /* content */
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(120deg,var(--blue-d),var(--blue));color:#fff;
+    padding:46px 52px 38px}
+  header.hero h1{margin:0 0 6px;font-size:30px;letter-spacing:-.3px}
+  header.hero p{margin:0;font-size:15.5px;color:#dbe8f8;max-width:760px}
+  header.hero .pill{display:inline-block;margin-top:16px;background:rgba(255,255,255,.16);
+    padding:4px 12px;border-radius:20px;font-size:12.5px}
+  .body{padding:14px 52px 80px;max-width:920px}
+  section{padding:22px 0;border-bottom:1px solid var(--line)}
+  section:last-child{border-bottom:none}
+  h2{font-size:21px;margin:14px 0 10px;color:var(--navy);scroll-margin-top:14px}
+  h3{font-size:16px;margin:20px 0 6px;color:var(--blue-d)}
+  p{margin:9px 0}
+  ul,ol{margin:8px 0;padding-left:22px}
+  li{margin:4px 0}
+  code,kbd{font-family:"Cascadia Code",Consolas,monospace}
+  code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:13px;color:#1d3b5e}
+  kbd{background:#fff;border:1px solid #c7cfda;border-bottom-width:2px;border-radius:5px;
+    padding:1px 7px;font-size:12.5px;color:#33424f;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px 20px;
+    margin:14px 0;box-shadow:0 1px 2px rgba(20,40,70,.04)}
+  .callout{border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;border:1px solid}
+  .tip{background:var(--green-bg);border-color:#bfe3d3;color:#155}
+  .note{background:var(--blue-bg);border-color:#c5dcf6;color:#13456f}
+  .warn{background:var(--amber-bg);border-color:#ecd9a6;color:#6f5210}
+  .callout b{display:block;margin-bottom:2px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line)}
+  th{background:#f0f4f9;color:var(--navy);font-weight:600}
+  tr:hover td{background:#fafcff}
+  .steps{counter-reset:s;list-style:none;padding-left:0}
+  .steps>li{position:relative;padding:6px 0 6px 40px;margin:6px 0}
+  .steps>li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:4px;
+    width:26px;height:26px;background:var(--blue);color:#fff;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .lead{font-size:16px;color:#3a4756}
+  footer{padding:24px 52px;color:var(--muted);font-size:13px}
+  .top{font-size:12px;color:var(--muted);float:right}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><h1>Template Designer</h1><span>User Manual · v2.3</span></div>
+    <a href="#intro">Welcome</a>
+    <div class="grp">Getting started</div>
+    <a href="#open" class="h2">Opening a template</a>
+    <a href="#parts" class="h2">Parts &amp; tabs</a>
+    <a href="#tour" class="h2">The workspace</a>
+    <div class="grp">Designing</div>
+    <a href="#select" class="h2">Selecting controls</a>
+    <a href="#move" class="h2">Move, resize, nudge</a>
+    <a href="#add" class="h2">Adding controls</a>
+    <a href="#props" class="h2">Properties &amp; style</a>
+    <a href="#symbols" class="h2">Symbols &amp; rename</a>
+    <a href="#arrange" class="h2">Z-order &amp; groups</a>
+    <a href="#delete" class="h2">Deleting safely</a>
+    <a href="#guides" class="h2">Rulers &amp; guides</a>
+    <div class="grp">Preview &amp; source</div>
+    <a href="#preview" class="h2">Flow preview</a>
+    <a href="#source" class="h2">Source panel</a>
+    <div class="grp">Finishing</div>
+    <a href="#save" class="h2">Saving</a>
+    <a href="#prefs" class="h2">Preferences &amp; layout</a>
+    <a href="#keys" class="h2">Keyboard shortcuts</a>
+  </nav>
+
+  <main>
+  <header class="hero">
+    <h1>Clarion Template Designer</h1>
+    <p>A visual designer for the <em>prompt UI</em> of Clarion templates. Open a <code>.tpl</code>,
+       see every control where it really sits, then drag, style, re-order and rename — and save changes
+       back into the template with surgical precision.</p>
+    <span class="pill">User Manual · version 2.3</span>
+  </header>
+
+  <div class="body">
+
+  <section id="intro">
+    <h2>Welcome <a class="top" href="#intro">↑ top</a></h2>
+    <p class="lead">The designer reads a Clarion template's <code>#SHEET</code> / <code>#TAB</code> /
+       <code>#PROMPT</code> structure and lays the controls out on a canvas at their real
+       <code>AT(x,y,w,h)</code> positions — icons render as the actual PNGs. You edit visually;
+       when you save, the designer rewrites <strong>only</strong> what you changed (positions, styles,
+       added/removed/relocated controls) and leaves every other byte of the template untouched.</p>
+    <div class="callout note"><b>Who this is for</b>
+       Anyone who maintains Clarion <code>.tpl</code>/<code>.tpw</code> templates and would rather lay
+       out a prompt window by eye than count dialog units by hand.</div>
+  </section>
+
+  <section id="open">
+    <h2>Opening a template <a class="top" href="#intro">↑ top</a></h2>
+    <ol class="steps">
+      <li>Choose <b>File ▸ Open .tpl…</b> and pick a template file.</li>
+      <li>The designer follows any <code>#INCLUDE('…tpw')</code> files automatically, so the whole
+          template set loads together.</li>
+      <li>The status bar reports how many editable parts, components and files were found.</li>
+    </ol>
+  </section>
+
+  <section id="parts">
+    <h2>Parts &amp; tabs <a class="top" href="#intro">↑ top</a></h2>
+    <p>A template can contain many components — one might be global, another an extension, another a
+       procedure. Each component that has a prompt sheet is a selectable <b>Part</b>.</p>
+    <ul>
+      <li><b>Part</b> selector — switch between the components in the template set (across all files).</li>
+      <li><b>Tab</b> selector — switch between the <code>#TAB</code>s within the current part's sheet.</li>
+    </ul>
+    <div class="callout tip"><b>Tip</b> Switching parts also reloads the Source panel to the file that
+       part lives in, so the source view always matches what you see.</div>
+  </section>
+
+  <section id="tour">
+    <h2>The workspace <a class="top" href="#intro">↑ top</a></h2>
+    <div class="card">
+    <ul>
+      <li><b>Canvas</b> — the centre, showing the current tab's controls over a dialog-unit grid with rulers.</li>
+      <li><b>Properties</b> — the control's text, position, style, symbol and usages.</li>
+      <li><b>Source</b> — the live template text in a colour-coded editor with a minimap.</li>
+      <li><b>Command bars</b> — quick controls for preview, style and inserting controls.</li>
+    </ul>
+    </div>
+    <p>Every panel is dockable — drag a panel's header to re-dock it to any edge, or tear it off into a
+       floating window. <b>View ▸ Reset panel layout</b> puts everything back.</p>
+  </section>
+
+  <section id="select">
+    <h2>Selecting controls <a class="top" href="#intro">↑ top</a></h2>
+    <ul>
+      <li><b>Click</b> a control to select it.</li>
+      <li><kbd>Ctrl</kbd>+click toggles a control in/out of the selection.</li>
+      <li><kbd>Shift</kbd>+click adds a control to the selection.</li>
+    </ul>
+    <p>A single selection shows resize handles and the full Properties pad. When you select several,
+       their lines are also highlighted in the Source panel.</p>
+  </section>
+
+  <section id="move">
+    <h2>Move, resize &amp; nudge <a class="top" href="#intro">↑ top</a></h2>
+    <ul>
+      <li><b>Drag</b> a control to move it; drag a <b>handle</b> to resize.</li>
+      <li>Arrow keys nudge the selection 1 unit; <kbd>Shift</kbd>+arrow nudges 5 units.</li>
+      <li>Snapping to the grid and to guides can be toggled in <b>Preferences</b>.</li>
+      <li>The zoom control scales the canvas without changing any coordinates.</li>
+    </ul>
+    <div class="callout note"><b>Need everything draggable?</b>
+       Some controls have no explicit position yet. <b>Edit ▸ Add AT to all controls</b> gives each
+       positionable control an <code>AT(x,y,w,h)</code> from the current layout so it can be dragged.
+       Prompts that Clarion auto-builds (dropdowns, “…” buttons) are skipped on purpose.</div>
+  </section>
+
+  <section id="add">
+    <h2>Adding controls <a class="top" href="#intro">↑ top</a></h2>
+    <p>Use the <b>Insert</b> menu or the <b>Add</b> command bar to drop in a
+       Label, String, Number, Spin, Check box, Image or Group box.</p>
+    <ul>
+      <li>New controls appear selected and ready to position.</li>
+      <li>In <b>Flow preview</b> you can drag a control straight from the Add bar onto the exact spot
+          (line) where you want it inserted.</li>
+      <li>For images, use the <code>…</code> button to browse for a file, then <b>↻ Refresh</b> to
+          re-render after typing or changing the file name.</li>
+    </ul>
+    <div class="callout tip"><b>Name it as you add it</b> A new control gets an auto field name. With it
+       selected, type a name in the Properties <b>SYMBOL</b> box and click <b>Set name</b>. See
+       <a href="#symbols">Symbols &amp; rename</a>.</div>
+  </section>
+
+  <section id="props">
+    <h2>Properties &amp; style <a class="top" href="#intro">↑ top</a></h2>
+    <p>The Properties pad shows, for the selected control:</p>
+    <ul>
+      <li><b>Text / label / file</b> — the control's caption or image file (editable for controls you add).</li>
+      <li><b>X / Y / W / H</b> — position and size in dialog units.</li>
+      <li><b>Style</b> — font, size, bold and colour. Changes are reflected on the canvas and written
+          back as the control's <code>PROP(…)</code> on save.</li>
+      <li><b>Source</b> — the control's exact template line(s), read-only.</li>
+    </ul>
+    <p>The <b>Style</b> command bar offers the same font / size / colour changes for fast edits.</p>
+  </section>
+
+  <section id="symbols">
+    <h2>Symbols &amp; rename <a class="top" href="#intro">↑ top</a></h2>
+    <p>Most prompts are bound to a <code>%Symbol</code> — a template field name. Selecting such a control
+       reveals a <b>SYMBOL</b> section in the Properties pad:</p>
+    <ul>
+      <li><b>Uses list</b> — every line, across every file in the template set, where the symbol appears.
+          The control's own declaration is marked with <b>●</b>; the rest are the generation/logic code
+          that reads it. <b>Click any entry to jump</b> the source editor straight to that line.</li>
+      <li><b>Rename</b> — type a new name and click <b>Rename</b> (or press <kbd>Enter</kbd>). The symbol
+          is renamed <em>everywhere at once</em> — the prompt and every reference — so the field stays
+          joined. It validates the name and refuses to merge into a symbol that already exists.</li>
+      <li><b>Set name</b> — for a newly added control, the same box names its field.</li>
+    </ul>
+    <div class="callout warn"><b>Pending vs saved</b> The Uses list reflects the file on disk. In Live
+       (pending) source mode, a jump can land a line or two off until you save. Rename is fully undoable.</div>
+  </section>
+
+  <section id="arrange">
+    <h2>Z-order &amp; groups <a class="top" href="#intro">↑ top</a></h2>
+    <p>When controls overlap, use the <b>Arrange</b> menu — <b>Bring to Front</b>, <b>Bring Forward</b>,
+       <b>Send Backward</b>, <b>Send to Back</b> — to control which sits on top.</p>
+    <p><b>Group boxes</b> (<code>#BOXED</code>) contain other controls. Drop a control inside a group box
+       to make it a child; drag it out to remove it. Moving the box carries its contents along.</p>
+  </section>
+
+  <section id="delete">
+    <h2>Deleting safely <a class="top" href="#intro">↑ top</a></h2>
+    <p>Delete a control with the <kbd>Delete</kbd> key or right-click ▸ Delete.</p>
+    <div class="callout warn"><b>Reference check</b> If the control's <code>%symbol</code> is used
+       elsewhere in the template (usually the generation/logic code), the designer warns you and lists
+       where — deleting the control removes where the symbol is set and can break code generation.
+       You decide whether to proceed.</div>
+  </section>
+
+  <section id="guides">
+    <h2>Rulers &amp; guides <a class="top" href="#intro">↑ top</a></h2>
+    <ul>
+      <li><b>Drag from the top ruler</b> to create a horizontal guide; <b>from the left ruler</b> for a
+          vertical guide.</li>
+      <li>Hold <kbd>Ctrl</kbd> while dragging to snap the guide to ruler segments.</li>
+      <li>Drag a guide back onto a ruler to remove it, or use <b>Guides ▸ Clear guides</b>.</li>
+      <li>Controls snap to guides when <b>Snap to guides</b> is on.</li>
+    </ul>
+  </section>
+
+  <section id="preview">
+    <h2>Flow preview <a class="top" href="#intro">↑ top</a></h2>
+    <p>Toggle <b>View ▸ Flow preview</b> to see the prompt rendered as real, flowed controls — the way
+       AppGen lays them out — instead of the absolute-position canvas. The preview is also a live editor:</p>
+    <ul>
+      <li><b>Drag a control</b> to a new line to re-order it; the underlying source moves with it.</li>
+      <li>Drag a control <b>into a group box</b>, or onto another <b>tab header</b>, to reparent it.</li>
+      <li><b>Drag from the Add bar</b> onto the preview to insert a new control where you drop it.</li>
+      <li>Edit a control's text, font and colour directly.</li>
+    </ul>
+    <h3>Preview width</h3>
+    <p>Switch the canvas width to match your Clarion version: <b>480</b> for Clarion 10 and earlier,
+       <b>960</b> for Clarion 11.0 / 11.1 / 12.</p>
+    <h3>Saved vs unsaved</h3>
+    <p><b>Preview unsaved work</b> (on) shows your in-progress, interactive model. Turn it off to preview
+       the saved file exactly as it is on disk (read-only).</p>
+  </section>
+
+  <section id="source">
+    <h2>Source panel <a class="top" href="#intro">↑ top</a></h2>
+    <ul>
+      <li>Colour-coded Clarion template syntax with a <b>minimap</b> for quick navigation.</li>
+      <li>Selecting controls highlights their lines; clicking a line scrolls to the matching control.</li>
+      <li><b>Live (pending)</b> shows the source as it <em>would</em> be saved, reflecting all unsaved edits.</li>
+      <li><b>Apply</b> writes your hand-edits in the editor back to the file and re-parses;
+          <b>Revert</b> discards them.</li>
+    </ul>
+  </section>
+
+  <section id="save">
+    <h2>Saving <a class="top" href="#intro">↑ top</a></h2>
+    <p><b>File ▸ Save</b> (<kbd>Ctrl</kbd>+<kbd>S</kbd>) writes your changes. The writer is conservative:
+       it rewrites only the <code>AT()</code> of moved/resized controls, updates <code>PROP(…)</code> for
+       style edits, drops deleted lines, relocates reparented controls, emits added ones, and applies
+       symbol renames across files. Everything else is preserved byte-for-byte. Only files that actually
+       changed are written — untouched <code>.tpw</code> includes are left alone.</p>
+  </section>
+
+  <section id="prefs">
+    <h2>Preferences &amp; layout <a class="top" href="#intro">↑ top</a></h2>
+    <p>The <b>Preferences</b> menu toggles <b>Show grid</b>, <b>Snap to grid</b>, <b>Snap to guides</b> and
+       <b>Show minimap</b> — all of which persist between sessions, along with your panel layout. Re-dock
+       or float any panel; <b>View ▸ Reset panel layout</b> restores the default arrangement.</p>
+  </section>
+
+  <section id="keys">
+    <h2>Keyboard shortcuts <a class="top" href="#intro">↑ top</a></h2>
+    <table>
+      <tr><th>Key</th><th>Action</th></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
+      <tr><td><kbd>Delete</kbd></td><td>Delete the selected control(s)</td></tr>
+      <tr><td>Arrow keys</td><td>Nudge selection 1 unit</td></tr>
+      <tr><td><kbd>Shift</kbd>+arrows</td><td>Nudge selection 5 units</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+click</td><td>Toggle a control in the selection</td></tr>
+      <tr><td><kbd>Shift</kbd>+click</td><td>Add a control to the selection</td></tr>
+      <tr><td><kbd>Ctrl</kbd> while dragging a guide</td><td>Snap the guide to ruler segments</td></tr>
+      <tr><td><kbd>Enter</kbd> in the Symbol box</td><td>Apply the rename</td></tr>
+      <tr><td><kbd>F1</kbd></td><td>Open this manual</td></tr>
+    </table>
+  </section>
+
+  </div>
+  <footer>Clarion Template Designer — User Manual · version 2.3 &nbsp;·&nbsp; See also the Programmer's Reference in the Help menu.</footer>
+  </main>
+</div>
+</body>
+</html>

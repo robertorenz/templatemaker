@@ -441,6 +441,49 @@ public partial class MainWindow : Window
     // ---------- panel layout persistence ----------
     void Exit_Click(object s, RoutedEventArgs e) => Close();
 
+    // ---------- Help ----------
+    void UserManual_Click(object s, RoutedEventArgs e) => OpenDoc("Docs.user-manual.html", "user-manual");
+    void ProgRef_Click(object s, RoutedEventArgs e) => OpenDoc("Docs.programmers-reference.html", "programmers-reference");
+
+    // Extract an embedded HTML doc to a temp file and open it in the default browser. Embedding means it
+    // works identically from the portable single-file exe and the installed build.
+    void OpenDoc(string resource, string baseName)
+    {
+        try
+        {
+            string html;
+            var asm = System.Reflection.Assembly.GetExecutingAssembly();
+            using (var stream = asm.GetManifestResourceStream(resource))
+            {
+                if (stream == null) { MessageBox.Show("Help document not found.", "Help",
+                    MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+                using var sr = new System.IO.StreamReader(stream);
+                html = sr.ReadToEnd();
+            }
+            // versioned temp name so an updated build refreshes the cached copy
+            string ver = asm.GetName().Version?.ToString() ?? "0";
+            string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"ClarionTplDesigner_{baseName}_{ver}.html");
+            System.IO.File.WriteAllText(path, html);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Couldn't open the help document:\n" + ex.Message, "Help",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    void About_Click(object s, RoutedEventArgs e)
+    {
+        var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        MessageBox.Show(this,
+            $"Clarion Template Designer\nVersion {ver?.ToString(3)}\n\n" +
+            "A visual designer for the prompt UI of Clarion templates.\n" +
+            "Reddin Assessments.\n\n" +
+            "Help ▸ User Manual  (F1)\nHelp ▸ Programmer's Reference",
+            "About Clarion Template Designer", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
     void ResetLayout_Click(object s, RoutedEventArgs e)
     {
         LoadLayout(_defaultLayoutXml);
@@ -2113,6 +2156,7 @@ public partial class MainWindow : Window
 
     void OnKeyDown(object s, KeyEventArgs e)
     {
+        if (e.Key == Key.F1) { UserManual_Click(s, e); e.Handled = true; return; }
         if (srcEditor.IsKeyboardFocusWithin) return;   // let the source editor handle its own keys
         if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && e.Key == Key.Z)
         {

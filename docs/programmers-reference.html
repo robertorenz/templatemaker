@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clarion Template Designer — Programmer's Reference</title>
+<style>
+  :root{
+    --blue:#0A66C2; --blue-d:#084d93; --navy:#0E1A2B; --navy-2:#16263c;
+    --ink:#22303f; --muted:#6b7785; --line:#e3e8ef; --bg:#f5f7fa;
+    --card:#ffffff; --green:#1e7c5a; --amber:#9a6a12; --amber-bg:#fff7e8;
+    --green-bg:#eef8f3; --blue-bg:#eef4fc;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:15px/1.65 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg)}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:flex;min-height:100vh}
+  nav{width:280px;flex:0 0 280px;background:linear-gradient(180deg,var(--navy),var(--navy-2));
+    color:#cdd8e6;position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 0}
+  nav .brand{padding:0 22px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+  nav .brand h1{font-size:16px;margin:0;color:#fff} nav .brand span{font-size:12px;color:#8aa0bb}
+  nav a{display:block;color:#b9c7d8;padding:6px 22px;font-size:13.5px;border-left:3px solid transparent}
+  nav a:hover{background:rgba(255,255,255,.05);color:#fff;text-decoration:none}
+  nav a.h2{padding-left:34px;font-size:13px;color:#9fb2c8}
+  nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#6e85a1;
+    padding:14px 22px 4px;font-weight:700}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(120deg,#0c2a4d,var(--blue));color:#fff;padding:46px 52px 38px}
+  header.hero h1{margin:0 0 6px;font-size:30px;letter-spacing:-.3px}
+  header.hero p{margin:0;font-size:15.5px;color:#dbe8f8;max-width:780px}
+  header.hero .pill{display:inline-block;margin-top:16px;background:rgba(255,255,255,.16);
+    padding:4px 12px;border-radius:20px;font-size:12.5px}
+  .body{padding:14px 52px 80px;max-width:940px}
+  section{padding:22px 0;border-bottom:1px solid var(--line)} section:last-child{border-bottom:none}
+  h2{font-size:21px;margin:14px 0 10px;color:var(--navy);scroll-margin-top:14px}
+  h3{font-size:16px;margin:20px 0 6px;color:var(--blue-d)}
+  p{margin:9px 0} ul,ol{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  code,kbd,pre{font-family:"Cascadia Code",Consolas,monospace}
+  code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:13px;color:#1d3b5e}
+  pre{background:#0f1d2e;color:#dbe6f2;padding:16px 18px;border-radius:10px;overflow:auto;
+    font-size:13px;line-height:1.55;margin:12px 0}
+  pre .c{color:#7fa6c9} pre .k{color:#79c0ff} pre .s{color:#7ee0b8} pre .t{color:#ffd591}
+  .callout{border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;border:1px solid}
+  .tip{background:var(--green-bg);border-color:#bfe3d3;color:#155}
+  .note{background:var(--blue-bg);border-color:#c5dcf6;color:#13456f}
+  .warn{background:var(--amber-bg);border-color:#ecd9a6;color:#6f5210}
+  .callout b{display:block;margin-bottom:2px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f0f4f9;color:var(--navy);font-weight:600}
+  tr:hover td{background:#fafcff}
+  .lead{font-size:16px;color:#3a4756}
+  footer{padding:24px 52px;color:var(--muted);font-size:13px}
+  .top{font-size:12px;color:var(--muted);float:right}
+  .filetree{font-family:"Cascadia Code",Consolas,monospace;font-size:13px;background:#fff;
+    border:1px solid var(--line);border-radius:10px;padding:14px 18px;line-height:1.7;color:#37485a}
+  .filetree b{color:var(--blue-d)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><h1>Template Designer</h1><span>Programmer's Reference · v2.3</span></div>
+    <a href="#over">Overview</a>
+    <div class="grp">Internals</div>
+    <a href="#arch" class="h2">Architecture</a>
+    <a href="#model" class="h2">The model</a>
+    <a href="#parser" class="h2">Parser</a>
+    <a href="#writer" class="h2">Writer</a>
+    <a href="#reloc" class="h2">Relocation model</a>
+    <a href="#rename" class="h2">Symbol rename</a>
+    <a href="#undo" class="h2">Undo</a>
+    <div class="grp">Clarion language</div>
+    <a href="#tpl" class="h2">Directives</a>
+    <a href="#at" class="h2">AT &amp; PROP</a>
+    <a href="#color" class="h2">Colours &amp; keycodes</a>
+    <a href="#prompt" class="h2">Prompt types</a>
+    <div class="grp">Project</div>
+    <a href="#layout" class="h2">File layout</a>
+    <a href="#build" class="h2">Build &amp; package</a>
+    <a href="#extend" class="h2">Extending</a>
+  </nav>
+
+  <main>
+  <header class="hero">
+    <h1>Programmer's Reference</h1>
+    <p>How the Clarion Template Designer is built — the parse/model/write pipeline, the relocation engine
+       that keeps edits surgical, and a working reference to the slice of the Clarion template language the
+       designer understands.</p>
+    <span class="pill">Programmer's Reference · version 2.3</span>
+  </header>
+
+  <div class="body">
+
+  <section id="over">
+    <h2>Overview <a class="top" href="#over">↑ top</a></h2>
+    <p class="lead">The designer is a <strong>.NET 9 / WPF</strong> application. Its core is a small,
+       lossless pipeline: <b>parse</b> a template into a model, let the UI <b>mutate</b> that model, then
+       <b>write</b> only what changed back into the original text. The guiding rule is
+       <em>preserve every byte you didn't touch</em>.</p>
+    <pre><span class="c">// the whole pipeline, conceptually</span>
+TplParser.Parse(path)   <span class="c">→ TplDocument (Files, Components, Tabs/Elements)</span>
+        <span class="c">↓  user edits flip Dirty / Inserted / Deleted / Moved flags</span>
+TplWriter.Save(doc)     <span class="c">→ rewrites only changed lines, per file</span></pre>
+  </section>
+
+  <section id="arch">
+    <h2>Architecture <a class="top" href="#over">↑ top</a></h2>
+    <table>
+      <tr><th>File</th><th>Responsibility</th></tr>
+      <tr><td><code>Tpl.cs</code></td><td>The model, parser and writer — the structural core.</td></tr>
+      <tr><td><code>MainWindow.xaml(.cs)</code></td><td>Canvas, properties, menus, selection, drag/resize, undo, source panel, prefs.</td></tr>
+      <tr><td><code>MainWindow.Preview.cs</code></td><td>The flow preview: real flowed controls, drag-to-reorder/reparent, drag-insert.</td></tr>
+      <tr><td><code>Minimap.cs</code></td><td>The source minimap (<code>FrameworkElement</code> drawing line bars + viewport).</td></tr>
+      <tr><td><code>LineHighlighter.cs</code></td><td>AvalonEdit <code>IBackgroundRenderer</code> banding selected lines.</td></tr>
+    </table>
+  </section>
+
+  <section id="model">
+    <h2>The model <a class="top" href="#over">↑ top</a></h2>
+    <p>Four record-like classes in <code>Tpl.cs</code> hold the parsed template:</p>
+    <table>
+      <tr><th>Type</th><th>Key members</th></tr>
+      <tr><td><code>TplElement</code></td><td>One control or container. <code>Kind</code>, <code>Title</code>,
+        <code>Symbol</code>, <code>PromptType</code>; position <code>X,Y,W,H</code> + <code>HasX/Y/W/H</code>;
+        style <code>FontName,FontSize,FontColor,FontStyle,Bold</code>; line span <code>LineIndex,EndLineIndex</code>;
+        edit flags <code>Dirty, Inserted, Deleted, Moved, FontDirty</code>; relocation <code>MoveAnchorLine</code>;
+        tree <code>Parent, Children</code>. <code>Clone()</code> deep-copies for undo.</td></tr>
+      <tr><td><code>TplFile</code></td><td><code>Path, Newline, Lines[], Included, Dirty</code>. <code>Dirty</code>
+        flags raw-text edits (e.g. a symbol rename) so the writer saves the file even with no element changes.</td></tr>
+      <tr><td><code>TplComponent</code></td><td>A <code>#EXTENSION/#CONTROL/#PROCEDURE/#CODE/#GROUP/…</code>:
+        <code>Kind, Name, FileIndex, StartLine, EndLine, Tabs</code>; <code>HasSheet</code>.</td></tr>
+      <tr><td><code>TplDocument</code></td><td><code>Path, Files, Components, Newline</code> — the whole loaded set.</td></tr>
+    </table>
+    <p><code>IsContainer</code> = Tab / Boxed / Button / Enable. <code>IsPositionable</code> =
+       Prompt / Display / Image / Boxed.</p>
+  </section>
+
+  <section id="parser">
+    <h2>Parser <a class="top" href="#over">↑ top</a></h2>
+    <ul>
+      <li><code>TplParser.Parse(path)</code> — loads the main file and follows <code>#INCLUDE('…')</code>
+          recursively (cycle-guarded; <code>#!</code> comment lines ignored).</li>
+      <li><code>TplParser.ParseText(text, path)</code> — parses an in-memory single file (no includes); used
+          to map the live/pending editor text back onto the model.</li>
+      <li><code>ParseComponents</code> walks the directive structure; <code>ParseSheet</code> builds the
+          <code>#SHEET/#TAB/#BOXED/#PROMPT/#DISPLAY/#IMAGE</code> tree with line indices.</li>
+    </ul>
+  </section>
+
+  <section id="writer">
+    <h2>Writer <a class="top" href="#over">↑ top</a></h2>
+    <ul>
+      <li><code>TplWriter.Save(doc)</code> — writes each file whose <code>TplFile.Dirty</code> is set, or that
+          contains an element flagged <code>Dirty/Inserted/Deleted/Moved/FontDirty</code>.</li>
+      <li><code>PreviewFile(doc, fileIndex)</code> — the text a file <em>would</em> have, without writing
+          (drives Live preview).</li>
+      <li><code>BuildLines(file, docTabs)</code> — the heart of the writer.</li>
+    </ul>
+    <p><code>BuildLines</code> clones <code>file.Lines</code> as its base, so any direct edit to that array
+       (such as a rename sweep) flows straight through. It then:</p>
+    <ol>
+      <li>builds a <b>drop set</b> — deleted ranges, and the full range of any moved container;</li>
+      <li>does an in-place <b>AT/PROP rewrite</b> for edited-but-not-relocated elements;</li>
+      <li>runs the <b>emit loop</b>, re-inserting added/moved units at their anchor.</li>
+    </ol>
+  </section>
+
+  <section id="reloc">
+    <h2>Relocation model <a class="top" href="#over">↑ top</a></h2>
+    <p>Re-ordering, reparenting and insert-at-position all share one mechanism:</p>
+    <ul>
+      <li>An element being relocated is flagged <code>Moved</code> with a <code>MoveAnchorLine</code> —
+          the line of the next real sibling it should be emitted before (or its owner's end line).</li>
+      <li>The drop set removes the element's original lines; the emit loop re-emits it at the anchor.</li>
+      <li>A moved container is emitted as its <b>verbatim block</b> (only the open line gets AT/PROP rewrites),
+          so its inner formatting survives intact.</li>
+      <li>Owners that can hold children — Tab, Boxed, <b>Enable</b> and <b>Button</b> — are all honoured by
+          the emit loop, so a control whose parent is any of them is never dropped without being re-emitted.</li>
+    </ul>
+    <div class="callout warn"><b>Invariant</b> Every relocation must be net-zero on line count and keep the
+      block balanced (e.g. <code>#BOXED…#ENDBOXED</code>). New writer paths are validated by re-parsing the
+      output and checking structure before shipping.</div>
+  </section>
+
+  <section id="rename">
+    <h2>Symbol rename <a class="top" href="#over">↑ top</a></h2>
+    <p>Renaming a <code>%Symbol</code> keeps the prompt and all its references joined by sweeping raw text:</p>
+    <pre><span class="k">var</span> rx = <span class="k">new</span> Regex(Regex.Escape(oldSym) + <span class="s">@"(?![A-Za-z0-9_])"</span>); <span class="c">// word boundary</span>
+<span class="k">foreach</span> (<span class="k">var</span> f <span class="k">in</span> doc.Files) {
+    <span class="c">// replace every hit in f.Lines, set f.Dirty if touched</span>
+}
+<span class="c">// then update Symbol on every matching model element to stay joined</span></pre>
+    <ul>
+      <li>Matching is word-boundary so <code>%Cust</code> never touches <code>%CustName</code>.</li>
+      <li>Renaming into an already-existing symbol is blocked (it would silently merge two fields).</li>
+      <li>Touched files are flagged <code>TplFile.Dirty</code> so <code>Save</code> writes them.</li>
+      <li>The full raw text is captured in the undo snapshot, so a rename is undoable.</li>
+    </ul>
+    <p>The Properties pad's <b>Uses</b> list comes from the same scan (<code>FindUsages</code>) over every
+       file; clicking an entry switches part/file as needed and scrolls the editor to the line.</p>
+  </section>
+
+  <section id="undo">
+    <h2>Undo <a class="top" href="#over">↑ top</a></h2>
+    <p>A <code>Snapshot</code> deep-clones the component tabs, the guides, and — since v2.3 — each file's
+       raw <code>Lines</code> + <code>Dirty</code> flag. Drag/resize gestures capture once at the start and
+       commit only if something actually changed. Structural saves re-parse from disk to re-sync line
+       indices and clear the undo stack.</p>
+  </section>
+
+  <section id="tpl">
+    <h2>Clarion directives <a class="top" href="#over">↑ top</a></h2>
+    <p>The designer reads the prompt-UI slice of the template language:</p>
+    <table>
+      <tr><th>Directive</th><th>Meaning</th></tr>
+      <tr><td><code>#TEMPLATE</code> / <code>#EXTENSION</code> / <code>#CONTROL</code> / <code>#PROCEDURE</code> / <code>#CODE</code> / <code>#GROUP</code> / <code>#UTILITY</code></td><td>Component kinds.</td></tr>
+      <tr><td><code>#SHEET</code> / <code>#TAB</code></td><td>The tabbed prompt container and its pages.</td></tr>
+      <tr><td><code>#BOXED</code> … <code>#ENDBOXED</code></td><td>A group box holding child controls.</td></tr>
+      <tr><td><code>#PROMPT</code> / <code>#DISPLAY</code></td><td>An input field (bound to a <code>%Symbol</code>) / a static label.</td></tr>
+      <tr><td><code>#IMAGE</code></td><td>A picture control (renders the PNG on the canvas).</td></tr>
+      <tr><td><code>#BUTTON</code> / <code>#ENABLE</code></td><td>A button / a conditional-enable container.</td></tr>
+      <tr><td><code>#INCLUDE('x.tpw')</code></td><td>Pulls another template file into the set.</td></tr>
+    </table>
+  </section>
+
+  <section id="at">
+    <h2>AT() &amp; PROP() <a class="top" href="#over">↑ top</a></h2>
+    <p><code>AT(x, y, w, h)</code> positions a control in <b>dialog units</b>. Any omitted slot is left to
+       Clarion's auto-layout — the designer tracks <code>HasX/HasY/HasW/HasH</code> so it never invents a
+       coordinate the author didn't write.</p>
+    <p>Style is carried as <code>PROP</code> attributes, rewritten on style edits:</p>
+    <table>
+      <tr><th>PROP</th><th>Carries</th></tr>
+      <tr><td><code>PROP:Font</code></td><td>Font face name.</td></tr>
+      <tr><td><code>PROP:FontSize</code></td><td>Point size.</td></tr>
+      <tr><td><code>PROP:FontStyle</code></td><td>Weight/style (bold etc.).</td></tr>
+      <tr><td><code>PROP:FontColor</code></td><td>Text colour as a COLORREF.</td></tr>
+    </table>
+  </section>
+
+  <section id="color">
+    <h2>Colours &amp; keycodes <a class="top" href="#over">↑ top</a></h2>
+    <h3>COLORREF</h3>
+    <p>Clarion colours are Win32 <code>COLORREF</code> values — <code>R | (G&lt;&lt;8) | (B&lt;&lt;16)</code> —
+       written in hex as <code>0{value:X}H</code>. The designer converts to/from WPF colours when you pick
+       one, and removes the PROP entirely when you clear the colour.</p>
+    <h3>Keycodes</h3>
+    <p>A keycode is the Windows virtual-key low byte plus modifier bits:
+       <code>Shift 0x100</code>, <code>Ctrl 0x200</code>, <code>Alt 0x400</code>. The designer decodes these
+       to a friendly name (e.g. <em>Ctrl+Shift+P</em>) in the Properties pad.</p>
+  </section>
+
+  <section id="prompt">
+    <h2>Prompt types <a class="top" href="#over">↑ top</a></h2>
+    <p><code>ClassifyPrompt</code> recognises the prompt's picture/type token and renders the right editor in
+       the flow preview: text pictures (<code>@s</code>, <code>@n</code>), <code>CHECK</code>,
+       <code>OPTION/RADIO</code>, <code>SPIN</code>, <code>DROP/FROM</code> lists, <code>PROCEDURE</code>,
+       <code>EXPR</code>, <code>KEYCODE</code>, and the dialog “…” pickers.</p>
+    <div class="callout note"><b>Auto-built prompts</b> Some prompt types make Clarion build a dropdown or
+       “…” button next to the field and lay it out for you. The designer flags these and skips them in
+       “Add AT to all”, because pinning an explicit position can hide that auto part.</div>
+  </section>
+
+  <section id="layout">
+    <h2>File layout <a class="top" href="#over">↑ top</a></h2>
+    <div class="filetree">
+templatemaker/<br>
+├─ <b>designer/ClarionTplDesigner/</b> &nbsp;<span style="color:#8a95a3">— the WPF app (Tpl.cs, MainWindow*, Minimap, LineHighlighter)</span><br>
+├─ <b>docs/</b> &nbsp;<span style="color:#8a95a3">— this reference + the user manual (embedded into the app)</span><br>
+├─ <b>templates/</b> &nbsp;<span style="color:#8a95a3">— the shipped .tpl/.tpw/.png corpus</span><br>
+├─ <b>skills/</b> &nbsp;<span style="color:#8a95a3">— the clarion-template skill</span><br>
+├─ <b>agents/</b> &nbsp;<span style="color:#8a95a3">— the clarion-template-pro agent</span><br>
+├─ <b>installer/</b> &nbsp;<span style="color:#8a95a3">— Inno Setup .iss + build-portable.ps1 + build-installer.ps1</span><br>
+└─ <b>run/</b> &nbsp;<span style="color:#8a95a3">— the portable single-file exe (git-ignored)</span>
+    </div>
+  </section>
+
+  <section id="build">
+    <h2>Build &amp; package <a class="top" href="#over">↑ top</a></h2>
+    <pre><span class="c"># build the app</span>
+dotnet build designer/ClarionTplDesigner/ClarionTplDesigner.csproj -c Release
+
+<span class="c"># portable single-file exe  → run/ClarionTemplateDesigner.exe</span>
+pwsh installer/build-portable.ps1
+
+<span class="c"># full installer  → installer/Output/ClarionTemplateToolsSetup.exe</span>
+pwsh installer/build-installer.ps1</pre>
+    <p>The version lives in two places that must stay in sync: <code>&lt;Version&gt;</code> in the
+       <code>.csproj</code> and <code>#define AppVersion</code> in the <code>.iss</code>. After a designer
+       change, rebuild the portable exe into <code>run/</code>.</p>
+  </section>
+
+  <section id="extend">
+    <h2>Extending the designer <a class="top" href="#over">↑ top</a></h2>
+    <p>Common entry points when adding a feature:</p>
+    <table>
+      <tr><th>To add…</th><th>Start at</th></tr>
+      <tr><td>a new control kind</td><td><code>MakeControl</code> / <code>AddControl</code> +
+        <code>BuildPromptRow</code> in the preview</td></tr>
+      <tr><td>a new property editor</td><td><code>PopulateProps</code> + a handler that sets a
+        <code>Dirty</code>/<code>FontDirty</code> flag</td></tr>
+      <tr><td>a new style attribute</td><td><code>ApplyProps</code> / <code>SetProp</code> in
+        <code>Tpl.cs</code></td></tr>
+      <tr><td>a new relocation/insert path</td><td>the emit loop in <code>BuildLines</code> — then
+        validate by re-parsing the output</td></tr>
+      <tr><td>a menu command</td><td>a <code>MenuItem</code> in <code>MainWindow.xaml</code> + a handler</td></tr>
+    </table>
+    <div class="callout tip"><b>Golden rule</b> Any change to the writer must be proven net-zero on line
+       count and structurally balanced by re-parsing its own output before it ships.</div>
+  </section>
+
+  </div>
+  <footer>Clarion Template Designer — Programmer's Reference · version 2.3 &nbsp;·&nbsp; See also the User Manual in the Help menu.</footer>
+  </main>
+</div>
+</body>
+</html>

@@ -171,8 +171,9 @@ removed by dragging them back onto a ruler; deleting a control whose `%symbol` i
 elsewhere pops a warning so you don't break code generation. Selecting a control surfaces its **`%symbol`**
 in the Properties pad with a navigable **Uses** list (every place across all files the symbol appears — click
 to jump to that line) and a **Rename** button that renames it *everywhere at once* (prompt **+** every
-reference) so the field stays joined; newly added controls can be named the same way. See
-`designer/ClarionTplDesigner/README.md`.
+reference) so the field stays joined; newly added controls can be named the same way. The **Help** menu
+opens a built-in **User Manual** (press `F1`) and **Programmer's Reference** — beautifully formatted HTML
+guides bundled into the app (sources in `docs/`). See `designer/ClarionTplDesigner/README.md`.
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
