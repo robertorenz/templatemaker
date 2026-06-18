@@ -31,11 +31,13 @@ public partial class MainWindow : Window
     Point _dragStart;
     double _elStartX, _elStartY;
     bool _suppressProp;
+    bool _ready;          // true once XAML is fully constructed
 
     public MainWindow()
     {
         InitializeComponent();
         KeyDown += OnKeyDown;
+        _ready = true;
     }
 
     // ---------- file ----------
@@ -74,6 +76,7 @@ public partial class MainWindow : Window
 
     void Render()
     {
+        if (!_ready) return;
         canvas.Children.Clear();
         _chips.Clear();
         if (_tab == null) return;
@@ -338,6 +341,7 @@ public partial class MainWindow : Window
     // ---------- misc ----------
     void Scroller_Scroll(object s, ScrollChangedEventArgs e)
     {
+        if (!_ready) return;
         hRuler.Offset = e.HorizontalOffset; vRuler.Offset = e.VerticalOffset;
         UpdateRulers();
     }
