@@ -78,6 +78,7 @@
             <MenuItem x:Name="miPreview" Header="_Flow preview" IsCheckable="True" Click="Preview_Toggle"/>
             <MenuItem x:Name="miPreviewPending" Header="Preview _unsaved work (off = saved file)" IsCheckable="True" IsChecked="True" Click="PreviewPending_Toggle"/>
             <MenuItem x:Name="miViewSource" Header="_Source panel" IsCheckable="True" Click="Source_Click"/>
+            <MenuItem x:Name="miViewOutline" Header="_Outline panel" IsCheckable="True" Click="Outline_Toggle"/>
             <Separator/>
             <MenuItem Header="_Reset panel layout" Click="ResetLayout_Click"/>
         </MenuItem>
@@ -153,6 +154,24 @@
         <avalonDock:DockingManager x:Name="dockMgr">
           <avalonDock:LayoutRoot>
             <avalonDock:LayoutPanel Orientation="Horizontal">
+              <avalonDock:LayoutAnchorablePane DockWidth="230">
+                <avalonDock:LayoutAnchorable x:Name="anchOutline" Title="Outline" ContentId="outline" CanClose="True">
+                  <DockPanel Background="#FBFCFD">
+                    <TextBox x:Name="txtFind" DockPanel.Dock="Top" Margin="6,6,6,4"
+                             TextChanged="OutlineFind_Changed" KeyDown="OutlineFind_KeyDown"
+                             ToolTip="Filter the tree by control caption or %symbol; Enter jumps to the next match"/>
+                    <TreeView x:Name="treeOutline" BorderThickness="0" Background="Transparent"
+                              SelectedItemChanged="Outline_Select"
+                              VirtualizingStackPanel.IsVirtualizing="False">
+                      <TreeView.Resources>
+                        <Style TargetType="TreeViewItem">
+                          <Setter Property="Padding" Value="0,1"/>
+                        </Style>
+                      </TreeView.Resources>
+                    </TreeView>
+                  </DockPanel>
+                </avalonDock:LayoutAnchorable>
+              </avalonDock:LayoutAnchorablePane>
               <avalonDock:LayoutPanel Orientation="Vertical">
                 <avalonDock:LayoutDocumentPane>
                   <avalonDock:LayoutDocument Title="Designer" ContentId="designer" CanClose="False" CanFloat="True">

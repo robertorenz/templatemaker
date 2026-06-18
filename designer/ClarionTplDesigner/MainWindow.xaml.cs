@@ -66,7 +66,8 @@ public partial class MainWindow : Window
     IHighlightingDefinition? _clarionHl;
 
     // panel layout persistence
-    FrameworkElement? _designerContent, _sourceContent, _propsContent;
+    FrameworkElement? _designerContent, _sourceContent, _propsContent, _outlineContent;
+    bool _buildingOutline;
     string? _defaultLayoutXml;
     LayoutAnchorable? _wiredSource;
 
@@ -103,6 +104,8 @@ public partial class MainWindow : Window
         _designerContent = designerHost;
         _sourceContent = (FrameworkElement)anchSource.Content;
         _propsContent = (FrameworkElement)anchProps.Content;
+        _outlineContent = (FrameworkElement)anchOutline.Content;
+        miViewOutline.IsChecked = anchOutline.IsVisible;
         try { _defaultLayoutXml = SerializeLayout(); } catch { }
         LoadPrefs();
         Loaded += (_, _) => TryLoadSavedLayout();
@@ -605,6 +608,7 @@ public partial class MainWindow : Window
                     "designer" => _designerContent,
                     "source" => _sourceContent,
                     "props" => _propsContent,
+                    "outline" => _outlineContent,
                     _ => null
                 };
                 if (e.Content == null) e.Cancel = true;
@@ -614,14 +618,27 @@ public partial class MainWindow : Window
 
             var prp = FindAnchorable("props"); if (prp != null) anchProps = prp;
             var src = FindAnchorable("source"); if (src != null) WireSource(src);
+            EnsureOutline();                          // a layout saved before v2.5 won't contain it
             _srcOpen = anchSource?.IsVisible ?? false;
             miViewSource.IsChecked = _srcOpen;
+            miViewOutline.IsChecked = anchOutline?.IsVisible ?? false;
         }
         catch { /* a bad/old layout file must never break startup */ }
     }
 
     LayoutAnchorable? FindAnchorable(string id) =>
         dockMgr.Layout.Descendents().OfType<LayoutAnchorable>().FirstOrDefault(a => a.ContentId == id);
+
+    // If a deserialized (older) layout lacks the Outline panel, re-attach it so it isn't lost.
+    void EnsureOutline()
+    {
+        var existing = FindAnchorable("outline");
+        if (existing != null) { anchOutline = existing; return; }
+        var pane = dockMgr.Layout.Descendents().OfType<LayoutAnchorablePane>().FirstOrDefault();
+        if (pane == null || _outlineContent == null) return;
+        anchOutline = new LayoutAnchorable { ContentId = "outline", Title = "Outline", Content = _outlineContent };
+        pane.Children.Add(anchOutline);
+    }
 
     void TryLoadSavedLayout()
     {
@@ -862,6 +879,7 @@ public partial class MainWindow : Window
     void Render()
     {
         if (!_ready) return;
+        PopulateOutline();            // keep the structure tree in step with the model
         RefreshLiveSource();          // keep the live source in step with the model
         canvas.Children.Clear();
         _chips.Clear();
@@ -1301,7 +1319,12 @@ public partial class MainWindow : Window
         Canvas.SetLeft(border, el.LX * Scale);
         Canvas.SetTop(border, el.LY * Scale);
         Panel.SetZIndex(border, el.HasZ ? el.Z : (box ? 0 : 5));
-        border.ContextMenu = BuildChipMenu(el);
+        // Build the menu when it opens so it reflects the live selection (multi-select doesn't re-render).
+        border.ContextMenuOpening += (_, _) =>
+        {
+            if (!_selection.Contains(el)) Select(el);   // right-clicking outside the selection selects this one
+            border.ContextMenu = BuildChipMenu(el);
+        };
         border.MouseLeftButtonDown += Chip_Down;
         canvas.Children.Add(border);
         _chips[el] = border;
@@ -1452,6 +1475,11 @@ public partial class MainWindow : Window
         cm.Items.Add(ZItem("Bring Forward", () => ZForward(el)));
         cm.Items.Add(ZItem("Send Backward", () => ZBackward(el)));
         cm.Items.Add(ZItem("Send to Back", () => ZBack(el)));
+        if (_selection.Count >= 2)        // alignment acts on the whole multi-selection
+        {
+            cm.Items.Add(new Separator());
+            cm.Items.Add(BuildAlignMenu());
+        }
         if (el.Kind is TplKind.Prompt or TplKind.Display or TplKind.Boxed)
         {
             cm.Items.Add(new Separator());
@@ -1460,6 +1488,30 @@ public partial class MainWindow : Window
         cm.Items.Add(new Separator());
         cm.Items.Add(ZItem("Delete", () => DeleteControl(el)));
         return cm;
+    }
+
+    // The Align / Same-size / Distribute submenu used by the right-click menu.
+    MenuItem BuildAlignMenu()
+    {
+        var root = new MenuItem { Header = $"Align / size  ({_selection.Count} selected)" };
+        root.Items.Add(ZItem("Align Left",           () => Align("left")));
+        root.Items.Add(ZItem("Align Centre (horiz.)", () => Align("hcenter")));
+        root.Items.Add(ZItem("Align Right",          () => Align("right")));
+        root.Items.Add(new Separator());
+        root.Items.Add(ZItem("Align Top",            () => Align("top")));
+        root.Items.Add(ZItem("Align Middle (vert.)", () => Align("vcenter")));
+        root.Items.Add(ZItem("Align Bottom",         () => Align("bottom")));
+        root.Items.Add(new Separator());
+        root.Items.Add(ZItem("Same Width",  () => SameSize("w")));
+        root.Items.Add(ZItem("Same Height", () => SameSize("h")));
+        root.Items.Add(ZItem("Same Both",   () => SameSize("both")));
+        if (_selection.Count >= 3)
+        {
+            root.Items.Add(new Separator());
+            root.Items.Add(ZItem("Distribute Horizontally", () => Distribute("h")));
+            root.Items.Add(ZItem("Distribute Vertically",   () => Distribute("v")));
+        }
+        return root;
     }
 
     static MenuItem ZItem(string header, Action act)
@@ -1496,7 +1548,11 @@ public partial class MainWindow : Window
 
     void Align_Click(object s, RoutedEventArgs e)
     {
-        if (s is not MenuItem mi || mi.Tag is not string mode) return;
+        if (s is MenuItem { Tag: string mode }) Align(mode);
+    }
+
+    void Align(string mode)
+    {
         var items = AlignTargets();
         if (items.Count < 2) { status.Text = "Select two or more controls to align (Ctrl/Shift-click)."; return; }
         PushUndo();
@@ -1518,7 +1574,11 @@ public partial class MainWindow : Window
 
     void SameSize_Click(object s, RoutedEventArgs e)
     {
-        if (s is not MenuItem mi || mi.Tag is not string which) return;
+        if (s is MenuItem { Tag: string which }) SameSize(which);
+    }
+
+    void SameSize(string which)
+    {
         var items = AlignTargets();
         if (items.Count < 2) { status.Text = "Select two or more controls to size together."; return; }
         PushUndo();
@@ -1530,7 +1590,11 @@ public partial class MainWindow : Window
 
     void Distribute_Click(object s, RoutedEventArgs e)
     {
-        if (s is not MenuItem mi || mi.Tag is not string dir) return;
+        if (s is MenuItem { Tag: string dir }) Distribute(dir);
+    }
+
+    void Distribute(string dir)
+    {
         var items = AlignTargets();
         if (items.Count < 3) { status.Text = "Select three or more controls to distribute."; return; }
         PushUndo();
@@ -1556,6 +1620,120 @@ public partial class MainWindow : Window
         RefreshSelectionVisual();
         RefreshLiveSource();
         status.Text = msg + "  Save to write the new AT() values.";
+    }
+
+    // ---------- outline tree + find ----------
+    void Outline_Toggle(object s, RoutedEventArgs e)
+    {
+        if (anchOutline == null) return;
+        if (miViewOutline.IsChecked) { anchOutline.Show(); anchOutline.IsActive = true; }
+        else anchOutline.Hide();
+    }
+
+    void PopulateOutline()
+    {
+        if (treeOutline == null) return;
+        _buildingOutline = true;
+        treeOutline.Items.Clear();
+        string f = (txtFind?.Text ?? "").Trim();
+        if (_component != null)
+            foreach (var tab in _component.Tabs) AddOutlineNode(treeOutline.Items, tab, f);
+        _buildingOutline = false;
+        HighlightOutline(_sel);
+    }
+
+    bool AddOutlineNode(ItemCollection into, TplElement el, string filter)
+    {
+        if (el.Deleted) return false;
+        bool self = OutlineMatches(el, filter);
+        var item = new TreeViewItem { Header = OutlineLabel(el), Tag = el };
+        bool anyChild = false;
+        foreach (var c in el.Children) anyChild |= AddOutlineNode(item.Items, c, filter);
+        if (filter.Length > 0 && !self && !anyChild) return false;
+        item.IsExpanded = filter.Length > 0 || el.IsContainer;
+        into.Add(item);
+        return true;
+    }
+
+    static bool OutlineMatches(TplElement el, string f) => f.Length == 0
+        || el.Title.Contains(f, StringComparison.OrdinalIgnoreCase)
+        || (el.Symbol?.Contains(f, StringComparison.OrdinalIgnoreCase) ?? false)
+        || el.Kind.ToString().Contains(f, StringComparison.OrdinalIgnoreCase);
+
+    static string OutlineLabel(TplElement el)
+    {
+        string icon = el.Kind switch
+        {
+            TplKind.Tab => "▤", TplKind.Boxed => "▭", TplKind.Button => "▢",
+            TplKind.Enable => "⌥", TplKind.Image => "🖼", TplKind.Prompt => "✎",
+            TplKind.Display => "T", _ => "•"
+        };
+        string body = el.Title.Length > 0 ? $"'{el.Title}'" : el.Kind.ToString();
+        string sym = string.IsNullOrEmpty(el.Symbol) ? "" : $"   {el.Symbol}";
+        return $"{icon}  {body}{sym}";
+    }
+
+    void Outline_Select(object s, RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (_buildingOutline) return;
+        if (e.NewValue is TreeViewItem { Tag: TplElement el }) SelectFromOutline(el);
+    }
+
+    void SelectFromOutline(TplElement el)
+    {
+        if (_component == null) return;
+        var tab = TabOf(el);
+        int ti = tab != null ? _component.Tabs.IndexOf(tab) : -1;
+        if (ti >= 0 && ti != cmbTabs.SelectedIndex) cmbTabs.SelectedIndex = ti;   // Tab_Changed -> Render
+        Select(el);
+    }
+
+    static TplElement? TabOf(TplElement el)
+    {
+        var c = el; while (c != null && c.Kind != TplKind.Tab) c = c.Parent; return c;
+    }
+
+    // Reflect the current selection in the tree without re-triggering selection logic.
+    void HighlightOutline(TplElement? el)
+    {
+        if (el == null || treeOutline == null) return;
+        _buildingOutline = true;
+        var tvi = FindTreeItem(treeOutline.Items, el);
+        if (tvi != null) { tvi.IsSelected = true; tvi.BringIntoView(); }
+        _buildingOutline = false;
+    }
+
+    static TreeViewItem? FindTreeItem(ItemCollection items, TplElement el)
+    {
+        foreach (var it in items.OfType<TreeViewItem>())
+        {
+            if (ReferenceEquals(it.Tag, el)) return it;
+            var sub = FindTreeItem(it.Items, el);
+            if (sub != null) { it.IsExpanded = true; return sub; }
+        }
+        return null;
+    }
+
+    void OutlineFind_Changed(object s, TextChangedEventArgs e) => PopulateOutline();
+
+    void OutlineFind_KeyDown(object s, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || _component == null) return;
+        string f = txtFind.Text.Trim();
+        if (f.Length == 0) return;
+        TplElement? first = null, firstLeaf = null;
+        foreach (var tab in _component.Tabs)
+        {
+            foreach (var el in Flat(tab))
+                if (!el.Deleted && OutlineMatches(el, f))
+                {
+                    first ??= el;
+                    if (!el.IsContainer) { firstLeaf = el; break; }
+                }
+            if (firstLeaf != null) break;
+        }
+        var pick = firstLeaf ?? first;
+        if (pick != null) { SelectFromOutline(pick); e.Handled = true; }
     }
 
     // A small bordered button simulating Clarion's auto-built dropdown (▾) / lookup (…) control.
@@ -1623,6 +1801,7 @@ public partial class MainWindow : Window
         RefreshSelectionVisual();
         PopulateProps(_sel);
         ScrollSourceTo(_sel);
+        HighlightOutline(_sel);
     }
 
     void RefreshSelectionVisual()
