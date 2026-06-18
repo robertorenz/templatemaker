@@ -94,15 +94,24 @@ public partial class MainWindow
         {
             var sp = new StackPanel { Margin = new Thickness(10) };
             BuildFlow(sp, tab.Children);
-            var item = new TabItem { Header = tab.Title, Content = sp, Tag = tab };
+            object header = tab.Title;
             if (_previewPending)        // interactive preview only: drag a tab header to reorder it
             {
-                item.ToolTip = "Drag this tab onto another to reorder it";
-                item.MouseLeftButtonDown += Tab_HeaderDown;
-                item.MouseMove += Tab_HeaderMove;
-                item.MouseLeftButtonUp += Tab_HeaderUp;
+                // Transparent border = the whole header strip is hit-testable, and the event reaches this
+                // child BEFORE TabItem's class handler swallows it to switch tabs (so the drag is detectable).
+                var hdr = new Border
+                {
+                    Background = Brushes.Transparent,
+                    Child = new TextBlock { Text = tab.Title },
+                    Tag = tab,
+                    ToolTip = "Drag this tab onto another to reorder it"
+                };
+                hdr.MouseLeftButtonDown += Tab_HeaderDown;
+                hdr.MouseMove += Tab_HeaderMove;
+                hdr.MouseLeftButtonUp += Tab_HeaderUp;
+                header = hdr;
             }
-            tabs.Items.Add(item);
+            tabs.Items.Add(new TabItem { Header = header, Content = sp, Tag = tab });
         }
         _previewLines = null;
         if (tabs.Items.Count == 0) { canvas.Width = canvas.Height = 10; return; }
@@ -239,8 +248,9 @@ public partial class MainWindow
     // (Clicks on a control inside the tab are marked handled by PreviewElement_Down, so they don't reach here.)
     void Tab_HeaderDown(object s, MouseButtonEventArgs e)
     {
-        if (s is not TabItem ti || ti.Tag is not TplElement tab) return;
+        if (s is not Border hdr || hdr.Tag is not TplElement tab) return;
         _dragTab = tab; _dragTabStart = e.GetPosition(canvas); _dragTabbing = false;
+        // don't handle: let it bubble to the TabItem so the tab still selects on click
     }
 
     void Tab_HeaderMove(object s, MouseEventArgs e)
@@ -250,13 +260,13 @@ public partial class MainWindow
         if (Math.Abs(p.X - _dragTabStart.X) > 6 || Math.Abs(p.Y - _dragTabStart.Y) > 6)
         {
             _dragTabbing = true;
-            if (s is TabItem ti) { ti.CaptureMouse(); ti.Opacity = 0.6; }
+            if (s is Border hdr) { hdr.CaptureMouse(); hdr.Opacity = 0.5; }
         }
     }
 
     void Tab_HeaderUp(object s, MouseButtonEventArgs e)
     {
-        if (s is TabItem ti) { ti.ReleaseMouseCapture(); ti.Opacity = 1; }
+        if (s is Border hdr) { hdr.ReleaseMouseCapture(); hdr.Opacity = 1; }
         var dragged = _dragTab; bool was = _dragTabbing;
         _dragTab = null; _dragTabbing = false;
         if (!was || dragged == null || _component == null) return;
