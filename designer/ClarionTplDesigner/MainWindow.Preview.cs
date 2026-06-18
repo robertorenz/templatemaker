@@ -15,6 +15,8 @@ namespace ClarionTplDesigner;
 public partial class MainWindow
 {
     bool _preview;
+    bool _previewPending;             // build the preview from the live/pending source, not the saved file
+    string[]? _previewLines;          // when set, prompt defaults/drops are read from these (the pending text)
 
     // Clarion prompt types that show a value field + a "…" lookup button.
     static readonly HashSet<string> DialogTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -34,17 +36,56 @@ public partial class MainWindow
             : "Designer — drag, position and edit controls.";
     }
 
+    void PreviewPending_Toggle(object s, RoutedEventArgs e)
+    {
+        _previewPending = (s as System.Windows.Controls.Primitives.ToggleButton)?.IsChecked
+                          ?? (s as MenuItem)?.IsChecked ?? !_previewPending;
+        miPreviewPending.IsChecked = _previewPending;
+        btnPreviewPending.IsChecked = _previewPending;
+        if (_previewPending && !_preview) { _preview = true; miPreview.IsChecked = true; btnPreview.IsChecked = true; }
+        Render();
+        status.Text = _previewPending
+            ? "Preview is reading the LIVE pending source (unsaved edits included)."
+            : "Preview is reading the current model.";
+    }
+
+    // The source text that includes every pending edit (un-applied hand edits, or the model's would-be save).
+    string PendingSourceText(int fi)
+    {
+        if (_doc == null) return "";
+        if (_srcOpen && _srcDirty && !_srcLive && fi == (_component?.FileIndex ?? 0))
+            return srcEditor.Text;                       // un-applied hand edits in the source panel
+        return TplWriter.PreviewFile(_doc, fi);          // model's would-be-saved text
+    }
+
     void RenderPreview()
     {
         if (_component == null) { canvas.Width = canvas.Height = 10; return; }
 
+        TplComponent comp = _component;
+        _previewLines = null;
+        if (_previewPending)
+        {
+            try
+            {
+                int fi = _component.FileIndex;
+                var temp = TplParser.ParseText(PendingSourceText(fi), _doc!.Files[fi].Path);
+                var match = temp.Components.FirstOrDefault(c => c.HasSheet
+                                && c.Kind == _component.Kind && c.Name == _component.Name)
+                            ?? temp.Components.FirstOrDefault(c => c.HasSheet);
+                if (match != null) { comp = match; _previewLines = temp.Files[0].Lines; }
+            }
+            catch { /* broken pending source -> fall back to the model */ }
+        }
+
         var tabs = new TabControl { Width = 480, BorderThickness = new Thickness(1), Background = Brushes.White };
-        foreach (var tab in _component.Tabs)
+        foreach (var tab in comp.Tabs)
         {
             var sp = new StackPanel { Margin = new Thickness(10) };
             BuildFlow(sp, tab.Children);
             tabs.Items.Add(new TabItem { Header = tab.Title, Content = sp });
         }
+        _previewLines = null;
         if (tabs.Items.Count == 0) { canvas.Width = canvas.Height = 10; return; }
 
         Canvas.SetLeft(tabs, 12); Canvas.SetTop(tabs, 12);
@@ -119,6 +160,9 @@ public partial class MainWindow
     // Wrap a preview control so clicking it selects the element (Ctrl = add to selection), with a context menu.
     FrameworkElement Selectable(FrameworkElement content, TplElement el)
     {
+        if (_previewPending)        // pending preview is read-only (its elements aren't the live model)
+            return new Border { Child = content, Padding = new Thickness(1), BorderThickness = new Thickness(1),
+                                BorderBrush = Brushes.Transparent };
         var b = new Border
         {
             Child = content,
@@ -217,9 +261,9 @@ public partial class MainWindow
 
     string PromptDefault(TplElement el)
     {
-        var f = CurrentFile();
-        if (f == null || el.LineIndex < 0 || el.LineIndex >= f.Lines.Length) return "";
-        var line = f.Lines[el.LineIndex];
+        var src = _previewLines ?? CurrentFile()?.Lines;
+        if (src == null || el.LineIndex < 0 || el.LineIndex >= src.Length) return "";
+        var line = src[el.LineIndex];
         var m = Regex.Match(line, @"\bdefault\s*\(\s*'([^']*)'", RegexOptions.IgnoreCase);
         if (m.Success) return m.Groups[1].Value;
         var m2 = Regex.Match(line, @"\bdefault\s*\(\s*([^)]*)\)", RegexOptions.IgnoreCase);
@@ -228,9 +272,9 @@ public partial class MainWindow
 
     IEnumerable<string> DropItems(TplElement el)
     {
-        var f = CurrentFile();
-        if (f == null || el.LineIndex < 0 || el.LineIndex >= f.Lines.Length) yield break;
-        var m = Regex.Match(f.Lines[el.LineIndex], @"\bdrop\s*\(\s*'([^']*)'", RegexOptions.IgnoreCase);
+        var src = _previewLines ?? CurrentFile()?.Lines;
+        if (src == null || el.LineIndex < 0 || el.LineIndex >= src.Length) yield break;
+        var m = Regex.Match(src[el.LineIndex], @"\bdrop\s*\(\s*'([^']*)'", RegexOptions.IgnoreCase);
         if (!m.Success) yield break;
         foreach (var part in m.Groups[1].Value.Split('|'))
         {

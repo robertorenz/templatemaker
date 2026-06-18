@@ -54,7 +54,8 @@
             <MenuItem x:Name="miMinimap"   Header="Show _minimap"   IsCheckable="True" Click="Minimap_Toggle"/>
         </MenuItem>
         <MenuItem Header="_View">
-            <MenuItem x:Name="miPreview" Header="_Flow preview (read-only)" IsCheckable="True" Click="Preview_Toggle"/>
+            <MenuItem x:Name="miPreview" Header="_Flow preview" IsCheckable="True" Click="Preview_Toggle"/>
+            <MenuItem x:Name="miPreviewPending" Header="Preview from _pending source" IsCheckable="True" Click="PreviewPending_Toggle"/>
             <MenuItem x:Name="miViewSource" Header="_Source panel" IsCheckable="True" Click="Source_Click"/>
             <Separator/>
             <MenuItem Header="_Reset panel layout" Click="ResetLayout_Click"/>
@@ -78,7 +79,9 @@
                      TextChanged="GridSize_Changed"/>
             <Separator/>
             <ToggleButton x:Name="btnPreview" Click="Preview_Toggle" Padding="8,2"
-                          ToolTip="Flow preview — how Clarion auto-lays out the prompts (read-only)">Preview</ToggleButton>
+                          ToolTip="Flow preview — how Clarion auto-lays out the prompts">Preview</ToggleButton>
+            <ToggleButton x:Name="btnPreviewPending" Click="PreviewPending_Toggle" Padding="8,2"
+                          ToolTip="Preview from the LIVE pending source (unsaved edits) instead of the saved/model state">Pending</ToggleButton>
         </ToolBar>
         <ToolBar Band="1" BandIndex="0">
             <TextBlock VerticalAlignment="Center" Margin="4,0" Foreground="#5B6878">Text:</TextBlock>

@@ -25,6 +25,9 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
   multi‑select), then change its font/size/bold/colour/text from the Style bar or right‑click → *Font &
   Colour…* / *Delete* — the preview updates live. (Free XY dragging stays in the positioner; in a flow layout
   "move" means reordering, a separate operation.)
+- **Preview source: model vs pending** — the **Pending** toolbar toggle (or *View ▸ Preview from pending
+  source*) switches the Flow preview between the current model and the **live pending source** (including
+  un‑applied hand edits in the Source panel) — so you can preview unsaved changes before committing.
 - **Live source** — tick **Live (pending)** in the Source panel to see the file *as it would be saved*,
   reflecting every unsaved edit (moves, styles, inserts, deletes, reparents) in real time — read‑only, nothing
   written to disk until you Save. Untick it to hand‑edit the on‑disk source again.

@@ -115,6 +115,17 @@ public static class TplParser
         return doc;
     }
 
+    /// <summary>Parse a single file's text in memory (no #INCLUDE following) — used to preview pending edits.</summary>
+    public static TplDocument ParseText(string text, string path)
+    {
+        var doc = new TplDocument { Path = path };
+        var nl = text.Contains("\r\n") ? "\r\n" : "\n";
+        var lines = text.Split(new[] { nl }, StringSplitOptions.None);
+        doc.Files.Add(new TplFile { Path = path, Newline = nl, Lines = lines });
+        ParseComponents(doc, 0, lines);
+        return doc;
+    }
+
     static void LoadFile(TplDocument doc, string path, bool included, HashSet<string> visited)
     {
         string full;

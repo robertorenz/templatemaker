@@ -999,9 +999,9 @@ public partial class MainWindow : Window
     // The numeric default(...) on a prompt's source line, if any (used to decode KEYCODE prompts).
     int? PromptDefaultInt(TplElement el)
     {
-        var f = CurrentFile();
-        if (f == null || el.LineIndex < 0 || el.LineIndex >= f.Lines.Length) return null;
-        var m = Regex.Match(f.Lines[el.LineIndex], @"default\(\s*(\d+)\s*\)", RegexOptions.IgnoreCase);
+        var src = _previewLines ?? CurrentFile()?.Lines;
+        if (src == null || el.LineIndex < 0 || el.LineIndex >= src.Length) return null;
+        var m = Regex.Match(src[el.LineIndex], @"default\(\s*(\d+)\s*\)", RegexOptions.IgnoreCase);
         return m.Success && int.TryParse(m.Groups[1].Value, out var v) ? v : null;
     }
 
