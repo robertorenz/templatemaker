@@ -4,3 +4,9 @@ run/
 # Build artifacts
 **/bin/
 **/obj/
+
+# Third-party AJE template assets (not redistributed)
+templates/AJEBackupAPP.tpl
+templates/AJE*.png
+templates/aje*.png
+templates/ajebackup.zip

@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <Version>1.5.0</Version>
+    <AssemblyName>ClarionTplDesigner</AssemblyName>
+    <Product>Clarion Template Designer</Product>
+    <Company>Reddin Assessments</Company>
   </PropertyGroup>
 
 </Project>
