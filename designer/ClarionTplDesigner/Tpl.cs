@@ -30,7 +30,9 @@ public class TplElement
     public string FontName = "";
     public int FontSize;
     public uint? FontColor;         // COLORREF 0x00BBGGRR
+    public int FontStyle;           // raw PROP(PROP:FontStyle,N); 0 = unset
     public bool Bold;
+    public bool FontDirty;          // font/colour/size/style edited -> rewrite its PROP(...) on save
 
     // computed absolute layout (DLU, tab-relative) used by the designer
     public double LX, LY, LW, LH;
@@ -50,7 +52,8 @@ public class TplElement
             Title = Title, Symbol = Symbol, PromptType = PromptType,
             HasAt = HasAt, HasX = HasX, HasY = HasY, HasW = HasW, HasH = HasH,
             X = X, Y = Y, W = W, H = H,
-            FontName = FontName, FontSize = FontSize, FontColor = FontColor, Bold = Bold,
+            FontName = FontName, FontSize = FontSize, FontColor = FontColor, FontStyle = FontStyle,
+            Bold = Bold, FontDirty = FontDirty,
             LX = LX, LY = LY, LW = LW, LH = LH, Dirty = Dirty, HasZ = HasZ, Z = Z,
             Parent = parent
         };
@@ -283,7 +286,7 @@ public static class TplParser
         var fn = Regex.Match(line, @"PROP\(\s*PROP:Font\s*,\s*'([^']*)'\s*\)", RegexOptions.IgnoreCase);
         if (fn.Success) e.FontName = fn.Groups[1].Value;
         var fst = Regex.Match(line, @"PROP\(\s*PROP:FontStyle\s*,\s*(\d+)\s*\)", RegexOptions.IgnoreCase);
-        if (fst.Success) e.Bold = int.Parse(fst.Groups[1].Value) >= 600;
+        if (fst.Success) { e.FontStyle = int.Parse(fst.Groups[1].Value); e.Bold = e.FontStyle >= 600; }
     }
 }
 
@@ -297,7 +300,7 @@ public static class TplWriter
             var tabs = new List<TplElement>();
             foreach (var c in doc.Components)
                 if (c.FileIndex == fi) tabs.AddRange(c.Tabs);
-            bool changed = tabs.Any(t => Flatten(t).Any(e => e.Dirty || e.Inserted || e.Deleted || e.Moved));
+            bool changed = tabs.Any(t => Flatten(t).Any(e => e.Dirty || e.Inserted || e.Deleted || e.Moved || e.FontDirty));
             if (changed) SaveFile(doc.Files[fi], tabs);
         }
     }
@@ -324,11 +327,14 @@ public static class TplWriter
                     drop.Add(e.LineIndex);
             }
 
-        // In-place AT rewrite for controls that stayed put (not added/relocated/deleted).
+        // In-place AT / PROP rewrite for controls that stayed put (not added/relocated/deleted).
         foreach (var tab in docTabs)
             foreach (var e in Flatten(tab))
-                if (e.Dirty && !e.Deleted && !e.Inserted && !e.Moved && e.LineIndex >= 0 && !drop.Contains(e.LineIndex))
-                    lines[e.LineIndex] = ApplyAt(lines[e.LineIndex], e);
+                if ((e.Dirty || e.FontDirty) && !e.Deleted && !e.Inserted && !e.Moved && e.LineIndex >= 0 && !drop.Contains(e.LineIndex))
+                {
+                    if (e.Dirty) lines[e.LineIndex] = ApplyAt(lines[e.LineIndex], e);
+                    if (e.FontDirty) lines[e.LineIndex] = ApplyProps(lines[e.LineIndex], e);
+                }
 
         // Emit added/relocated controls just before their (stationary) container's #END line.
         var emit = new Dictionary<int, List<string>>();
@@ -375,12 +381,49 @@ public static class TplWriter
         }
         else if (e.Inserted)
         {
-            yield return GenLine(e);                 // freshly generated leaf
+            yield return ApplyProps(GenLine(e), e);  // freshly generated leaf (+ any font set in the panel)
         }
         else if (e.LineIndex >= 0 && e.LineIndex < lines.Length)
         {
-            yield return e.Dirty ? ApplyAt(lines[e.LineIndex], e) : lines[e.LineIndex];  // existing control, verbatim
+            var ln = lines[e.LineIndex];             // existing control, kept verbatim except edited AT/PROPs
+            if (e.Dirty) ln = ApplyAt(ln, e);
+            if (e.FontDirty) ln = ApplyProps(ln, e);
+            yield return ln;
         }
+    }
+
+    /// <summary>Preview the line as it would be written, applying any pending AT/PROP edits.</summary>
+    public static string PreviewLine(string original, TplElement e)
+    {
+        if (e.Dirty) original = ApplyAt(original, e);
+        if (e.FontDirty) original = ApplyProps(original, e);
+        return original;
+    }
+
+    /// <summary>Update/insert the PROP(PROP:Font/FontColor/FontSize/FontStyle) clauses from the model.</summary>
+    static string ApplyProps(string line, TplElement e)
+    {
+        line = e.FontColor is uint c ? SetProp(line, "FontColor", $"0{c:X}H") : RemoveProp(line, "FontColor");
+        if (e.FontSize > 0)        line = SetProp(line, "FontSize", e.FontSize.ToString());
+        if (e.FontName.Length > 0) line = SetProp(line, "Font", $"'{Esc(e.FontName)}'");
+        if (e.FontStyle > 0)       line = SetProp(line, "FontStyle", e.FontStyle.ToString());
+        return line;
+    }
+
+    static string SetProp(string line, string prop, string val)
+    {
+        string clause = $"PROP(PROP:{prop},{val})";
+        var m = Regex.Match(line, $@"PROP\(\s*PROP:{prop}\s*,[^)]*\)", RegexOptions.IgnoreCase);
+        if (m.Success) return line[..m.Index] + clause + line[(m.Index + m.Length)..];
+        int cut = TrailingComment(line);
+        if (cut < 0) return line.TrimEnd() + "," + clause;
+        return line[..cut].TrimEnd() + "," + clause + " " + line[cut..];
+    }
+
+    static string RemoveProp(string line, string prop)
+    {
+        var m = Regex.Match(line, $@",?\s*PROP\(\s*PROP:{prop}\s*,[^)]*\)", RegexOptions.IgnoreCase);
+        return m.Success ? line.Remove(m.Index, m.Length) : line;
     }
 
     /// <summary>Generate the directive line for a newly-added control (box = its open line only).</summary>

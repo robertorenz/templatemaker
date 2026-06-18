@@ -68,6 +68,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         KeyDown += OnKeyDown;
+        cmbFont.ItemsSource = System.Windows.Media.Fonts.SystemFontFamilies
+            .Select(f => f.Source).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
         anchSource.IsVisibleChanged += AnchSource_VisChanged;
         _srcOpen = anchSource.IsVisible;
         btnSource.IsChecked = _srcOpen;
@@ -250,7 +252,7 @@ public partial class MainWindow : Window
         if (el.Inserted) return "(new control — written to the template on Save)";
         var f = CurrentFile();
         if (f == null || el.LineIndex < 0 || el.LineIndex >= f.Lines.Length) return "";
-        string s = f.Lines[el.LineIndex].Trim();
+        string s = TplWriter.PreviewLine(f.Lines[el.LineIndex], el).Trim();   // reflect pending AT/PROP edits
         if (el.EndLineIndex > el.LineIndex)            // container: note the span
             s += $"\n…\n{f.Lines[Math.Min(el.EndLineIndex, f.Lines.Length - 1)].Trim()}"
                + $"   ({el.EndLineIndex - el.LineIndex + 1} lines)";
@@ -823,6 +825,11 @@ public partial class MainWindow : Window
         cm.Items.Add(ZItem("Bring Forward", () => ZForward(el)));
         cm.Items.Add(ZItem("Send Backward", () => ZBackward(el)));
         cm.Items.Add(ZItem("Send to Back", () => ZBack(el)));
+        if (el.Kind is TplKind.Prompt or TplKind.Display or TplKind.Boxed)
+        {
+            cm.Items.Add(new Separator());
+            cm.Items.Add(ZItem("Font && Colour…", () => EditFontDialog(el)));
+        }
         cm.Items.Add(new Separator());
         cm.Items.Add(ZItem("Delete", () => DeleteControl(el)));
         return cm;
@@ -937,6 +944,16 @@ public partial class MainWindow : Window
         bool isImg = el is { Kind: TplKind.Image };
         imgRow.Visibility = isImg ? Visibility.Visible : Visibility.Collapsed;
         btnBrowseImg.IsEnabled = isImg && el!.Inserted;  // browsing changes the file name (only added images persist)
+
+        bool styleable = el is { Kind: TplKind.Prompt or TplKind.Display or TplKind.Boxed };
+        styleHdr.Visibility = styleGrid.Visibility = styleable ? Visibility.Visible : Visibility.Collapsed;
+        if (styleable)
+        {
+            cmbFont.Text = el!.FontName;
+            txtFontSize.Text = el.FontSize > 0 ? el.FontSize.ToString() : "";
+            chkBold.IsChecked = el.Bold;
+            colorSwatch.Background = el.FontColor is uint cc ? FromColorRef(cc) : Brushes.Transparent;
+        }
         _suppressProp = false;
 
         _suppressChildSel = true;
@@ -992,6 +1009,120 @@ public partial class MainWindow : Window
         _sel.HasX = _sel.HasY = _sel.HasW = _sel.HasH = true;
         _sel.Dirty = true;
         Render();
+    }
+
+    // ---------- style (font / size / bold / colour) ----------
+    void BeginStyleEdit() { if (!_editGuard) { PushUndo(); _editGuard = true; } }
+
+    void AfterStyleEdit()
+    {
+        if (_sel == null) return;
+        _sel.FontDirty = true;
+        Render();                                  // chip reflects the new font/size/colour
+        propSource.Text = SourceOf(_sel);          // per-control source preview shows the edited line
+        srcHdr.Visibility = propSource.Visibility = Visibility.Visible;
+    }
+
+    void Font_Changed(object s, RoutedEventArgs e)
+    {
+        if (_suppressProp || _sel == null) return;
+        string name = (cmbFont.Text ?? "").Trim();
+        if (name == _sel.FontName) return;
+        BeginStyleEdit(); _sel.FontName = name; AfterStyleEdit();
+    }
+
+    void FontSize_Changed(object s, TextChangedEventArgs e)
+    {
+        if (_suppressProp || _sel == null) return;
+        int sz = int.TryParse(txtFontSize.Text, out var v) ? v : 0;
+        if (sz == _sel.FontSize) return;
+        BeginStyleEdit(); _sel.FontSize = sz; AfterStyleEdit();
+    }
+
+    void Bold_Changed(object s, RoutedEventArgs e)
+    {
+        if (_suppressProp || _sel == null) return;
+        BeginStyleEdit();
+        _sel.Bold = chkBold.IsChecked == true;
+        _sel.FontStyle = _sel.Bold ? 700 : 400;
+        AfterStyleEdit();
+    }
+
+    void Color_Click(object s, RoutedEventArgs e) => ChangeColor();
+
+    void ChangeColor()
+    {
+        if (_sel == null) return;
+        using var dlg = new System.Windows.Forms.ColorDialog { FullOpen = true, AnyColor = true };
+        if (_sel.FontColor is uint c)
+            dlg.Color = System.Drawing.Color.FromArgb((int)(c & 0xFF), (int)((c >> 8) & 0xFF), (int)((c >> 16) & 0xFF));
+        if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+        var col = dlg.Color;
+        BeginStyleEdit();
+        _sel.FontColor = (uint)(col.R | (col.G << 8) | (col.B << 16));     // COLORREF 0x00BBGGRR
+        colorSwatch.Background = FromColorRef(_sel.FontColor.Value);
+        AfterStyleEdit();
+    }
+
+    // ---------- style command bar (acts on the selected control) ----------
+    void StyleFont_Click(object s, RoutedEventArgs e) => EditFontDialog(_sel);
+    void StyleColor_Click(object s, RoutedEventArgs e) => ChangeColor();
+
+    void StyleBold_Click(object s, RoutedEventArgs e)
+    {
+        if (_sel == null) return;
+        PushUndo();
+        _sel.Bold = !_sel.Bold; _sel.FontStyle = _sel.Bold ? 700 : 400; _sel.FontDirty = true;
+        Render(); Select(_sel);
+    }
+
+    void StyleBigger_Click(object s, RoutedEventArgs e) => BumpSize(+1);
+    void StyleSmaller_Click(object s, RoutedEventArgs e) => BumpSize(-1);
+
+    void BumpSize(int delta)
+    {
+        if (_sel == null) return;
+        PushUndo();
+        int cur = _sel.FontSize > 0 ? _sel.FontSize : 9;
+        _sel.FontSize = Math.Max(4, cur + delta); _sel.FontDirty = true;
+        Render(); Select(_sel);
+    }
+
+    void NoColor_Click(object s, RoutedEventArgs e)
+    {
+        if (_sel == null || _sel.FontColor is null) return;
+        BeginStyleEdit();
+        _sel.FontColor = null;
+        colorSwatch.Background = Brushes.Transparent;
+        AfterStyleEdit();
+    }
+
+    // One-shot font + style + colour picker (used by the right-click menu and the toolbar).
+    void EditFontDialog(TplElement? el)
+    {
+        if (el == null) return;
+        Select(el);
+        using var fd = new System.Windows.Forms.FontDialog { ShowColor = true, ShowEffects = true, FontMustExist = false };
+        try
+        {
+            var style = el.Bold ? System.Drawing.FontStyle.Bold : System.Drawing.FontStyle.Regular;
+            fd.Font = new System.Drawing.Font(el.FontName.Length > 0 ? el.FontName : "Segoe UI",
+                                              el.FontSize > 0 ? el.FontSize : 9, style);
+            if (el.FontColor is uint c)
+                fd.Color = System.Drawing.Color.FromArgb((int)(c & 0xFF), (int)((c >> 8) & 0xFF), (int)((c >> 16) & 0xFF));
+        }
+        catch { /* invalid current font; dialog opens with defaults */ }
+
+        if (fd.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+        PushUndo();
+        var ft = fd.Font;
+        el.FontName = ft.Name;
+        el.FontSize = (int)Math.Round(ft.SizeInPoints);
+        el.Bold = ft.Bold; el.FontStyle = ft.Bold ? 700 : 400;
+        el.FontColor = (uint)(fd.Color.R | (fd.Color.G << 8) | (fd.Color.B << 16));
+        el.FontDirty = true;
+        Render(); Select(el);
+        status.Text = $"{el.Display}  →  {el.FontName} {el.FontSize}pt{(el.Bold ? " Bold" : "")}";
     }
 
     // ---------- canvas dragging ----------

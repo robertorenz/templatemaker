@@ -84,6 +84,12 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
 - **Undo** — **Ctrl+Z** (or the *↶ Undo* button) reverts the last change, step by step, all the way back:
   moves, resizes, reparents, adds, deletes, z-order, text/coord edits, and guide changes. History is kept
   per editing session and cleared when you open a file or after a structural save.
+- **Font / colour / size editing** — change a control's **font, size, bold and colour** and it updates on the
+  canvas *and* in the source (the `PROP(PROP:Font/FontColor/FontSize/FontStyle)` clauses are rewritten on
+  save; existing clauses are replaced in place, new ones appended, and a removed colour is deleted). Three
+  ways: the **STYLE** section in the Properties panel (font dropdown, size, Bold, colour swatch + picker), the
+  **Style:** command bar (Font &amp; Colour…, Colour…, **B**, A▲/A▼), or **right-click → Font &amp; Colour…** on
+  any control (a full font+style+colour dialog).
 - **Properties panel** — edit X/Y/W/H directly (arrow keys nudge, Shift = ×5); for prompts it names the
   type, and a read-only **Source** box shows the control's raw directive line so you can see its full
   definition (`default(...)`, `req`, `prop(...)`, `at(10)`, …).

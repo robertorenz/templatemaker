@@ -6,11 +6,20 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Version>1.9.0</Version>
     <AssemblyName>ClarionTplDesigner</AssemblyName>
     <Product>Clarion Template Designer</Product>
     <Company>Reddin Assessments</Company>
   </PropertyGroup>
+
+  <!-- WinForms is enabled only for the colour/font dialogs; drop its global usings so
+       WPF types (Brush, Pen, Point, Application, …) stay unambiguous. WinForms types are
+       referenced fully-qualified in code. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AvalonEdit" Version="6.3.1.120" />

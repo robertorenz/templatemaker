@@ -52,6 +52,13 @@
             <Button Click="Add_Check_Click"  Padding="7,2" ToolTip="Add a checkbox (#PROMPT CHECK)">Check</Button>
             <Button Click="Add_Image_Click"  Padding="7,2" ToolTip="Add an image (#IMAGE)">Image</Button>
             <Button Click="Add_Group_Click"  Padding="7,2" ToolTip="Add a group box (#BOXED … #ENDBOXED)">Group box</Button>
+            <Separator/>
+            <TextBlock VerticalAlignment="Center" Margin="8,0,4,0" FontWeight="SemiBold" Foreground="#5B6878">Style:</TextBlock>
+            <Button Click="StyleFont_Click"    Padding="7,2" ToolTip="Font, style &amp; colour of the selected control…">Font &amp; Colour…</Button>
+            <Button Click="StyleColor_Click"   Padding="7,2" ToolTip="Colour of the selected control…">Colour…</Button>
+            <Button Click="StyleBold_Click"    Padding="9,2" ToolTip="Toggle bold" FontWeight="Bold">B</Button>
+            <Button Click="StyleBigger_Click"  Padding="7,2" ToolTip="Increase font size">A▲</Button>
+            <Button Click="StyleSmaller_Click" Padding="7,2" ToolTip="Decrease font size">A▼</Button>
         </ToolBar>
       </ToolBarTray>
 
@@ -140,6 +147,36 @@
                     <TextBlock Text="H" VerticalAlignment="Center"/>
                     <TextBox x:Name="txtH" Margin="0,2" TextChanged="Prop_Changed"/>
                 </UniformGrid>
+                <TextBlock x:Name="styleHdr" Text="STYLE" FontWeight="Bold" Foreground="#5B6878" FontSize="11"
+                           Margin="0,14,0,2" Visibility="Collapsed"/>
+                <Grid x:Name="styleGrid" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Font" VerticalAlignment="Center" Margin="0,0,6,2"/>
+                    <ComboBox  Grid.Row="0" Grid.Column="1" x:Name="cmbFont" IsEditable="True" Margin="0,0,0,2"
+                               SelectionChanged="Font_Changed" LostFocus="Font_Changed"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Size" VerticalAlignment="Center" Margin="0,0,6,2"/>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,2">
+                        <TextBox x:Name="txtFontSize" Width="46" TextChanged="FontSize_Changed"/>
+                        <CheckBox x:Name="chkBold" Content="Bold" VerticalAlignment="Center" Margin="10,0,0,0"
+                                  Click="Bold_Changed"/>
+                    </StackPanel>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Colour" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
+                        <Border x:Name="colorSwatch" Width="20" Height="16" BorderBrush="#AAB2BE" BorderThickness="1"
+                                Background="Black" VerticalAlignment="Center"/>
+                        <Button x:Name="btnColor" Content="Colour…" Padding="8,1" Margin="6,0,0,0" Click="Color_Click"/>
+                        <Button x:Name="btnNoColor" Content="✕" Padding="6,1" Margin="4,0,0,0" Click="NoColor_Click"
+                                ToolTip="Remove the explicit colour"/>
+                    </StackPanel>
+                </Grid>
                 <TextBlock x:Name="srcHdr" Text="SOURCE" FontWeight="Bold" Foreground="#5B6878" FontSize="11"
                            Margin="0,14,0,2" Visibility="Collapsed"/>
                 <TextBox x:Name="propSource" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas"
