@@ -15,6 +15,8 @@
 #SHEET,HSCROLL
 #!===========================================================================
  #TAB('About')
+   #DISPLAY('')
+   #IMAGE('AJEico_about.png'),AT(,,24,24)
    #DISPLAY('Welcome'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,12),PROP(PROP:Font,'Segoe UI')
    #DISPLAY('Automatic, versioned backups every time you compile.'),PROP(PROP:FontColor,06E6E6EH),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
    #DISPLAY('')
@@ -29,6 +31,8 @@
    #DISPLAY('Tip: open the Instructions tab to get started.'),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontSize,8)
    #ENDTAB
   #TAB('Configuration')
+    #DISPLAY('')
+    #IMAGE('AJEico_config.png'),AT(,,24,24)
     #DISPLAY('Configuration'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,12),PROP(PROP:Font,'Segoe UI')
     #DISPLAY('Choose where and what to back up after each compile.'),PROP(PROP:FontColor,06E6E6EH),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
     #DISPLAY('')
@@ -71,6 +75,8 @@
         #DISPLAY('From Alejandro J. Elias    -    www.DeveloperTeam.com.ar'),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontSize,8)
         #ENDTAB
   #TAB('Other Files')
+    #DISPLAY('')
+    #IMAGE('AJEico_files.png'),AT(,,24,24)
     #DISPLAY('Other Files'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,12),PROP(PROP:Font,'Segoe UI')
     #DISPLAY('Extra files to include in every backup (icons, configs, ...).'),PROP(PROP:FontColor,06E6E6EH),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
     #DISPLAY('')
@@ -91,6 +97,8 @@
     #DISPLAY('From Alejandro J. Elias    -    www.DeveloperTeam.com.ar'),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontSize,8)
   #ENDTAB
   #TAB('Settings')
+    #DISPLAY('')
+    #IMAGE('AJEico_settings.png'),AT(,,24,24)
     #DISPLAY('Settings'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,12),PROP(PROP:Font,'Segoe UI')
     #DISPLAY('History window, database type and an optional REST API.'),PROP(PROP:FontColor,06E6E6EH),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
     #DISPLAY('')
@@ -109,6 +117,8 @@
     #DISPLAY('From Alejandro J. Elias    -    www.DeveloperTeam.com.ar'),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontSize,8)
   #ENDTAB
   #TAB('License')
+    #DISPLAY('')
+    #IMAGE('AJEico_license.png'),AT(,,24,24)
     #DISPLAY('License'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:FontSize,12),PROP(PROP:Font,'Segoe UI')
     #DISPLAY('Enter your registration details.'),PROP(PROP:FontColor,06E6E6EH),PROP(PROP:FontSize,8),PROP(PROP:Font,'Segoe UI')
     #DISPLAY('')
@@ -119,6 +129,8 @@
     #DISPLAY('From Alejandro J. Elias    -    www.DeveloperTeam.com.ar'),PROP(PROP:FontColor,0808080H),PROP(PROP:Font,'Segoe UI'),PROP(PROP:FontSize,8)
   #ENDTAB
   #TAB('Instructions')
+    #DISPLAY('')
+    #IMAGE('AJEico_help.png'),AT(,,24,24)
     #BOXED('How to use Automatic Backup APP'),SECTION
       #DISPLAY('What it does'),PROP(PROP:FontColor,0794E1FH),PROP(PROP:FontStyle,700),PROP(PROP:Font,'Segoe UI')
       #DISPLAY('After each successful compile it makes a versioned backup of your')
