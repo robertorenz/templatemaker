@@ -20,6 +20,7 @@ public static class Layout
 
         foreach (var ch in c.Children)
         {
+            if (ch.Deleted) continue;
             double w = ch.HasW && ch.W > 0 ? ch.W : DefaultW(ch, width);
             double h = ch.HasH && ch.H > 0 ? ch.H : DefaultH(ch);
 

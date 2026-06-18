@@ -32,6 +32,10 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
 - **Z-order** — *Order: Front / ↑ / ↓ / Back* on the toolbar (or right-click a control) raises/lowers it so
   you can see and grab controls hidden underneath. This is a *view* aid in the designer; it does not reorder
   the generated source.
+- **Delete** — select a control and press **Delete** (or right-click → *Delete*) to remove it. On **Save**
+  the control's source line is dropped; deleting a `#BOXED` removes the whole block through its `#ENDBOXED`.
+  Nothing is written until you Save, so re-opening the file undoes a delete. (As with any edit, if the removed
+  prompt's `%symbol` is referenced by the template's generation code you'll need to fix that up in the IDE.)
 - **Rulers** (top + left) in dialog units, with a live cursor marker.
 - **Guides** — drag *down* from the top ruler for a horizontal guide, *right* from the left ruler for a
   vertical guide (or use the *+ V/H guide* buttons). Hold **Ctrl** while dragging to snap the guide to the

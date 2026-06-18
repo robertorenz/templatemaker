@@ -143,9 +143,20 @@ public partial class MainWindow : Window
     {
         foreach (var ch in c.Children)
         {
+            if (ch.Deleted) continue;
             if (ch.IsPositionable) yield return ch;
             foreach (var x in Positionable(ch)) yield return x;
         }
+    }
+
+    void DeleteControl(TplElement el)
+    {
+        el.Deleted = true;
+        if (_sel == el) Select(null);
+        Render();
+        bool block = el.EndLineIndex >= 0;
+        status.Text = $"Deleted {el.Display}"
+                    + (block ? " and its contents" : "") + ".  Save to write the change (re-open to undo).";
     }
 
     void AddChip(TplElement el)
@@ -268,6 +279,8 @@ public partial class MainWindow : Window
         cm.Items.Add(ZItem("Bring Forward", () => ZForward(el)));
         cm.Items.Add(ZItem("Send Backward", () => ZBackward(el)));
         cm.Items.Add(ZItem("Send to Back", () => ZBack(el)));
+        cm.Items.Add(new Separator());
+        cm.Items.Add(ZItem("Delete", () => DeleteControl(el)));
         return cm;
     }
 
@@ -620,6 +633,11 @@ public partial class MainWindow : Window
     void OnKeyDown(object s, KeyEventArgs e)
     {
         if (_sel == null) return;
+        if (e.Key is Key.Delete or Key.Back)
+        {
+            if (Keyboard.FocusedElement is TextBox) return;   // let the X/Y/W/H editors handle it
+            DeleteControl(_sel); e.Handled = true; return;
+        }
         int d = (Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? 5 : 1;
         double nx = _sel.LX, ny = _sel.LY;
         switch (e.Key)

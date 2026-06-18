@@ -13,7 +13,9 @@ public enum TplKind { Sheet, Tab, Boxed, Button, Enable, Prompt, Display, Image,
 public class TplElement
 {
     public TplKind Kind;
-    public int LineIndex = -1;     // 0-based line in source (single-line directives)
+    public int LineIndex = -1;     // 0-based line of this element's directive
+    public int EndLineIndex = -1;  // 0-based line of the matching #END... (containers); -1 = single line
+    public bool Deleted;           // marked for removal -> its source line(s) are dropped on Save
     public string Title = "";      // tab name / box title / display text / prompt label / image file
     public string Symbol = "";     // %Symbol (prompts/images target a feq)
     public string PromptType = ""; // CHECK / @s255 / SPIN(..) / OPTION / RADIO / OPENDIALOG(..)
@@ -91,19 +93,19 @@ public static class TplParser
                 case "TAB":
                     var tab = NewEl(TplKind.Tab, lines[i], i);
                     Add(stack, tab); doc.Tabs.Add(tab); stack.Push(tab); break;
-                case "ENDTAB": Pop(stack); break;
+                case "ENDTAB": Close(stack, i); break;
                 case "BOXED":
                     var box = NewEl(TplKind.Boxed, lines[i], i);
                     Add(stack, box); stack.Push(box); break;
-                case "ENDBOXED": Pop(stack); break;
+                case "ENDBOXED": Close(stack, i); break;
                 case "BUTTON":
                     var btn = NewEl(TplKind.Button, lines[i], i);
                     Add(stack, btn); stack.Push(btn); break;
-                case "ENDBUTTON": Pop(stack); break;
+                case "ENDBUTTON": Close(stack, i); break;
                 case "ENABLE":
                     var en = NewEl(TplKind.Enable, lines[i], i);
                     Add(stack, en); stack.Push(en); break;
-                case "ENDENABLE": Pop(stack); break;
+                case "ENDENABLE": Close(stack, i); break;
                 case "PROMPT": Add(stack, NewEl(TplKind.Prompt, lines[i], i)); break;
                 case "DISPLAY": Add(stack, NewEl(TplKind.Display, lines[i], i)); break;
                 case "IMAGE": Add(stack, NewEl(TplKind.Image, lines[i], i)); break;
@@ -124,6 +126,10 @@ public static class TplParser
         var p = s.Peek(); e.Parent = p; p.Children.Add(e);
     }
     static void Pop(Stack<TplElement> s) { if (s.Count > 1) s.Pop(); }
+    static void Close(Stack<TplElement> s, int endLine)
+    {
+        if (s.Count > 1) { var e = s.Pop(); e.EndLineIndex = endLine; }
+    }
 
     static TplElement NewEl(TplKind kind, string line, int idx)
     {
@@ -181,16 +187,31 @@ public static class TplParser
 
 public static class TplWriter
 {
-    /// <summary>Rewrite only the AT() of moved elements; every other byte is preserved.</summary>
+    /// <summary>Rewrite only the AT() of moved elements and drop deleted ones; every other byte is preserved.</summary>
     public static void Save(TplDocument doc, string path)
     {
         var lines = (string[])doc.Lines.Clone();
+
+        // Collect every source line covered by a deleted element (containers span to their #END...).
+        var drop = new HashSet<int>();
         foreach (var tab in doc.Tabs)
             foreach (var e in Flatten(tab))
-                if (e.Dirty && e.LineIndex >= 0)
+                if (e.Deleted && e.LineIndex >= 0)
+                {
+                    int end = e.EndLineIndex >= 0 ? e.EndLineIndex : e.LineIndex;
+                    for (int i = e.LineIndex; i <= end && i < lines.Length; i++) drop.Add(i);
+                }
+
+        foreach (var tab in doc.Tabs)
+            foreach (var e in Flatten(tab))
+                if (e.Dirty && !e.Deleted && e.LineIndex >= 0 && !drop.Contains(e.LineIndex))
                     lines[e.LineIndex] = ApplyAt(lines[e.LineIndex], e);
 
-        File.WriteAllText(path, string.Join(doc.Newline, lines));
+        var kept = new List<string>(lines.Length);
+        for (int i = 0; i < lines.Length; i++)
+            if (!drop.Contains(i)) kept.Add(lines[i]);
+
+        File.WriteAllText(path, string.Join(doc.Newline, kept));
     }
 
     static IEnumerable<TplElement> Flatten(TplElement e)
