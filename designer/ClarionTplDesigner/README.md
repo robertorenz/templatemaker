@@ -87,6 +87,9 @@ Then **Open .tpl…** and pick e.g. `..\..\templates\AJEBackupAPP.tpl`.
   keeps the live controls (Part, Tab, Zoom, snap grid/guides).
 - **Click vs. drag** — clicking a control only *selects* it; it moves only once you actually drag past a few
   pixels (so snap‑to‑grid no longer nudges a control on a plain click).
+- **Multi‑select** — **Ctrl+click** toggles, **Shift+click** adds, or **drag a marquee** on empty canvas to
+  rubber‑band several controls. Font / size / bold / colour, **delete**, and **drag‑move** then apply to the
+  whole selection at once (a selected group box carries its contents).
 - **Undo** — **Ctrl+Z** (or the *↶ Undo* button) reverts the last change, step by step, all the way back:
   moves, resizes, reparents, adds, deletes, z-order, text/coord edits, and guide changes. History is kept
   per editing session and cleared when you open a file or after a structural save.

@@ -29,6 +29,9 @@ public partial class MainWindow : Window
     int GridStep => int.TryParse(txtGrid.Text, out var g) && g > 0 ? g : 5;
     const double SnapPx = 6;                 // snap threshold in pixels
 
+    readonly List<TplElement> _selection = new();                       // all selected (incl. the primary _sel)
+    readonly Dictionary<TplElement, (double X, double Y)> _dragStartPos = new();
+    bool _marquee; Point _marqueeStart; Rectangle? _marqueeRect;
     readonly Dictionary<TplElement, Border> _chips = new();
     readonly Dictionary<string, BitmapImage?> _imgCache = new(StringComparer.OrdinalIgnoreCase);
     readonly List<Guide> _guides = new();
@@ -570,8 +573,7 @@ public partial class MainWindow : Window
         foreach (var g in _guides) AddGuideVisual(g);
 
         UpdateRulers();
-        if (_sel != null && _chips.TryGetValue(_sel, out var b)) Highlight(b, true);
-        ShowHandles(_sel);
+        RefreshSelectionVisual();
     }
 
     IEnumerable<TplElement> Positionable(TplElement c)
@@ -582,6 +584,26 @@ public partial class MainWindow : Window
             if (ch.IsPositionable) yield return ch;
             foreach (var x in Positionable(ch)) yield return x;
         }
+    }
+
+    void DeleteSelection()
+    {
+        var items = _selection.Count > 0 ? _selection.ToList()
+                  : (_sel != null ? new List<TplElement> { _sel } : new List<TplElement>());
+        if (items.Count == 0) return;
+        if (items.Count == 1) { DeleteControl(items[0]); return; }   // single keeps the detailed warning
+
+        int refd = items.Count(el => ExternalReferences(el).Count > 0);
+        string msg = $"Delete {items.Count} controls?"
+                   + (refd > 0 ? $"\n\n{refd} of them have a %symbol referenced elsewhere in the template; "
+                               + "deleting may break code generation." : "");
+        if (MessageBox.Show(msg, "Delete controls", MessageBoxButton.YesNo,
+                MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        PushUndo();
+        foreach (var el in items) el.Deleted = true;
+        Select(null);
+        Render();
+        status.Text = $"Deleted {items.Count} controls.  Save to write the change (re-open to undo).";
     }
 
     void DeleteControl(TplElement el)
@@ -977,24 +999,64 @@ public partial class MainWindow : Window
     {
         var b = (Border)s;
         var el = (TplElement)b.Tag;
-        Select(el);
+        bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+        bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+        if (ctrl) { ToggleSelect(el); e.Handled = true; return; }   // Ctrl+click toggles; no drag
+        if (shift) AddSelect(el);
+        else if (!_selection.Contains(el)) Select(el);
+        else { _sel = el; RefreshSelectionVisual(); PopulateProps(el); }   // click a member -> keep group, set primary
+
         BeginGesture();
         _drag = Drag.Element; _dragEl = el; _dragMoved = false;
         _dragStart = e.GetPosition(canvas);
         _elStartX = el.LX; _elStartY = el.LY;
+        _dragStartPos.Clear();
+        foreach (var se in _selection) _dragStartPos[se] = (se.LX, se.LY);
         canvas.CaptureMouse();
         e.Handled = true;
     }
 
-    void Select(TplElement? el)
+    void Select(TplElement? el)        // single-select (replaces the whole selection)
     {
-        _editGuard = false;          // next X/Y/W/H or text edit starts a fresh undo entry
-        if (_sel != null && _chips.TryGetValue(_sel, out var old)) Highlight(old, false);
+        _selection.Clear();
+        if (el != null) _selection.Add(el);
         _sel = el;
-        if (el != null && _chips.TryGetValue(el, out var b)) Highlight(b, true);
-        ShowHandles(el);
+        AfterSelectionChanged();
+    }
+
+    void ToggleSelect(TplElement el)   // Ctrl+click
+    {
+        if (!_selection.Remove(el)) _selection.Add(el);
+        _sel = _selection.Contains(el) ? el : (_selection.Count > 0 ? _selection[^1] : null);
+        AfterSelectionChanged();
+    }
+
+    void AddSelect(TplElement el)      // Shift+click
+    {
+        if (!_selection.Contains(el)) _selection.Add(el);
+        _sel = el;
+        AfterSelectionChanged();
+    }
+
+    void AfterSelectionChanged()
+    {
+        _editGuard = false;            // next X/Y/W/H or text edit starts a fresh undo entry
+        RefreshSelectionVisual();
+        PopulateProps(_sel);
+        ScrollSourceTo(_sel);
+    }
+
+    void RefreshSelectionVisual()
+    {
+        foreach (var kv in _chips) Highlight(kv.Value, _selection.Contains(kv.Key));
+        ShowHandles(_selection.Count == 1 ? _sel : null);   // resize handles only for a single selection
+    }
+
+    void PopulateProps(TplElement? el)
+    {
         propGrid.IsEnabled = el != null;
-        propTitle.Text = el?.Display ?? "(none)";
+        propTitle.Text = _selection.Count > 1 ? $"{_selection.Count} controls selected"
+                                              : el?.Display ?? "(none)";
         propKind.Text = el == null ? "" : $"{el.Kind}   line {el.LineIndex + 1}";
 
         var refs = el == null ? new List<(string Symbol, List<int> Lines)>() : ExternalReferences(el);
@@ -1064,8 +1126,6 @@ public partial class MainWindow : Window
             childHdr.Visibility = lstChildren.Visibility = Visibility.Collapsed;
         }
         _suppressChildSel = false;
-
-        ScrollSourceTo(el);
     }
 
     void Children_Select(object s, SelectionChangedEventArgs e)
@@ -1107,12 +1167,14 @@ public partial class MainWindow : Window
     // ---------- style (font / size / bold / colour) ----------
     void BeginStyleEdit() { if (!_editGuard) { PushUndo(); _editGuard = true; } }
 
-    void AfterStyleEdit()
+    // Apply a style change to every selected control (one undo entry per editing burst).
+    void ApplyStyle(Action<TplElement> set)
     {
         if (_sel == null) return;
-        _sel.FontDirty = true;
-        Render();                                  // chip reflects the new font/size/colour
-        propSource.Text = SourceOf(_sel);          // per-control source preview shows the edited line
+        BeginStyleEdit();
+        foreach (var el in _selection) { set(el); el.FontDirty = true; }
+        Render();                                  // chips reflect the new font/size/colour
+        propSource.Text = SourceOf(_sel);          // per-control source preview (primary)
         srcHdr.Visibility = propSource.Visibility = Visibility.Visible;
     }
 
@@ -1120,25 +1182,23 @@ public partial class MainWindow : Window
     {
         if (_suppressProp || _sel == null) return;
         string name = (cmbFont.Text ?? "").Trim();
-        if (name == _sel.FontName) return;
-        BeginStyleEdit(); _sel.FontName = name; AfterStyleEdit();
+        if (_selection.Count == 1 && name == _sel.FontName) return;
+        ApplyStyle(el => el.FontName = name);
     }
 
     void FontSize_Changed(object s, TextChangedEventArgs e)
     {
         if (_suppressProp || _sel == null) return;
         int sz = int.TryParse(txtFontSize.Text, out var v) ? v : 0;
-        if (sz == _sel.FontSize) return;
-        BeginStyleEdit(); _sel.FontSize = sz; AfterStyleEdit();
+        if (_selection.Count == 1 && sz == _sel.FontSize) return;
+        ApplyStyle(el => el.FontSize = sz);
     }
 
     void Bold_Changed(object s, RoutedEventArgs e)
     {
         if (_suppressProp || _sel == null) return;
-        BeginStyleEdit();
-        _sel.Bold = chkBold.IsChecked == true;
-        _sel.FontStyle = _sel.Bold ? 700 : 400;
-        AfterStyleEdit();
+        bool nb = chkBold.IsChecked == true;
+        ApplyStyle(el => { el.Bold = nb; el.FontStyle = nb ? 700 : 400; });
     }
 
     void Color_Click(object s, RoutedEventArgs e) => ChangeColor();
@@ -1151,22 +1211,28 @@ public partial class MainWindow : Window
             dlg.Color = System.Drawing.Color.FromArgb((int)(c & 0xFF), (int)((c >> 8) & 0xFF), (int)((c >> 16) & 0xFF));
         if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
         var col = dlg.Color;
-        BeginStyleEdit();
-        _sel.FontColor = (uint)(col.R | (col.G << 8) | (col.B << 16));     // COLORREF 0x00BBGGRR
-        colorSwatch.Background = FromColorRef(_sel.FontColor.Value);
-        AfterStyleEdit();
+        uint cref = (uint)(col.R | (col.G << 8) | (col.B << 16));     // COLORREF 0x00BBGGRR
+        ApplyStyle(el => el.FontColor = cref);
+        colorSwatch.Background = FromColorRef(cref);
     }
 
-    // ---------- style command bar (acts on the selected control) ----------
+    void NoColor_Click(object s, RoutedEventArgs e)
+    {
+        if (_sel == null) return;
+        ApplyStyle(el => el.FontColor = null);
+        colorSwatch.Background = Brushes.Transparent;
+    }
+
+    // ---------- style command bar / menu (act on all selected) ----------
     void StyleFont_Click(object s, RoutedEventArgs e) => EditFontDialog(_sel);
     void StyleColor_Click(object s, RoutedEventArgs e) => ChangeColor();
 
     void StyleBold_Click(object s, RoutedEventArgs e)
     {
         if (_sel == null) return;
-        PushUndo();
-        _sel.Bold = !_sel.Bold; _sel.FontStyle = _sel.Bold ? 700 : 400; _sel.FontDirty = true;
-        Render(); Select(_sel);
+        bool nb = !_sel.Bold;
+        ApplyStyle(el => { el.Bold = nb; el.FontStyle = nb ? 700 : 400; });
+        PopulateProps(_sel);
     }
 
     void StyleBigger_Click(object s, RoutedEventArgs e) => BumpSize(+1);
@@ -1175,26 +1241,15 @@ public partial class MainWindow : Window
     void BumpSize(int delta)
     {
         if (_sel == null) return;
-        PushUndo();
-        int cur = _sel.FontSize > 0 ? _sel.FontSize : 9;
-        _sel.FontSize = Math.Max(4, cur + delta); _sel.FontDirty = true;
-        Render(); Select(_sel);
+        ApplyStyle(el => el.FontSize = Math.Max(4, (el.FontSize > 0 ? el.FontSize : 9) + delta));
+        PopulateProps(_sel);
     }
 
-    void NoColor_Click(object s, RoutedEventArgs e)
-    {
-        if (_sel == null || _sel.FontColor is null) return;
-        BeginStyleEdit();
-        _sel.FontColor = null;
-        colorSwatch.Background = Brushes.Transparent;
-        AfterStyleEdit();
-    }
-
-    // One-shot font + style + colour picker (used by the right-click menu and the toolbar).
+    // One-shot font + style + colour picker (right-click menu / toolbar / menu) — applies to all selected.
     void EditFontDialog(TplElement? el)
     {
         if (el == null) return;
-        Select(el);
+        if (!_selection.Contains(el)) Select(el);   // right-clicking a non-selected control acts on just it
         using var fd = new System.Windows.Forms.FontDialog { ShowColor = true, ShowEffects = true, FontMustExist = false };
         try
         {
@@ -1207,21 +1262,31 @@ public partial class MainWindow : Window
         catch { /* invalid current font; dialog opens with defaults */ }
 
         if (fd.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
-        PushUndo();
         var ft = fd.Font;
-        el.FontName = ft.Name;
-        el.FontSize = (int)Math.Round(ft.SizeInPoints);
-        el.Bold = ft.Bold; el.FontStyle = ft.Bold ? 700 : 400;
-        el.FontColor = (uint)(fd.Color.R | (fd.Color.G << 8) | (fd.Color.B << 16));
-        el.FontDirty = true;
-        Render(); Select(el);
-        status.Text = $"{el.Display}  →  {el.FontName} {el.FontSize}pt{(el.Bold ? " Bold" : "")}";
+        int pts = (int)Math.Round(ft.SizeInPoints);
+        uint cref = (uint)(fd.Color.R | (fd.Color.G << 8) | (fd.Color.B << 16));
+        ApplyStyle(t => { t.FontName = ft.Name; t.FontSize = pts; t.Bold = ft.Bold; t.FontStyle = ft.Bold ? 700 : 400; t.FontColor = cref; });
+        PopulateProps(_sel);
+        status.Text = $"{(_selection.Count > 1 ? _selection.Count + " controls" : _sel?.Display)}  →  {ft.Name} {pts}pt{(ft.Bold ? " Bold" : "")}";
     }
 
     // ---------- canvas dragging ----------
     void Canvas_MouseDown(object s, MouseButtonEventArgs e)
     {
-        if (e.OriginalSource == canvas) Select(null);
+        if (e.OriginalSource != canvas) return;
+        Select(null);
+        _marquee = true; _marqueeStart = e.GetPosition(canvas);
+        _marqueeRect = new Rectangle
+        {
+            Stroke = new SolidColorBrush(Color.FromRgb(0, 120, 200)), StrokeThickness = 1,
+            StrokeDashArray = new DoubleCollection { 3, 2 },
+            Fill = new SolidColorBrush(Color.FromArgb(28, 0, 120, 200))
+        };
+        Panel.SetZIndex(_marqueeRect, 3_000_000);
+        Canvas.SetLeft(_marqueeRect, _marqueeStart.X); Canvas.SetTop(_marqueeRect, _marqueeStart.Y);
+        canvas.Children.Add(_marqueeRect);
+        canvas.CaptureMouse();
+        e.Handled = true;
     }
 
     void Canvas_MouseMove(object s, MouseEventArgs e)
@@ -1229,6 +1294,14 @@ public partial class MainWindow : Window
         var p = e.GetPosition(canvas);
         hRuler.MouseDlu = p.X / Scale; vRuler.MouseDlu = p.Y / Scale;
         hRuler.InvalidateVisual(); vRuler.InvalidateVisual();
+
+        if (_marquee && _marqueeRect != null)
+        {
+            double mx = Math.Min(p.X, _marqueeStart.X), my = Math.Min(p.Y, _marqueeStart.Y);
+            Canvas.SetLeft(_marqueeRect, mx); Canvas.SetTop(_marqueeRect, my);
+            _marqueeRect.Width = Math.Abs(p.X - _marqueeStart.X); _marqueeRect.Height = Math.Abs(p.Y - _marqueeStart.Y);
+            return;
+        }
 
         // A plain click must only select — don't move/resize until the mouse really travels.
         if ((_drag == Drag.Element || _drag == Drag.Resize) && !_dragMoved)
@@ -1239,10 +1312,10 @@ public partial class MainWindow : Window
 
         if (_drag == Drag.Element && _dragEl != null)
         {
-            double nx = _elStartX + (p.X - _dragStart.X) / Scale;
-            double ny = _elStartY + (p.Y - _dragStart.Y) / Scale;
-            nx = SnapX(nx); ny = SnapY(ny);
-            MoveElement(_dragEl, nx, ny);
+            double nx = SnapX(_elStartX + (p.X - _dragStart.X) / Scale);
+            double ny = SnapY(_elStartY + (p.Y - _dragStart.Y) / Scale);
+            if (_selection.Count <= 1) MoveElement(_dragEl, nx, ny);
+            else MoveGroup(nx - _elStartX, ny - _elStartY);     // move the whole selection by the same delta
         }
         else if (_drag == Drag.Resize && _sel != null)
         {
@@ -1274,14 +1347,52 @@ public partial class MainWindow : Window
 
     void Canvas_MouseUp(object s, MouseButtonEventArgs e)
     {
+        if (_marquee)
+        {
+            _marquee = false;
+            if (_marqueeRect != null)
+            {
+                double x = Canvas.GetLeft(_marqueeRect) / Scale, y = Canvas.GetTop(_marqueeRect) / Scale;
+                double w = _marqueeRect.Width / Scale, h = _marqueeRect.Height / Scale;
+                canvas.Children.Remove(_marqueeRect); _marqueeRect = null;
+                if (w > 1 && h > 1) SelectInRect(x, y, w, h);
+            }
+            canvas.ReleaseMouseCapture();
+            return;
+        }
         if (_drag == Drag.Guide && _dragGuide != null && InRulerZone(e.GetPosition(scroller)))
             DeleteGuide(_dragGuide);
-        else if (_drag == Drag.Element && _dragEl != null && !_dragEl.IsContainer)
-            TryReparent(_dragEl);            // dropping a control may move it in/out of a group box
+        else if (_drag == Drag.Element && _dragEl != null && !_dragEl.IsContainer && _selection.Count <= 1)
+            TryReparent(_dragEl);            // dropping a single control may move it in/out of a group box
         bool wasElementGesture = _drag is Drag.Element or Drag.Resize;
         canvas.ReleaseMouseCapture();
         _drag = Drag.None; _dragEl = null; _dragGuide = null;
         if (wasElementGesture) CommitGesture();
+    }
+
+    void SelectInRect(double x, double y, double w, double h)
+    {
+        if (_tab == null) return;
+        _selection.Clear();
+        foreach (var el in Positionable(_tab))
+            if (el.LX < x + w && el.LX + el.LW > x && el.LY < y + h && el.LY + el.LH > y)
+                _selection.Add(el);
+        _sel = _selection.Count > 0 ? _selection[^1] : null;
+        AfterSelectionChanged();
+        status.Text = _selection.Count > 0 ? $"{_selection.Count} control(s) selected." : "Nothing selected.";
+    }
+
+    bool AncestorSelected(TplElement el)
+    {
+        for (var p = el.Parent; p != null; p = p.Parent) if (_selection.Contains(p)) return true;
+        return false;
+    }
+
+    void MoveGroup(double dX, double dY)
+    {
+        foreach (var el in _selection)
+            if (!AncestorSelected(el) && _dragStartPos.TryGetValue(el, out var st))
+                MoveElement(el, st.X + dX, st.Y + dY);   // a selected box carries its children
     }
 
     // ---------- group containment ----------
@@ -1593,7 +1704,7 @@ public partial class MainWindow : Window
         if (e.Key is Key.Delete or Key.Back)
         {
             if (Keyboard.FocusedElement is TextBox) return;   // let the X/Y/W/H editors handle it
-            DeleteControl(_sel); e.Handled = true; return;
+            DeleteSelection(); e.Handled = true; return;
         }
         int d = (Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? 5 : 1;
         double nx = _sel.LX, ny = _sel.LY;
