@@ -82,9 +82,10 @@ public partial class MainWindow : Window
             _undo.Clear();
             Title = "Clarion Template Designer — " + System.IO.Path.GetFileName(dlg.FileName);
             PopulateParts(0, 0);
+            SetSource(true);          // show the colour-coded source panel so it's never hidden
             int files = _doc.Files.Count, comps = _doc.Components.Count;
             status.Text = $"Loaded {_parts.Count} editable part(s) of {comps} component(s) across {files} file(s). "
-                        + "Pick a Part, then a Tab.";
+                        + "Pick a Part and Tab; the colour-coded source is in the panel below (toggle with “View Source”).";
         }
         catch (Exception ex) { MessageBox.Show("Parse failed:\n" + ex.Message); }
     }
@@ -347,12 +348,15 @@ public partial class MainWindow : Window
         return _clarionHl;
     }
 
-    void Source_Click(object s, RoutedEventArgs e)
+    void Source_Click(object s, RoutedEventArgs e) => SetSource(btnSource.IsChecked == true);
+
+    void SetSource(bool show)
     {
-        _srcOpen = btnSource.IsChecked == true;
-        srcRow.Height = _srcOpen ? new GridLength(240) : new GridLength(0);
-        srcSplitter.Visibility = _srcOpen ? Visibility.Visible : Visibility.Collapsed;
-        if (_srcOpen) { LoadSource(); ScrollSourceTo(_sel); }
+        _srcOpen = show;
+        btnSource.IsChecked = show;
+        srcRow.Height = show ? new GridLength(260) : new GridLength(0);
+        srcSplitter.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (show) { LoadSource(); ScrollSourceTo(_sel); }
     }
 
     void LoadSource()
@@ -363,7 +367,7 @@ public partial class MainWindow : Window
         _loadingSrc = true;
         try
         {
-            if (f == null) srcEditor.Text = "";
+            if (f == null) srcEditor.Text = "(Open a .tpl with the “Open .tpl…” button to view its source here.)";
             else { try { srcEditor.Text = System.IO.File.ReadAllText(f.Path); } catch { srcEditor.Text = string.Join(f.Newline, f.Lines); } }
         }
         finally { _loadingSrc = false; }

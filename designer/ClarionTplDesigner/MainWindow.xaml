@@ -10,9 +10,9 @@
         <ToolBar Band="0" BandIndex="0">
             <Button Click="Open_Click" Padding="8,2">Open .tpl…</Button>
             <Button Click="Save_Click" Padding="8,2">Save</Button>
-            <Button Click="Undo_Click" Padding="8,2" ToolTip="Undo last change (Ctrl+Z)">↶ Undo</Button>
             <ToggleButton x:Name="btnSource" Click="Source_Click" Padding="8,2"
-                          ToolTip="Show the template source with syntax colouring">⌗ Source</ToggleButton>
+                          ToolTip="Show/hide the colour-coded template source at the bottom">View Source</ToggleButton>
+            <Button Click="Undo_Click" Padding="8,2" ToolTip="Undo last change (Ctrl+Z)">↶ Undo</Button>
             <Button Click="MaterializeAll_Click" Padding="8,2"
                     ToolTip="Give every control an explicit AT(x,y,w,h) from the current layout, so they can all be dragged">Add AT to all</Button>
             <Separator/>
