@@ -341,10 +341,82 @@ public partial class MainWindow
     {
         var b = (Border)s;
         b.ReleaseMouseCapture(); b.Opacity = 1;
-        bool reordered = _dragPreviewing && _dragPreviewEl != null && ReorderTo(_dragPreviewEl, e.GetPosition(canvas));
+        var pt = e.GetPosition(canvas);
+        bool reordered = false;
+        if (_dragPreviewing && _dragPreviewEl != null)
+            // in true layout, reorder by re-flowing Y (source-order reorder wouldn't change the Y-sorted view)
+            reordered = (_previewTrueLayout && TrueLayoutReorder(_dragPreviewEl, pt)) || ReorderTo(_dragPreviewEl, pt);
         _dragPreviewEl = null; _dragPreviewing = false;
         Render();
-        if (reordered) status.Text = "Reordered control — Save to write the new line order.";
+        if (reordered) status.Text = "Reordered — Save to write the new positions.";
+    }
+
+    // True-layout drag reorder: move the dragged control's row above/below the target row by re-flowing the
+    // parent's rows to a clean vertical stack in the new order (so the Y-sorted preview actually changes).
+    bool TrueLayoutReorder(TplElement dragged, Point ptCanvas)
+    {
+        if (canvas.InputHitTest(ptCanvas) is not DependencyObject hit) return false;
+        TplElement? ctrl = null; Border? cb = null;
+        for (DependencyObject? d = hit; d != null; d = VisualTreeHelper.GetParent(d))
+            if (d is Border bb && bb.Tag is TplElement te) { ctrl = te; cb = bb; break; }
+        if (ctrl == null || ctrl == dragged) return false;
+
+        // dropping a leaf onto a box (not its own) is a reparent — let ReorderTo handle it
+        if (ctrl.Kind == TplKind.Boxed && dragged.Kind is TplKind.Prompt or TplKind.Display or TplKind.Image
+            && !IsAncestor(ctrl, dragged)) return false;
+
+        var p = dragged.Parent;
+        if (p == null) return false;
+        var target = ctrl;                              // map the target up to a direct sibling of the dragged
+        while (target != null && target.Parent != p) target = target.Parent;
+        if (target == null || target == dragged) return false;    // different parent -> reparent (ReorderTo)
+
+        bool before = true;
+        try { before = canvas.TransformToVisual(cb).Transform(ptCanvas).Y < cb!.ActualHeight / 2; } catch { }
+        return ReflowRows(p, dragged, target, before);
+    }
+
+    bool ReflowRows(TplElement p, TplElement dragged, TplElement target, bool before)
+    {
+        EnsureLayout();
+        var kids = p.Children.Where(c => !c.Deleted && (c.IsPositionable || c.Kind == TplKind.Button)).ToList();
+        if (kids.Count < 2) return false;
+
+        // group into rows (boxes own a row; leaves within a few units of Y share one), ordered top-down
+        var sorted = kids.OrderBy(k => k.LY).ToList();
+        var rows = new List<(List<TplElement> els, double top, double height)>();
+        for (int i = 0; i < sorted.Count;)
+        {
+            double top = sorted[i].LY, bottom = sorted[i].LY + sorted[i].LH;
+            var els = new List<TplElement> { sorted[i] };
+            if (sorted[i].Kind == TplKind.Boxed) i++;
+            else
+            {
+                i++;
+                while (i < sorted.Count && sorted[i].Kind != TplKind.Boxed && sorted[i].LY - top <= 6)
+                { els.Add(sorted[i]); bottom = Math.Max(bottom, sorted[i].LY + sorted[i].LH); i++; }
+            }
+            rows.Add((els, top, bottom - top));
+        }
+
+        int dRow = rows.FindIndex(r => r.els.Contains(dragged));
+        int tRow = rows.FindIndex(r => r.els.Contains(target));
+        if (dRow < 0 || tRow < 0 || dRow == tRow) return false;
+
+        var moving = rows[dRow]; rows.RemoveAt(dRow);
+        int ti = rows.FindIndex(r => r.els.Contains(target));
+        rows.Insert(before ? ti : ti + 1, moving);
+
+        PushUndo();
+        double anchor = rows.Min(r => r.top), cur = anchor; const double gap = 4;
+        foreach (var r in rows)
+        {
+            double delta = cur - r.top;
+            if (Math.Abs(delta) >= 0.5)
+                foreach (var el in r.els) MoveElement(el, el.LX, Math.Max(0, el.LY + delta));   // boxes carry contents
+            cur += r.height + gap;
+        }
+        return true;
     }
 
     // ---------- drag a TAB header to reorder the tabs ----------
