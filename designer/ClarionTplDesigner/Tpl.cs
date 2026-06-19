@@ -504,7 +504,10 @@ public static class TplWriter
             TplKind.Display => $"{ind}#DISPLAY('{Esc(e.Title)}'),{at}",
             TplKind.Image   => $"{ind}#IMAGE('{Esc(e.Title)}'),{at}",
             TplKind.Boxed   => $"{ind}#BOXED('{Esc(e.Title)}'),{at}",
-            TplKind.Prompt  => $"{ind}#PROMPT('{Esc(e.Title)}',{e.PromptType}),{e.Symbol},{at}"
+            TplKind.Button  => $"{ind}#BUTTON('{Esc(e.Title)}'),{at}",
+            TplKind.Prompt  => $"{ind}#PROMPT('{Esc(e.Title)}',{e.PromptType})"
+                             + (string.IsNullOrEmpty(e.Symbol) ? "" : $",{e.Symbol}")
+                             + $",{at}"
                              + (e.Req ? ",REQ" : "")
                              + (e.DefaultExpr.Length > 0 ? $",DEFAULT({e.DefaultExpr})"
                                 : (e.PromptType.Equals("CHECK", StringComparison.OrdinalIgnoreCase) ? ",DEFAULT(%TRUE)" : "")),

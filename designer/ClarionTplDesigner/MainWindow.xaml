@@ -37,6 +37,13 @@
             <MenuItem Header="_Group box" Click="Add_Group_Click"/>
             <Separator/>
             <MenuItem Header="New _Tab…" Click="AddTab_Click"/>
+            <Separator/>
+            <MenuItem Header="S_nippets">
+                <MenuItem Header="Group box with 3 _fields" Click="Snippet_Click" Tag="fieldgroup"/>
+                <MenuItem Header="_Option group (3 choices)" Click="Snippet_Click" Tag="optiongroup"/>
+                <MenuItem Header="_Two columns of fields"   Click="Snippet_Click" Tag="twocol"/>
+                <MenuItem Header="Two _check boxes"          Click="Snippet_Click" Tag="checks"/>
+            </MenuItem>
         </MenuItem>
         <MenuItem Header="_Arrange">
             <MenuItem Header="Bring to _Front" Click="Front_Click"/>

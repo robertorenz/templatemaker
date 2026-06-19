@@ -378,6 +378,89 @@ public partial class MainWindow : Window
 
     void AddTab_Click(object s, RoutedEventArgs e) => AddTab();
 
+    // ---------- snippets / pattern library ----------
+    void Snippet_Click(object s, RoutedEventArgs e)
+    {
+        if (s is MenuItem { Tag: string name }) InsertSnippet(name);
+    }
+
+    void InsertSnippet(string name)
+    {
+        if (_doc == null || _tab == null)
+        {
+            MessageBox.Show("Open a template and pick a tab first.", "Snippet",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var roots = BuildSnippet(name);
+        if (roots.Count == 0) return;
+        var parent = _sel is { Kind: TplKind.Boxed, Deleted: false } ? _sel : _tab;
+        PushUndo();
+        _addN = (_addN + 1) % 16; int bx = 12 + _addN * 4, by = 12 + _addN * 6;
+        foreach (var r in roots) { OffsetTree(r, bx, by); r.Parent = parent; parent.Children.Add(r); }
+        foreach (var r in roots) ReassignSymbols(r);     // fresh %symbols so the snippet never duplicates a field
+        Render();
+        _selection.Clear(); _selection.AddRange(roots); _sel = roots[^1];
+        AfterSelectionChanged();
+        status.Text = $"Inserted snippet ({roots.Count} top-level control(s)).  Save to write.";
+    }
+
+    static void OffsetTree(TplElement e, int dx, int dy)
+    {
+        e.X += dx; e.Y += dy;
+        foreach (var c in e.Children) OffsetTree(c, dx, dy);
+    }
+
+    static TplElement SnipPrompt(string title, string pt, int x, int y, int w, int h, string sym = "") => new()
+    {
+        Kind = TplKind.Prompt, Inserted = true, Dirty = true, Title = title, PromptType = pt, Symbol = sym,
+        X = x, Y = y, W = w, H = h, HasX = true, HasY = true, HasW = true, HasH = true
+    };
+
+    static List<TplElement> BuildSnippet(string name)
+    {
+        switch (name)
+        {
+            case "fieldgroup":
+            {
+                var box = new TplElement
+                {
+                    Kind = TplKind.Boxed, Inserted = true, Dirty = true, Title = "Group",
+                    X = 0, Y = 0, W = 180, H = 58, HasX = true, HasY = true, HasW = true, HasH = true
+                };
+                for (int i = 0; i < 3; i++)
+                {
+                    var p = SnipPrompt($"Field {i + 1}:", "@s30", 8, 12 + i * 14, 150, 10, "%Field");
+                    p.Parent = box; box.Children.Add(p);
+                }
+                return new List<TplElement> { box };
+            }
+            case "optiongroup":
+                return new List<TplElement>
+                {
+                    SnipPrompt("Choose one:", "OPTION", 0, 0, 160, 10, "%Choice"),
+                    SnipPrompt("Option A", "RADIO", 8, 14, 120, 10),
+                    SnipPrompt("Option B", "RADIO", 8, 28, 120, 10),
+                    SnipPrompt("Option C", "RADIO", 8, 42, 120, 10),
+                };
+            case "twocol":
+                return new List<TplElement>
+                {
+                    SnipPrompt("Field 1:", "@s30", 0, 0, 140, 10, "%Field"),
+                    SnipPrompt("Field 2:", "@s30", 150, 0, 140, 10, "%Field"),
+                    SnipPrompt("Field 3:", "@s30", 0, 14, 140, 10, "%Field"),
+                    SnipPrompt("Field 4:", "@s30", 150, 14, 140, 10, "%Field"),
+                };
+            case "checks":
+                return new List<TplElement>
+                {
+                    SnipPrompt("Enabled", "CHECK", 0, 0, 120, 10, "%Flag"),
+                    SnipPrompt("Visible", "CHECK", 0, 14, 120, 10, "%Flag"),
+                };
+            default: return new List<TplElement>();
+        }
+    }
+
     // Add a new #TAB to the current part's #SHEET (inserted before #ENDSHEET, after the existing tabs).
     void AddTab()
     {
