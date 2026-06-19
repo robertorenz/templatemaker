@@ -108,6 +108,7 @@
                 <MenuItem Header="Pack into a _row"    Click="PackRow_Click"/>
                 <MenuItem Header="Pack into a _column" Click="PackCol_Click"/>
             </MenuItem>
+            <MenuItem Header="Move to a clear row _below" Click="NewRow_Click"/>
             <Separator/>
             <MenuItem Header="_Group into box" Click="Group_Click" InputGestureText="Ctrl+G"/>
             <MenuItem Header="Un_group box" Click="Ungroup_Click" InputGestureText="Ctrl+Shift+G"/>
