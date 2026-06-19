@@ -478,7 +478,8 @@ public partial class MainWindow : Window
 
     void InsertSnippet(string name)
     {
-        if (_doc == null || _tab == null)
+        var tab = TargetTab();
+        if (_doc == null || tab == null)
         {
             MessageBox.Show("Open a template and pick a tab first.", "Snippet",
                 MessageBoxButton.OK, MessageBoxImage.Information);
@@ -486,7 +487,7 @@ public partial class MainWindow : Window
         }
         var roots = BuildSnippet(name);
         if (roots.Count == 0) return;
-        var parent = _sel is { Kind: TplKind.Boxed, Deleted: false } ? _sel : _tab;
+        var parent = _sel is { Kind: TplKind.Boxed, Deleted: false } ? _sel : tab;
         PushUndo();
         _addN = (_addN + 1) % 16; int bx = 12 + _addN * 4, by = 12 + _addN * 6;
         foreach (var r in roots) { OffsetTree(r, bx, by); r.Parent = parent; parent.Children.Add(r); }
@@ -700,7 +701,8 @@ public partial class MainWindow : Window
 
     void AddControl(TplKind kind, string title, string promptType, int w, int h)
     {
-        if (_doc == null || _tab == null)
+        var tab = TargetTab();
+        if (_doc == null || tab == null)
         {
             MessageBox.Show("Open a template and select a tab first.", "Add control",
                 MessageBoxButton.OK, MessageBoxImage.Information);
@@ -708,7 +710,7 @@ public partial class MainWindow : Window
         }
         PushUndo();
         var el = MakeControl(kind, title, promptType, w, h);
-        el.Parent = _tab; _tab.Children.Add(el);
+        el.Parent = tab; tab.Children.Add(el);
         Render();
         Select(el);
         status.Text = $"Added {kind} \"{title}\".  Drag to position, edit its text in the panel, then Save.";
@@ -1431,12 +1433,24 @@ public partial class MainWindow : Window
         if (_clip.Count > 0) DeleteSelection();
     }
 
+    // The tab currently being shown: in flow preview that's the previewed tab, otherwise the canvas tab.
+    TplElement? TargetTab()
+    {
+        if (_preview && _component != null)
+        {
+            var lts = LiveTabs();
+            if (_previewTabIndex >= 0 && _previewTabIndex < lts.Count) return lts[_previewTabIndex];
+        }
+        return _tab;
+    }
+
     void Paste()
     {
         if (_clip.Count == 0) { status.Text = "Nothing to paste."; return; }
-        if (_tab == null) { status.Text = "Pick a tab to paste into."; return; }
-        // paste into the selected group box, else the current tab
-        var parent = _sel is { Kind: TplKind.Boxed, Deleted: false } ? _sel : _tab;
+        var tab = TargetTab();
+        if (tab == null) { status.Text = "Pick a tab to paste into."; return; }
+        // paste into the selected group box, else the current/visible tab
+        var parent = _sel is { Kind: TplKind.Boxed, Deleted: false } ? _sel : tab;
         PushUndo();
         var added = new List<TplElement>();
         foreach (var src in _clip)
@@ -1451,7 +1465,7 @@ public partial class MainWindow : Window
         Render();
         _selection.Clear(); _selection.AddRange(added); _sel = added[^1];
         AfterSelectionChanged();
-        status.Text = $"Pasted {added.Count} control(s) into {(parent == _tab ? "the tab" : "the group")}.  Save to write.";
+        status.Text = $"Pasted {added.Count} control(s) into {(parent.Kind == TplKind.Tab ? "the tab" : "the group")}.  Save to write.";
     }
 
     void Duplicate()
