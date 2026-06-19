@@ -9,9 +9,13 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Text.RegularExpressions;
+using ICSharpCode.AvalonEdit.CodeCompletion;
+using ICSharpCode.AvalonEdit.Document;
+using ICSharpCode.AvalonEdit.Editing;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using ICSharpCode.AvalonEdit.Rendering;
+using ICSharpCode.AvalonEdit.Search;
 using AvalonDock.Layout;
 using AvalonDock.Layout.Serialization;
 using Microsoft.Win32;
@@ -103,6 +107,8 @@ public partial class MainWindow : Window
         srcMap.GoToLine += ln => srcEditor.ScrollToLine(Math.Min(srcEditor.Document?.LineCount ?? 1, ln + 1));
         srcEditor.TextArea.TextView.ScrollOffsetChanged += (_, _) => UpdateMinimapViewport();
         srcEditor.TextArea.TextView.BackgroundRenderers.Add(_lineHi);
+        SearchPanel.Install(srcEditor);                       // Ctrl+F find/replace in the source
+        srcEditor.TextArea.TextEntered += Src_TextEntered;    // %symbol / #directive autocomplete
         _ready = true;
 
         // remember panel contents + the pristine layout, then restore the user's saved layout
@@ -931,6 +937,53 @@ public partial class MainWindow : Window
         RebuildPendingMap();
         RefreshMinimap();
         UpdateSourceHighlights();
+    }
+
+    // ---------- source autocomplete (%symbols + #directives) ----------
+    CompletionWindow? _completion;
+    static readonly string[] Directives =
+    {
+        "PROMPT", "DISPLAY", "IMAGE", "BUTTON", "ENDBUTTON", "BOXED", "ENDBOXED", "TAB", "ENDTAB",
+        "SHEET", "ENDSHEET", "ENABLE", "ENDENABLE", "GROUP", "ENDGROUP", "INSERT", "EQUATE", "DECLARE",
+        "SYSTEM", "EXTENSION", "CONTROL", "CODE", "PROCEDURE", "TEMPLATE", "AT", "PROP", "DEFAULT", "REQ",
+        "WHERE", "FROM", "DROP", "SPIN", "CHECK", "OPTION", "RADIO", "EXPR", "KEYCODE"
+    };
+
+    void Src_TextEntered(object sender, System.Windows.Input.TextCompositionEventArgs e)
+    {
+        if (e.Text == "%") ShowCompletion(EditorSymbols().Select(x => (x, "%symbol")));
+        else if (e.Text == "#") ShowCompletion(Directives.Select(d => (d, "#directive")));
+    }
+
+    IEnumerable<string> EditorSymbols()
+    {
+        var set = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (System.Text.RegularExpressions.Match m in
+                 System.Text.RegularExpressions.Regex.Matches(srcEditor.Text, @"%([A-Za-z]\w*)"))
+            set.Add(m.Groups[1].Value);
+        return set;
+    }
+
+    void ShowCompletion(IEnumerable<(string text, string desc)> items)
+    {
+        var list = items.ToList();
+        if (list.Count == 0) return;
+        _completion = new CompletionWindow(srcEditor.TextArea);
+        foreach (var (t, desc) in list) _completion.CompletionList.CompletionData.Add(new ComplItem(t, desc));
+        _completion.Closed += (_, _) => _completion = null;
+        _completion.Show();
+    }
+
+    sealed class ComplItem : ICompletionData
+    {
+        readonly string _desc;
+        public ComplItem(string text, string desc) { Text = text; _desc = desc; }
+        public System.Windows.Media.ImageSource? Image => null;
+        public string Text { get; }
+        public object Content => Text;
+        public object Description => _desc;
+        public double Priority => 0;
+        public void Complete(TextArea area, ISegment seg, EventArgs e) => area.Document.Replace(seg, Text);
     }
 
     void LoadSource()
