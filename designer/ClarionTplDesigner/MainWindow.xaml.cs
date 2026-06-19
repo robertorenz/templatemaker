@@ -2172,6 +2172,7 @@ public partial class MainWindow : Window
     {
         var items = AlignTargets();
         if (items.Count < 2) { status.Text = "Select two or more controls to align (Ctrl/Shift-click)."; return; }
+        EnsureLayout();
         PushUndo();
         double minX = items.Min(e2 => e2.LX), maxR = items.Max(e2 => e2.LX + e2.LW);
         double minY = items.Min(e2 => e2.LY), maxB = items.Max(e2 => e2.LY + e2.LH);
@@ -2198,6 +2199,7 @@ public partial class MainWindow : Window
     {
         var items = AlignTargets();
         if (items.Count < 2) { status.Text = "Select two or more controls to size together."; return; }
+        EnsureLayout();
         PushUndo();
         double w = items.Max(e2 => e2.LW), h = items.Max(e2 => e2.LH);
         foreach (var el in items)
@@ -2214,6 +2216,7 @@ public partial class MainWindow : Window
     {
         var items = AlignTargets();
         if (items.Count < 3) { status.Text = "Select three or more controls to distribute."; return; }
+        EnsureLayout();
         PushUndo();
         bool horiz = dir == "h";
         items = (horiz ? items.OrderBy(e2 => e2.LX) : items.OrderBy(e2 => e2.LY)).ToList();
@@ -2247,10 +2250,14 @@ public partial class MainWindow : Window
 
     // Move the selection straight up/down so it no longer overlaps any other control (carrying box contents).
     // Use case: a #BOXED that overlaps the title row -> one click puts it on a clear row below (or above).
+    // The flow preview doesn't run the canvas layout, so refresh LX/LY from the model before a layout op.
+    void EnsureLayout() { if (_tab != null) Layout.Run(_tab); }
+
     void MoveClearRow(bool down)
     {
         var items = AlignTargets();
         if (items.Count == 0 || _tab == null) { status.Text = "Select a control (or box) to move to a clear row."; return; }
+        EnsureLayout();
         var sel = new HashSet<TplElement>(items);
         bool InSel(TplElement e) { for (var p = e; p != null; p = p.Parent) if (sel.Contains(p)) return true; return false; }
 
@@ -2285,6 +2292,7 @@ public partial class MainWindow : Window
         // Keep selection order: the FIRST-selected control anchors the row/column; the rest follow it.
         var items = AlignTargets();
         if (items.Count < 2) { status.Text = "Select two or more controls to pack together (the first one selected leads)."; return; }
+        EnsureLayout();
         PushUndo();
         const double gap = 4;     // small breathing space between controls (DLU)
         var first = items[0];
