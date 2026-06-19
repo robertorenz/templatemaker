@@ -123,6 +123,7 @@ public partial class MainWindow : Window
         try { _defaultLayoutXml = SerializeLayout(); } catch { }
         LoadPrefs();
         LoadRecent();
+        RefreshRecentMenus();
         Loaded += (_, _) => TryLoadSavedLayout();
         Closing += (_, _) => { SaveLayout(); SavePrefs(); };
     }
@@ -194,18 +195,31 @@ public partial class MainWindow : Window
         _recent.Insert(0, path);
         while (_recent.Count > 12) _recent.RemoveAt(_recent.Count - 1);
         SaveRecent();
+        RefreshRecentMenus();
     }
 
     void RemoveRecent(string path)
     {
         _recent.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
         SaveRecent();
+        RefreshRecentMenus();
     }
 
-    // Populate the Recent submenu (used by both the File menu and the toolbar) on open.
+    // Build both Recent menus eagerly — a submenu must already have items or WPF won't open it.
+    void RefreshRecentMenus()
+    {
+        PopulateRecentMenu(miRecentBar);
+        PopulateRecentMenu(miRecentFile);
+    }
+
     void RecentBar_Opened(object s, RoutedEventArgs e)
     {
-        if (s is not MenuItem mi) return;
+        if (s is MenuItem mi) PopulateRecentMenu(mi);     // refresh on open too
+    }
+
+    void PopulateRecentMenu(MenuItem mi)
+    {
+        if (mi == null) return;
         mi.Items.Clear();
         if (_recent.Count == 0)
         {
@@ -215,18 +229,14 @@ public partial class MainWindow : Window
         int n = 1;
         foreach (var path in _recent)
         {
-            var item = new MenuItem
-            {
-                Header = $"_{n++}  {System.IO.Path.GetFileName(path)}",
-                ToolTip = path
-            };
+            var item = new MenuItem { Header = $"_{n++}  {System.IO.Path.GetFileName(path)}", ToolTip = path };
             var captured = path;
             item.Click += (_, _) => OpenPath(captured);
             mi.Items.Add(item);
         }
         mi.Items.Add(new Separator());
         var clear = new MenuItem { Header = "Clear recent files" };
-        clear.Click += (_, _) => { _recent.Clear(); SaveRecent(); };
+        clear.Click += (_, _) => { _recent.Clear(); SaveRecent(); RefreshRecentMenus(); };
         mi.Items.Add(clear);
     }
 
