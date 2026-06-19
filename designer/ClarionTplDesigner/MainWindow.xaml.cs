@@ -1121,6 +1121,8 @@ public partial class MainWindow : Window
             if (d.TryGetValue("snapGrid", out var sn)) miSnapGrid.IsChecked = sn == "1";
             if (d.TryGetValue("snapGuide", out var su)) miSnapGuide.IsChecked = su == "1";
             if (d.TryGetValue("smartGuides", out var smg)) miSmartGuides.IsChecked = smg == "1";
+            if (d.TryGetValue("trueLayout", out var tl) && tl == "1")
+            { _previewTrueLayout = true; miTrueLayout.IsChecked = true; btnTrueLayout.IsChecked = true; }
             if (d.TryGetValue("minimap", out var mm)) miMinimap.IsChecked = mm == "1";
             if (d.TryGetValue("gridSize", out var gs) && int.TryParse(gs, out _)) txtGrid.Text = gs;
             if (d.TryGetValue("previewWidth", out var pw) && int.TryParse(pw, out var pwv))
@@ -1148,6 +1150,7 @@ public partial class MainWindow : Window
                 $"snapGrid={(miSnapGrid.IsChecked == true ? 1 : 0)}",
                 $"snapGuide={(miSnapGuide.IsChecked == true ? 1 : 0)}",
                 $"smartGuides={(miSmartGuides.IsChecked == true ? 1 : 0)}",
+                $"trueLayout={(_previewTrueLayout ? 1 : 0)}",
                 $"minimap={(miMinimap.IsChecked == true ? 1 : 0)}",
                 $"gridSize={GridStep}",
                 $"previewWidth={_previewWidth}",

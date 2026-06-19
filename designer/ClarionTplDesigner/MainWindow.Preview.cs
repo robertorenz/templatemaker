@@ -15,6 +15,7 @@ namespace ClarionTplDesigner;
 public partial class MainWindow
 {
     bool _preview;
+    bool _previewTrueLayout;          // ON = lay out controls by their AT (same-Y on one row); OFF = stack top-to-bottom
     bool _previewPending = true;      // ON = current/unsaved work (interactive); OFF = the saved file on disk
     string[]? _previewLines;          // when set (saved preview), prompt defaults/drops are read from these
     int _previewTabIndex;             // remembered across the rebuild that each selection triggers
@@ -47,6 +48,19 @@ public partial class MainWindow
         status.Text = _preview
             ? "Flow preview (read-only) — how Clarion auto-lays out the prompts."
             : "Designer — drag, position and edit controls.";
+    }
+
+    void TrueLayout_Toggle(object s, RoutedEventArgs e)
+    {
+        _previewTrueLayout = (s as System.Windows.Controls.Primitives.ToggleButton)?.IsChecked
+                             ?? (s as MenuItem)?.IsChecked ?? !_previewTrueLayout;
+        miTrueLayout.IsChecked = _previewTrueLayout;
+        btnTrueLayout.IsChecked = _previewTrueLayout;
+        if (_previewTrueLayout && !_preview) { _preview = true; miPreview.IsChecked = true; btnPreview.IsChecked = true; }
+        Render();
+        status.Text = _previewTrueLayout
+            ? "Preview: true layout — controls sharing a row sit side by side (by AT)."
+            : "Preview: stacked — every control on its own row (AppGen style).";
     }
 
     void PreviewPending_Toggle(object s, RoutedEventArgs e)
@@ -136,6 +150,14 @@ public partial class MainWindow
 
     void BuildFlow(Panel host, IEnumerable<TplElement> children)
     {
+        if (_previewTrueLayout)
+        {
+            var rows = new List<(double y, double x, FrameworkElement vis)>();
+            CollectRows(rows, children);
+            FlushRows(host, rows);
+            return;
+        }
+
         StackPanel? optionGroup = null;     // RADIOs accumulate into the most recent OPTION group
         foreach (var el in children)
         {
@@ -148,65 +170,117 @@ public partial class MainWindow
                 ApplyFont(rb, el); optionGroup.Children.Add(Selectable(rb, el));
                 continue;
             }
-
             if (!(el.Kind == TplKind.Prompt && u.StartsWith("OPTION"))) optionGroup = null;
 
-            FrameworkElement content;
-            switch (el.Kind)
+            if (el.Kind == TplKind.Enable) { BuildFlow(host, el.Children); continue; }   // transparent group
+            if (el.Kind == TplKind.Prompt && u.StartsWith("OPTION"))
             {
-                case TplKind.Display:
-                    var disp = new TextBlock { Text = el.Title.Length > 0 ? el.Title : " ",
-                        Margin = new Thickness(0, 2, 0, 2), TextWrapping = TextWrapping.Wrap, IsHitTestVisible = false };
-                    ApplyFont(disp, el); content = disp;
-                    break;
-                case TplKind.Image:
-                    var bmp = ResolveImage(el.Title);
-                    if (bmp != null)
-                    {
-                        double f = PreviewFactor;
-                        content = new System.Windows.Controls.Image
-                        {
-                            Source = bmp, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly,
-                            IsHitTestVisible = false, SnapsToDevicePixels = true,
-                            HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 2, 0, 2),
-                            MaxWidth = el.HasW && el.W > 0 ? el.W * f : bmp.PixelWidth,
-                            MaxHeight = el.HasH && el.H > 0 ? el.H * f : bmp.PixelHeight
-                        };
-                    }
-                    else
-                        content = new TextBlock { Text = "🖼 " + el.Title, Margin = new Thickness(0, 2, 0, 2),
-                            IsHitTestVisible = false, Foreground = new SolidColorBrush(Color.FromRgb(0x8A, 0x95, 0xA3)) };
-                    break;
-                case TplKind.Boxed:
-                    var gb = new GroupBox { Header = el.Title, Margin = new Thickness(0, 4, 0, 4) };
-                    var bi = new StackPanel(); BuildFlow(bi, el.Children); gb.Content = bi;
-                    content = gb;
-                    break;
-                case TplKind.Enable:
-                    BuildFlow(host, el.Children);   // conditional group, no visual of its own
-                    continue;
-                case TplKind.Button:
-                    content = new Button { Content = el.Title, HorizontalAlignment = HorizontalAlignment.Left,
-                        Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 4, 0, 4), IsHitTestVisible = false };
-                    break;
-                case TplKind.Prompt:
-                    if (u.StartsWith("OPTION"))
-                    {
-                        var og = new GroupBox { Header = el.Title, Margin = new Thickness(0, 4, 0, 4) };
-                        var oi = new StackPanel(); og.Content = oi;
-                        host.Children.Add(Selectable(og, el)); optionGroup = oi;
-                        continue;
-                    }
-                    if (u == "CHECK")
-                    {
-                        var cb = new CheckBox { Content = el.Title, Margin = new Thickness(0, 3, 0, 3), IsHitTestVisible = false };
-                        ApplyFont(cb, el); content = cb;
-                    }
-                    else content = BuildPromptRow(el, u);
-                    break;
-                default: continue;
+                host.Children.Add(Selectable(MakeOptionGroup(el, out optionGroup), el));
+                continue;
             }
-            host.Children.Add(Selectable(content, el));
+            var content = BuildContent(el, u);
+            if (content != null) host.Children.Add(Selectable(content, el));
+        }
+    }
+
+    // Collect (y, x, visual) for each control so they can be grouped into rows by Y (true-layout mode).
+    void CollectRows(List<(double y, double x, FrameworkElement vis)> rows, IEnumerable<TplElement> children)
+    {
+        StackPanel? optionGroup = null;
+        foreach (var el in children)
+        {
+            if (el.Deleted) continue;
+            string u = el.Kind == TplKind.Prompt ? el.PromptType.Trim().ToUpperInvariant() : "";
+
+            if (el.Kind == TplKind.Prompt && u.StartsWith("RADIO") && optionGroup != null)
+            {
+                var rb = new RadioButton { Content = el.Title, Margin = new Thickness(2), IsHitTestVisible = false };
+                ApplyFont(rb, el); optionGroup.Children.Add(Selectable(rb, el));
+                continue;
+            }
+            if (!(el.Kind == TplKind.Prompt && u.StartsWith("OPTION"))) optionGroup = null;
+
+            if (el.Kind == TplKind.Enable) { CollectRows(rows, el.Children); continue; }
+            double y = el.HasY ? el.Y : 0, x = el.HasX ? el.X : 0;
+            if (el.Kind == TplKind.Prompt && u.StartsWith("OPTION"))
+            {
+                rows.Add((y, x, Selectable(MakeOptionGroup(el, out optionGroup), el)));
+                continue;
+            }
+            var content = BuildContent(el, u);
+            if (content != null) rows.Add((y, x, Selectable(content, el)));
+        }
+    }
+
+    // Group collected controls whose Y is within a few units onto one horizontal row, ordered by X.
+    void FlushRows(Panel host, List<(double y, double x, FrameworkElement vis)> rows)
+    {
+        var sorted = rows.OrderBy(r => r.y).ToList();
+        int i = 0;
+        while (i < sorted.Count)
+        {
+            double y0 = sorted[i].y;
+            var group = new List<(double x, FrameworkElement vis)>();
+            while (i < sorted.Count && sorted[i].y - y0 <= 6) { group.Add((sorted[i].x, sorted[i].vis)); i++; }
+            if (group.Count == 1) { host.Children.Add(group[0].vis); continue; }
+            group.Sort((a, b) => a.x.CompareTo(b.x));
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            foreach (var g in group)
+            {
+                g.vis.VerticalAlignment = VerticalAlignment.Center;
+                row.Children.Add(g.vis);
+            }
+            host.Children.Add(row);
+        }
+    }
+
+    GroupBox MakeOptionGroup(TplElement el, out StackPanel inner)
+    {
+        var og = new GroupBox { Header = el.Title, Margin = new Thickness(0, 4, 0, 4) };
+        inner = new StackPanel(); og.Content = inner;
+        return og;
+    }
+
+    // The visual for one control (no Selectable wrapper, no OPTION/RADIO/ENABLE handling).
+    FrameworkElement? BuildContent(TplElement el, string u)
+    {
+        switch (el.Kind)
+        {
+            case TplKind.Display:
+                var disp = new TextBlock { Text = el.Title.Length > 0 ? el.Title : " ",
+                    Margin = new Thickness(0, 2, 0, 2), TextWrapping = TextWrapping.Wrap, IsHitTestVisible = false };
+                ApplyFont(disp, el); return disp;
+            case TplKind.Image:
+                var bmp = ResolveImage(el.Title);
+                if (bmp != null)
+                {
+                    double f = PreviewFactor;
+                    return new System.Windows.Controls.Image
+                    {
+                        Source = bmp, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly,
+                        IsHitTestVisible = false, SnapsToDevicePixels = true,
+                        HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 2, 0, 2),
+                        MaxWidth = el.HasW && el.W > 0 ? el.W * f : bmp.PixelWidth,
+                        MaxHeight = el.HasH && el.H > 0 ? el.H * f : bmp.PixelHeight
+                    };
+                }
+                return new TextBlock { Text = "🖼 " + el.Title, Margin = new Thickness(0, 2, 0, 2),
+                    IsHitTestVisible = false, Foreground = new SolidColorBrush(Color.FromRgb(0x8A, 0x95, 0xA3)) };
+            case TplKind.Boxed:
+                var gb = new GroupBox { Header = el.Title, Margin = new Thickness(0, 4, 0, 4) };
+                var bi = new StackPanel(); BuildFlow(bi, el.Children); gb.Content = bi;
+                return gb;
+            case TplKind.Button:
+                return new Button { Content = el.Title, HorizontalAlignment = HorizontalAlignment.Left,
+                    Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 4, 0, 4), IsHitTestVisible = false };
+            case TplKind.Prompt:
+                if (u == "CHECK")
+                {
+                    var cb = new CheckBox { Content = el.Title, Margin = new Thickness(0, 3, 0, 3), IsHitTestVisible = false };
+                    ApplyFont(cb, el); return cb;
+                }
+                return BuildPromptRow(el, u);
+            default: return null;
         }
     }
 

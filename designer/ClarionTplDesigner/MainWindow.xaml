@@ -131,6 +131,7 @@
         <MenuItem Header="_View">
             <MenuItem x:Name="miPreview" Header="_Flow preview" IsCheckable="True" Click="Preview_Toggle"/>
             <MenuItem x:Name="miPreviewPending" Header="Preview _unsaved work (off = saved file)" IsCheckable="True" IsChecked="True" Click="PreviewPending_Toggle"/>
+            <MenuItem x:Name="miTrueLayout" Header="Preview _true layout (side-by-side by AT)" IsCheckable="True" Click="TrueLayout_Toggle"/>
             <MenuItem x:Name="miViewSource" Header="_Source panel" IsCheckable="True" Click="Source_Click"/>
             <MenuItem x:Name="miViewOutline" Header="_Outline panel" IsCheckable="True" Click="Outline_Toggle"/>
             <MenuItem x:Name="miViewSymbols" Header="S_ymbols panel" IsCheckable="True" Click="Symbols_Toggle"/>
@@ -192,6 +193,8 @@
                           ToolTip="Flow preview — how Clarion auto-lays out the prompts">Preview</ToggleButton>
             <ToggleButton x:Name="btnPreviewPending" Click="PreviewPending_Toggle" Padding="8,2" IsChecked="True"
                           ToolTip="ON = preview your current/unsaved work; OFF = preview the saved file on disk">Unsaved</ToggleButton>
+            <ToggleButton x:Name="btnTrueLayout" Click="TrueLayout_Toggle" Padding="8,2"
+                          ToolTip="ON = true layout: controls sharing a row (same Y) sit side by side; OFF = stacked one per row">True layout</ToggleButton>
             <ComboBox x:Name="cmbPreviewWidth" Width="124" VerticalAlignment="Center" Margin="4,0,0,0"
                       SelectionChanged="PreviewWidth_Changed"
                       ToolTip="Prompt-window width: 480 (Clarion 10 and earlier) or 960 (Clarion 11.0/11.1/12)">
