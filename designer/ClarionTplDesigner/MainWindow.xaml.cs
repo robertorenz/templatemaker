@@ -2076,12 +2076,12 @@ public partial class MainWindow : Window
         root.Items.Add(ZItem("Send to Back",   () => { Pick(); ZBack(el); }));
         root.Items.Add(new Separator());
         var align = BuildAlignMenu();
-        align.IsEnabled = _selection.Count >= 2;     // align/distribute need a multi-selection
+        align.IsEnabled = _selection.Count >= 2;     // align/distribute need a reference control
         root.Items.Add(align);
         root.Items.Add(new Separator());
-        var group = ZItem("Group into box", GroupSelection);
-        group.IsEnabled = _selection.Count >= 2;
-        root.Items.Add(group);
+        // grouping a single control in a box is valid; right-click already ensures it's selected
+        root.Items.Add(ZItem(_selection.Count >= 2 ? "Group into box" : "Group into box (this control)",
+                             () => { Pick(); GroupSelection(); }));
         if (el.Kind == TplKind.Boxed) root.Items.Add(ZItem("Ungroup box", () => { Pick(); UngroupSelection(); }));
         return root;
     }
