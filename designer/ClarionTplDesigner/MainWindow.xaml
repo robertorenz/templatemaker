@@ -17,6 +17,11 @@
         <MenuItem Header="_Edit">
             <MenuItem Header="_Undo" Click="Undo_Click" InputGestureText="Ctrl+Z"/>
             <Separator/>
+            <MenuItem Header="_Copy" Click="Copy_Click" InputGestureText="Ctrl+C"/>
+            <MenuItem Header="Cu_t" Click="Cut_Click" InputGestureText="Ctrl+X"/>
+            <MenuItem Header="_Paste" Click="Paste_Click" InputGestureText="Ctrl+V"/>
+            <MenuItem Header="_Duplicate" Click="Duplicate_Click" InputGestureText="Ctrl+D"/>
+            <Separator/>
             <MenuItem Header="Add _AT to all controls" Click="MaterializeAll_Click"/>
             <Separator/>
             <MenuItem Header="_Check for problems" Click="Validate_Click"/>

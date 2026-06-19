@@ -1053,6 +1053,72 @@ public partial class MainWindow : Window
         srcMap.InvalidateVisual();
     }
 
+    // ---------- copy / cut / paste / duplicate ----------
+    readonly List<TplElement> _clip = new();   // cloned subtrees; paste re-clones so it can be pasted repeatedly
+
+    void Copy_Click(object s, RoutedEventArgs e) => Copy();
+    void Cut_Click(object s, RoutedEventArgs e) => Cut();
+    void Paste_Click(object s, RoutedEventArgs e) => Paste();
+    void Duplicate_Click(object s, RoutedEventArgs e) => Duplicate();
+
+    void Copy()
+    {
+        var items = _selection.Where(x => !x.Deleted && (x.IsPositionable || x.Kind == TplKind.Button)).ToList();
+        if (items.Count == 0) { status.Text = "Select control(s) to copy."; return; }
+        _clip.Clear();
+        foreach (var x in items) _clip.Add(x.Clone());
+        status.Text = $"Copied {items.Count} control(s).  Paste with Ctrl+V.";
+    }
+
+    void Cut()
+    {
+        Copy();
+        if (_clip.Count > 0) DeleteSelection();
+    }
+
+    void Paste()
+    {
+        if (_clip.Count == 0) { status.Text = "Nothing to paste."; return; }
+        if (_tab == null) { status.Text = "Pick a tab to paste into."; return; }
+        // paste into the selected group box, else the current tab
+        var parent = _sel is { Kind: TplKind.Boxed, Deleted: false } ? _sel : _tab;
+        PushUndo();
+        var added = new List<TplElement>();
+        foreach (var src in _clip)
+        {
+            var c = src.Clone();
+            PrepInserted(c);
+            c.X += 4; c.Y += 4;                    // nudge so the copy isn't exactly on top
+            c.Parent = parent; parent.Children.Add(c);
+            added.Add(c);
+        }
+        foreach (var c in added) ReassignSymbols(c);   // fresh %symbols so paste never duplicates a field
+        Render();
+        _selection.Clear(); _selection.AddRange(added); _sel = added[^1];
+        AfterSelectionChanged();
+        status.Text = $"Pasted {added.Count} control(s) into {(parent == _tab ? "the tab" : "the group")}.  Save to write.";
+    }
+
+    void Duplicate()
+    {
+        if (_selection.Count == 0) { status.Text = "Select control(s) to duplicate."; return; }
+        Copy();
+        Paste();
+    }
+
+    static void PrepInserted(TplElement c)
+    {
+        c.Inserted = true; c.Dirty = true; c.Moved = false; c.Deleted = false;
+        c.LineIndex = -1; c.EndLineIndex = -1; c.MoveAnchorLine = -1;
+        foreach (var ch in c.Children) PrepInserted(ch);
+    }
+
+    void ReassignSymbols(TplElement c)
+    {
+        if (!string.IsNullOrEmpty(c.Symbol)) c.Symbol = NewSymbol();   // NewSymbol scans the live tree, so each is unique
+        foreach (var ch in c.Children) ReassignSymbols(ch);
+    }
+
     void DeleteSelection()
     {
         var items = _selection.Count > 0 ? _selection.ToList()
@@ -1574,6 +1640,8 @@ public partial class MainWindow : Window
             cm.Items.Add(ZItem("Font && Colour…", () => EditFontDialog(el)));
         }
         cm.Items.Add(new Separator());
+        cm.Items.Add(ZItem("Duplicate", () => { if (!_selection.Contains(el)) Select(el); Duplicate(); }));
+        cm.Items.Add(ZItem("Copy", () => { if (!_selection.Contains(el)) Select(el); Copy(); }));
         cm.Items.Add(ZItem("Delete", () => DeleteControl(el)));
         return cm;
     }
@@ -2741,10 +2809,16 @@ public partial class MainWindow : Window
     {
         if (e.Key == Key.F1) { UserManual_Click(s, e); e.Handled = true; return; }
         if (srcEditor.IsKeyboardFocusWithin) return;   // let the source editor handle its own keys
-        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && e.Key == Key.Z)
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && Keyboard.FocusedElement is not TextBox)
         {
-            if (Keyboard.FocusedElement is TextBox) return;   // let the editor's own undo run
-            Undo(); e.Handled = true; return;
+            switch (e.Key)
+            {
+                case Key.Z: Undo(); e.Handled = true; return;
+                case Key.C: Copy(); e.Handled = true; return;
+                case Key.X: Cut(); e.Handled = true; return;
+                case Key.V: Paste(); e.Handled = true; return;
+                case Key.D: Duplicate(); e.Handled = true; return;
+            }
         }
         if (_sel == null) return;
         if (e.Key is Key.Delete or Key.Back)
