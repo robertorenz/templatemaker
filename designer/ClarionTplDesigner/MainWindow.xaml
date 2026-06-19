@@ -104,6 +104,9 @@
                 <MenuItem Header="Distribute _Horizontally" Click="Distribute_Click" Tag="h"/>
                 <MenuItem Header="Distribute _Vertically"   Click="Distribute_Click" Tag="v"/>
             </MenuItem>
+            <Separator/>
+            <MenuItem Header="_Group into box" Click="Group_Click" InputGestureText="Ctrl+G"/>
+            <MenuItem Header="Un_group box" Click="Ungroup_Click" InputGestureText="Ctrl+Shift+G"/>
         </MenuItem>
         <MenuItem Header="St_yle">
             <MenuItem Header="_Font &amp; Colour…" Click="StyleFont_Click"/>

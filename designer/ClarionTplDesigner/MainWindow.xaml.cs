@@ -2012,7 +2012,10 @@ public partial class MainWindow : Window
         {
             cm.Items.Add(new Separator());
             cm.Items.Add(BuildAlignMenu());
+            cm.Items.Add(ZItem("Group into box", GroupSelection));
         }
+        if (el.Kind == TplKind.Boxed)
+            cm.Items.Add(ZItem("Ungroup box", UngroupSelection));
         if (el.Kind is TplKind.Prompt or TplKind.Display or TplKind.Boxed)
         {
             cm.Items.Add(new Separator());
@@ -2155,6 +2158,75 @@ public partial class MainWindow : Window
         RefreshSelectionVisual();
         RefreshLiveSource();
         status.Text = msg + "  Save to write the new AT() values.";
+    }
+
+    // ---------- group / ungroup ----------
+    void Group_Click(object s, RoutedEventArgs e) => GroupSelection();
+    void Ungroup_Click(object s, RoutedEventArgs e) => UngroupSelection();
+
+    void GroupSelection()
+    {
+        var items = _selection.Where(x => !x.Deleted && (x.IsPositionable || x.Kind == TplKind.Button)).ToList();
+        if (items.Count == 0) { status.Text = "Select control(s) to group into a box."; return; }
+        var parent = items[0].Parent;
+        if (parent == null || items.Any(x => x.Parent != parent))
+        {
+            status.Text = "To group, select controls that live in the same tab or box.";
+            return;
+        }
+        PushUndo();
+
+        double minX = items.Min(i => i.LX), minY = items.Min(i => i.LY);
+        double maxX = items.Max(i => i.LX + i.LW), maxY = items.Max(i => i.LY + i.LH);
+        const int pad = 6;
+        var box = new TplElement
+        {
+            Kind = TplKind.Boxed, Inserted = true, Dirty = true, Title = "Group",
+            X = Math.Max(0, (int)Math.Round(minX) - pad), Y = Math.Max(0, (int)Math.Round(minY) - pad),
+            W = (int)Math.Round(maxX - minX) + 2 * pad, H = (int)Math.Round(maxY - minY) + 2 * pad,
+            HasX = true, HasY = true, HasW = true, HasH = true
+        };
+        // emit the box where the first existing member sits (its members relocate inside it)
+        box.MoveAnchorLine = items.Where(i => !i.Inserted && i.LineIndex >= 0)
+                                  .Select(i => i.LineIndex).DefaultIfEmpty(-1).Min();
+
+        int idx = parent.Children.IndexOf(items[0]);
+        parent.Children.Insert(Math.Max(0, idx), box);
+        box.Parent = parent;
+        foreach (var it in items)
+        {
+            parent.Children.Remove(it);
+            it.Parent = box; box.Children.Add(it);
+            if (!it.Inserted) it.Moved = true;     // existing members: drop original line, re-emit inside the box
+        }
+        Render();
+        Select(box);
+        status.Text = $"Grouped {items.Count} control(s) into a box.  Save to write.";
+    }
+
+    void UngroupSelection()
+    {
+        var box = _sel;
+        if (box is not { Kind: TplKind.Boxed } || box.Deleted) { status.Text = "Select a group box to ungroup."; return; }
+        var parent = box.Parent;
+        if (parent == null) return;
+        PushUndo();
+
+        int idx = parent.Children.IndexOf(box);
+        var kids = box.Children.Where(c => !c.Deleted).ToList();
+        foreach (var c in kids)
+        {
+            box.Children.Remove(c);
+            c.Parent = parent;
+            parent.Children.Insert(idx++, c);
+            if (!c.Inserted) { c.Moved = true; c.MoveAnchorLine = box.LineIndex >= 0 ? box.LineIndex : -1; }
+        }
+        if (box.Inserted) parent.Children.Remove(box); else box.Deleted = true;
+        Render();
+        Select(null);
+        _selection.Clear(); _selection.AddRange(kids);
+        if (kids.Count > 0) { _sel = kids[^1]; AfterSelectionChanged(); }
+        status.Text = $"Ungrouped {kids.Count} control(s).  Save to write.";
     }
 
     // ---------- outline tree + find ----------
@@ -3196,6 +3268,8 @@ public partial class MainWindow : Window
                 case Key.Z when shift: Redo(); e.Handled = true; return;
                 case Key.Z: Undo(); e.Handled = true; return;
                 case Key.Y: Redo(); e.Handled = true; return;
+                case Key.G when shift: UngroupSelection(); e.Handled = true; return;
+                case Key.G: GroupSelection(); e.Handled = true; return;
                 case Key.C: Copy(); e.Handled = true; return;
                 case Key.X: Cut(); e.Handled = true; return;
                 case Key.V: Paste(); e.Handled = true; return;
