@@ -92,7 +92,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        KeyDown += OnKeyDown;
+        PreviewKeyDown += OnKeyDown;   // tunnel: see arrows before the ScrollViewer scrolls on them
+        canvas.Focusable = true;       // so the canvas can hold keyboard focus for nudging
         var fonts = System.Windows.Media.Fonts.SystemFontFamilies
             .Select(f => f.Source).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
         cmbFont.ItemsSource = fonts;
@@ -2628,6 +2629,7 @@ public partial class MainWindow : Window
         _dragStartPos.Clear();
         foreach (var se in _selection) _dragStartPos[se] = (se.LX, se.LY);
         canvas.CaptureMouse();
+        canvas.Focus();                 // take keyboard focus so arrow keys nudge this control
         e.Handled = true;
     }
 
@@ -3470,8 +3472,11 @@ public partial class MainWindow : Window
     void OnKeyDown(object s, KeyEventArgs e)
     {
         if (e.Key == Key.F1) { UserManual_Click(s, e); e.Handled = true; return; }
-        if (srcEditor.IsKeyboardFocusWithin) return;   // let the source editor handle its own keys
-        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && Keyboard.FocusedElement is not TextBox)
+        if (srcEditor.IsKeyboardFocusWithin) return;        // let the source editor handle its own keys
+        // while editing a text field / combo, leave every key to it (caret, copy/paste text, list nav)
+        if (Keyboard.FocusedElement is TextBox or ComboBox or ComboBoxItem) return;
+
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
         {
             bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
             switch (e.Key)
@@ -3488,11 +3493,7 @@ public partial class MainWindow : Window
             }
         }
         if (_sel == null) return;
-        if (e.Key is Key.Delete or Key.Back)
-        {
-            if (Keyboard.FocusedElement is TextBox) return;   // let the X/Y/W/H editors handle it
-            DeleteSelection(); e.Handled = true; return;
-        }
+        if (e.Key is Key.Delete or Key.Back) { DeleteSelection(); e.Handled = true; return; }
         int d = (Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? 5 : 1;
         double nx = _sel.LX, ny = _sel.LY;
         switch (e.Key)
