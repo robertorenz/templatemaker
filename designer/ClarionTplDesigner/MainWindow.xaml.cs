@@ -2051,18 +2051,7 @@ public partial class MainWindow : Window
     ContextMenu BuildChipMenu(TplElement el)
     {
         var cm = new ContextMenu();
-        cm.Items.Add(ZItem("Bring to Front", () => ZFront(el)));
-        cm.Items.Add(ZItem("Bring Forward", () => ZForward(el)));
-        cm.Items.Add(ZItem("Send Backward", () => ZBackward(el)));
-        cm.Items.Add(ZItem("Send to Back", () => ZBack(el)));
-        if (_selection.Count >= 2)        // alignment acts on the whole multi-selection
-        {
-            cm.Items.Add(new Separator());
-            cm.Items.Add(BuildAlignMenu());
-            cm.Items.Add(ZItem("Group into box", GroupSelection));
-        }
-        if (el.Kind == TplKind.Boxed)
-            cm.Items.Add(ZItem("Ungroup box", UngroupSelection));
+        cm.Items.Add(BuildArrangeMenu(el));
         if (el.Kind is TplKind.Prompt or TplKind.Display or TplKind.Boxed)
         {
             cm.Items.Add(new Separator());
@@ -2073,6 +2062,28 @@ public partial class MainWindow : Window
         cm.Items.Add(ZItem("Copy", () => { if (!_selection.Contains(el)) Select(el); Copy(); }));
         cm.Items.Add(ZItem("Delete", () => DeleteControl(el)));
         return cm;
+    }
+
+    // The full "Arrange" submenu (z-order, align/size/distribute, group) — shared by the canvas and
+    // flow-preview right-click menus. Right-clicking a control that isn't selected selects it first.
+    MenuItem BuildArrangeMenu(TplElement el)
+    {
+        void Pick() { if (!_selection.Contains(el)) Select(el); }
+        var root = new MenuItem { Header = "Arrange" };
+        root.Items.Add(ZItem("Bring to Front", () => { Pick(); ZFront(el); }));
+        root.Items.Add(ZItem("Bring Forward",  () => { Pick(); ZForward(el); }));
+        root.Items.Add(ZItem("Send Backward",  () => { Pick(); ZBackward(el); }));
+        root.Items.Add(ZItem("Send to Back",   () => { Pick(); ZBack(el); }));
+        root.Items.Add(new Separator());
+        var align = BuildAlignMenu();
+        align.IsEnabled = _selection.Count >= 2;     // align/distribute need a multi-selection
+        root.Items.Add(align);
+        root.Items.Add(new Separator());
+        var group = ZItem("Group into box", GroupSelection);
+        group.IsEnabled = _selection.Count >= 2;
+        root.Items.Add(group);
+        if (el.Kind == TplKind.Boxed) root.Items.Add(ZItem("Ungroup box", () => { Pick(); UngroupSelection(); }));
+        return root;
     }
 
     // The Align / Same-size / Distribute submenu used by the right-click menu.

@@ -209,8 +209,13 @@ public partial class MainWindow
             BorderThickness = new Thickness(1),
             BorderBrush = _selection.Contains(el) ? new SolidColorBrush(Color.FromRgb(220, 70, 60)) : Brushes.Transparent,
             Padding = new Thickness(1),
-            Tag = el,
-            ContextMenu = BuildPreviewMenu(el)
+            Tag = el
+        };
+        // build the menu on open so Arrange reflects the live selection (multi-select doesn't re-render)
+        b.ContextMenuOpening += (_, _) =>
+        {
+            if (!_selection.Contains(el)) Select(el);
+            b.ContextMenu = BuildPreviewMenu(el);
         };
         b.MouseLeftButtonDown += PreviewElement_Down;
         b.MouseMove += PreviewDrag_Move;
@@ -513,7 +518,11 @@ public partial class MainWindow
     ContextMenu BuildPreviewMenu(TplElement el)
     {
         var cm = new ContextMenu();
+        cm.Items.Add(BuildArrangeMenu(el));
+        cm.Items.Add(new Separator());
         cm.Items.Add(ZItem("Font && Colour…", () => EditFontDialog(el)));
+        cm.Items.Add(ZItem("Duplicate", () => { if (!_selection.Contains(el)) Select(el); Duplicate(); }));
+        cm.Items.Add(ZItem("Copy", () => { if (!_selection.Contains(el)) Select(el); Copy(); }));
         cm.Items.Add(new Separator());
         cm.Items.Add(ZItem("Delete", () => { if (!_selection.Contains(el)) Select(el); DeleteSelection(); }));
         return cm;
