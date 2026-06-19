@@ -51,6 +51,7 @@
         </MenuItem>
         <MenuItem Header="_Edit">
             <MenuItem Header="_Undo" Click="Undo_Click" InputGestureText="Ctrl+Z"/>
+            <MenuItem Header="_Redo" Click="Redo_Click" InputGestureText="Ctrl+Y"/>
             <Separator/>
             <MenuItem Header="_Copy" Click="Copy_Click" InputGestureText="Ctrl+C"/>
             <MenuItem Header="Cu_t" Click="Cut_Click" InputGestureText="Ctrl+X"/>
@@ -155,6 +156,7 @@
             <Rectangle Width="1" Margin="5,3" Fill="#D0D7E0"/>
             <Button Style="{StaticResource IconBtn}" Click="PreviewChanges_Click" Content="&#xE7C3;" ToolTip="Preview changes (diff vs disk)…"/>
             <Button Style="{StaticResource IconBtn}" Click="Undo_Click" Content="&#xE7A7;" ToolTip="Undo (Ctrl+Z)"/>
+            <Button Style="{StaticResource IconBtn}" Click="Redo_Click" Content="&#xE7A6;" ToolTip="Redo (Ctrl+Y)"/>
             <Rectangle Width="1" Margin="5,3" Fill="#D0D7E0"/>
             <Button Style="{StaticResource IconBtn}" Click="Copy_Click" Content="&#xE8C8;" ToolTip="Copy control(s) (Ctrl+C)"/>
             <Button Style="{StaticResource IconBtn}" Click="Paste_Click" Content="&#xE77F;" ToolTip="Paste (Ctrl+V)"/>

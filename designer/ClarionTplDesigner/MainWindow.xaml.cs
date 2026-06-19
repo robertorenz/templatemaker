@@ -58,6 +58,7 @@ public partial class MainWindow : Window
 
     // ---- undo (snapshot history) ----
     readonly List<Snapshot> _undo = new();
+    readonly List<Snapshot> _redo = new();
     Snapshot? _gestureSnap;           // captured at a drag/resize start, committed on end if it changed anything
     bool _gestureChanged;
     bool _editGuard;                  // one undo entry per X/Y/W/H or text editing burst
@@ -145,7 +146,7 @@ public partial class MainWindow : Window
         try
         {
             _doc = TplParser.Parse(path);
-            _undo.Clear();
+            _undo.Clear(); _redo.Clear();
             Title = "Clarion Template Designer — " + System.IO.Path.GetFileName(path);
             PopulateParts(0, 0);
             SetSource(true);          // show the colour-coded source panel so it's never hidden
@@ -400,7 +401,7 @@ public partial class MainWindow : Window
         if (_doc == null) return;
         int partIdx = cmbParts.SelectedIndex, tabIdx = cmbTabs.SelectedIndex;
         _doc = TplParser.Parse(_doc.Path);
-        _undo.Clear();           // line indices changed on disk; old snapshots no longer apply
+        _undo.Clear(); _redo.Clear();   // line indices changed on disk; old snapshots no longer apply
         _sel = null;
         PopulateParts(partIdx, tabIdx);
     }
@@ -789,17 +790,30 @@ public partial class MainWindow : Window
         if (_doc == null) return;
         _undo.Add(Capture());
         if (_undo.Count > MaxUndo) _undo.RemoveAt(0);
+        _redo.Clear();                 // a fresh edit invalidates the redo stack
     }
 
     void Undo_Click(object s, RoutedEventArgs e) => Undo();
+    void Redo_Click(object s, RoutedEventArgs e) => Redo();
 
     void Undo()
     {
         if (_undo.Count == 0) { status.Text = "Nothing to undo."; return; }
+        _redo.Add(Capture());          // current state becomes redoable
         var snap = _undo[^1];
         _undo.RemoveAt(_undo.Count - 1);
         Restore(snap);
-        status.Text = $"Undid last change.  ({_undo.Count} more in history)";
+        status.Text = $"Undid last change.  ({_undo.Count} undo, {_redo.Count} redo)";
+    }
+
+    void Redo()
+    {
+        if (_redo.Count == 0) { status.Text = "Nothing to redo."; return; }
+        _undo.Add(Capture());          // current state becomes undoable again
+        var snap = _redo[^1];
+        _redo.RemoveAt(_redo.Count - 1);
+        Restore(snap);
+        status.Text = $"Redid change.  ({_undo.Count} undo, {_redo.Count} redo)";
     }
 
     void Restore(Snapshot snap)
@@ -836,6 +850,7 @@ public partial class MainWindow : Window
         {
             _undo.Add(_gestureSnap);
             if (_undo.Count > MaxUndo) _undo.RemoveAt(0);
+            _redo.Clear();             // a fresh edit invalidates the redo stack
         }
         _gestureSnap = null; _gestureChanged = false;
         RefreshLiveSource();          // drag/resize move the chips directly (no Render) — refresh now
@@ -3151,9 +3166,12 @@ public partial class MainWindow : Window
         if (srcEditor.IsKeyboardFocusWithin) return;   // let the source editor handle its own keys
         if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && Keyboard.FocusedElement is not TextBox)
         {
+            bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
             switch (e.Key)
             {
+                case Key.Z when shift: Redo(); e.Handled = true; return;
                 case Key.Z: Undo(); e.Handled = true; return;
+                case Key.Y: Redo(); e.Handled = true; return;
                 case Key.C: Copy(); e.Handled = true; return;
                 case Key.X: Cut(); e.Handled = true; return;
                 case Key.V: Paste(); e.Handled = true; return;
