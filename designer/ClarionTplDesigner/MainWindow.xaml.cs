@@ -437,6 +437,10 @@ public partial class MainWindow : Window
     readonly Dictionary<string, DateTime> _fileWriteTimes = new(StringComparer.OrdinalIgnoreCase); // path -> last write time we know about
     System.Windows.Threading.DispatcherTimer? _extChangeTimer;   // debounces bursts of FS events into one check
     bool _extPromptOpen;                                          // a reload prompt is already showing — don't stack another
+    readonly HashSet<string> _deletedWarned = new(StringComparer.OrdinalIgnoreCase); // files we've already flagged as deleted
+
+    static string FileNames(IEnumerable<TplFile> files) =>
+        string.Join(", ", files.Select(f => System.IO.Path.GetFileName(f.Path)).Distinct(StringComparer.OrdinalIgnoreCase));
 
     void StopWatching()
     {
@@ -449,6 +453,7 @@ public partial class MainWindow : Window
     void RecordWriteTimes()
     {
         _fileWriteTimes.Clear();
+        _deletedWarned.Clear();   // a fresh baseline means everything we track currently exists
         if (_doc == null) return;
         foreach (var f in _doc.Files)
         {
@@ -480,7 +485,9 @@ public partial class MainWindow : Window
                 };
                 w.Changed += OnFsEvent;
                 w.Created += OnFsEvent;
+                w.Deleted += OnFsEvent;
                 w.Renamed += OnFsEvent;
+                w.Error   += OnFsError;
                 w.EnableRaisingEvents = true;
                 _watchers.Add(w);
             }
@@ -518,6 +525,14 @@ public partial class MainWindow : Window
         try { Dispatcher.BeginInvoke(new Action(ScheduleExternalCheck)); } catch { }
     }
 
+    // Buffer overflow (an event storm) or the watched directory going away. Events may have been dropped,
+    // so re-check from scratch. We don't restart watchers here — that would re-baseline and could hide a
+    // pending change; a plain check (plus the Activated re-check) surfaces anything we missed.
+    void OnFsError(object sender, System.IO.ErrorEventArgs e)
+    {
+        try { Dispatcher.BeginInvoke(new Action(ScheduleExternalCheck)); } catch { }
+    }
+
     void ScheduleExternalCheck()
     {
         if (_extChangeTimer == null)
@@ -529,57 +544,99 @@ public partial class MainWindow : Window
         _extChangeTimer.Start();
     }
 
-    // Compare disk write-times against what we last recorded. Anything newer was changed by another program.
+    // Compare disk state against what we last recorded. A newer write-time means an external edit; a
+    // tracked file that has vanished means an external delete/move. (A delete+recreate atomic save resolves
+    // within the debounce window, so it shows up here as a change, not a deletion.)
     void CheckExternalChanges()
     {
         _extChangeTimer?.Stop();
         if (_doc == null || _extPromptOpen) return;
         var changed = new List<TplFile>();
+        var deleted = new List<TplFile>();
         foreach (var f in _doc.Files)
         {
             if (string.IsNullOrEmpty(f.Path)) continue;
+            bool tracked = _fileWriteTimes.TryGetValue(f.Path, out var known);
+            bool exists;
+            try { exists = System.IO.File.Exists(f.Path); } catch { continue; }
+            if (!exists)
+            {
+                if (tracked && _deletedWarned.Add(f.Path)) deleted.Add(f);   // flag each disappearance once
+                continue;
+            }
+            _deletedWarned.Remove(f.Path);   // it's back on disk
             try
             {
-                if (!System.IO.File.Exists(f.Path)) continue;
                 var disk = System.IO.File.GetLastWriteTimeUtc(f.Path);
-                if (_fileWriteTimes.TryGetValue(f.Path, out var known) && disk != known) changed.Add(f);
+                if (tracked && disk != known) changed.Add(f);
             }
             catch { }
         }
+        if (deleted.Count > 0) HandleDeleted(deleted);
         if (changed.Count > 0) HandleExternalChange(changed);
     }
 
     void HandleExternalChange(List<TplFile> changed)
     {
-        RecordWriteTimes();   // re-baseline first so we react to this change exactly once
-        string names = string.Join(", ", changed.Select(f => System.IO.Path.GetFileName(f.Path)).Distinct(StringComparer.OrdinalIgnoreCase));
+        string names = FileNames(changed);
 
-        if (!HasUnsavedEdits())
+        if (HasUnsavedEdits())
         {
-            ReloadPreservingView(() => { ReloadFromDisk(); LoadSource(); });   // safe to refresh silently — nothing here to lose
-            status.Text = $"{names} changed on disk — reloaded.";
-            return;
+            bool discard;
+            _extPromptOpen = true;
+            try
+            {
+                discard = MessageBox.Show(
+                    $"{names} was changed by another program, but you have unsaved changes in the designer.\n\n" +
+                    "Reload from disk and discard your unsaved changes?",
+                    "File changed on disk", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No)
+                    == MessageBoxResult.Yes;
+            }
+            finally { _extPromptOpen = false; }
+
+            if (!discard)
+            {
+                RecordWriteTimes();   // keep the edits; don't nag again until the next external write
+                status.Text = $"{names} changed on disk — kept your unsaved edits (Save will overwrite the external change).";
+                return;
+            }
         }
 
+        // Auto-reload (no unsaved edits) or the user chose to discard them.
+        if (TryReload())
+            status.Text = $"{names} changed on disk — reloaded.";
+        else
+        {
+            // Couldn't read it yet — most likely still being written or briefly locked. Force a re-check on
+            // the next FS event / focus so we retry once it settles, and leave the current model untouched.
+            foreach (var f in changed) _fileWriteTimes[f.Path] = DateTime.MinValue;
+            status.Text = $"{names} changed on disk — couldn't reload yet (file in use?); will retry.";
+        }
+    }
+
+    // The file (or a #INCLUDEd one) was deleted or moved away. Don't touch the in-memory model — it's the
+    // only surviving copy — just tell the user so a later Save isn't a silent resurrection out of nowhere.
+    void HandleDeleted(List<TplFile> gone)
+    {
+        string names = FileNames(gone);
         _extPromptOpen = true;
         try
         {
-            var r = MessageBox.Show(
-                $"{names} was changed by another program, but you have unsaved changes in the designer.\n\n" +
-                "Reload from disk and discard your unsaved changes?",
-                "File changed on disk", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
-            if (r == MessageBoxResult.Yes)
-            {
-                ReloadPreservingView(() => { ReloadFromDisk(); LoadSource(); });
-                status.Text = $"{names} reloaded from disk.";
-            }
-            else
-            {
-                // Keep the user's edits. Times are already re-baselined, so we won't nag again until the next external write.
-                status.Text = $"{names} changed on disk — kept your unsaved edits (Save will overwrite the external change).";
-            }
+            MessageBox.Show(
+                $"{names} was deleted or moved outside the designer.\n\n" +
+                "Your in-memory copy is kept — use Save to write it back to disk, or close it to discard it.",
+                "File removed on disk", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally { _extPromptOpen = false; }
+        status.Text = $"{names} was removed on disk — kept your in-memory copy (Save to restore it).";
+    }
+
+    // Reload from disk without letting a locked / half-written / vanished file crash the app.
+    // ReloadFromDisk parses into _doc as its first action, so a parse failure leaves the model intact.
+    bool TryReload()
+    {
+        try { ReloadPreservingView(() => { ReloadFromDisk(); LoadSource(); }); return true; }
+        catch { return false; }
     }
 
     bool HasUnsavedEdits() =>
