@@ -2273,9 +2273,90 @@ public partial class MainWindow : Window
 
     IEnumerable<string> ImageSearchDirs()
     {
-        if (_doc != null) yield return System.IO.Path.GetDirectoryName(_doc.Path) ?? ".";
-        yield return @"C:\clarion12\accessory\template\win";
-        yield return @"C:\clarion12\images";
+        var dirs = new List<string>();
+        void Add(string? d)
+        {
+            if (string.IsNullOrWhiteSpace(d)) return;
+            if (!dirs.Any(x => string.Equals(x, d, StringComparison.OrdinalIgnoreCase))) dirs.Add(d);
+        }
+
+        // 1. The opened template's own folder.
+        if (_doc != null) Add(System.IO.Path.GetDirectoryName(_doc.Path) ?? ".");
+
+        // 2. The Clarion install that OWNS the opened template — found by walking up its path.
+        //    This auto-selects the right version (e.g. Clarion11.1-13810 vs clarion12) per file,
+        //    so icons resolve from the same install the template lives in.
+        var docRoot = _doc != null ? ClarionRootOf(_doc.Path) : null;
+        if (docRoot != null)
+        {
+            Add(System.IO.Path.Combine(docRoot, "accessory", "template", "win"));
+            Add(System.IO.Path.Combine(docRoot, "images"));
+        }
+
+        // 3. Default root (CLARION_ROOT env var → drive auto-detect → C:\clarion12) as a backstop
+        //    for templates edited outside any install tree (e.g. this repo's templates\ folder).
+        var root = ClarionRoot();
+        Add(System.IO.Path.Combine(root, "accessory", "template", "win"));
+        Add(System.IO.Path.Combine(root, "images"));
+
+        return dirs;
+    }
+
+    // Walk up from a file to the Clarion install root that owns it: the first ancestor folder
+    // that has BOTH a bin\ and a template\win\ subtree (the accessory\ and template\win\ folders
+    // alone are NOT roots). Returns null when the file isn't inside a Clarion install.
+    static string? ClarionRootOf(string? path)
+    {
+        try
+        {
+            var dir = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path!));
+            while (!string.IsNullOrEmpty(dir))
+            {
+                if (System.IO.Directory.Exists(System.IO.Path.Combine(dir, "bin")) &&
+                    System.IO.Directory.Exists(System.IO.Path.Combine(dir, "template", "win")))
+                    return dir.TrimEnd('\\');
+                dir = System.IO.Path.GetDirectoryName(dir);
+            }
+        }
+        catch { /* malformed path */ }
+        return null;
+    }
+
+    // Resolve the DEFAULT Clarion install root once (used only as a backstop — see ImageSearchDirs):
+    // an explicit CLARION_ROOT environment variable wins; otherwise auto-detect a "clarion*" folder
+    // (with a template\win tree) on any ready fixed drive; otherwise fall back to C:\clarion12.
+    // Set CLARION_ROOT to pin which install resolves icons for templates edited outside any install.
+    static string? _clarionRoot;
+    static string ClarionRoot()
+    {
+        if (_clarionRoot != null) return _clarionRoot;
+
+        static bool HasTemplates(string root) =>
+            System.IO.Directory.Exists(System.IO.Path.Combine(root, "template", "win"));
+
+        // 1. Explicit override.
+        var env = Environment.GetEnvironmentVariable("CLARION_ROOT");
+        if (!string.IsNullOrWhiteSpace(env) && System.IO.Directory.Exists(env))
+            return _clarionRoot = env.TrimEnd('\\');
+
+        // 2. Auto-detect a clarion* install on any ready fixed drive (case-insensitive on Windows).
+        try
+        {
+            foreach (var drv in System.IO.DriveInfo.GetDrives())
+            {
+                if (drv.DriveType != System.IO.DriveType.Fixed || !drv.IsReady) continue;
+                try
+                {
+                    foreach (var dir in System.IO.Directory.EnumerateDirectories(drv.RootDirectory.FullName, "clarion*"))
+                        if (HasTemplates(dir)) return _clarionRoot = dir.TrimEnd('\\');
+                }
+                catch { /* access denied on this drive root */ }
+            }
+        }
+        catch { /* DriveInfo unavailable */ }
+
+        // 3. Historical default.
+        return _clarionRoot = @"C:\clarion12";
     }
 
     // A bare file name if the picked file lives in a search dir, else the full path (both resolve & render).
