@@ -242,6 +242,18 @@
             <TextBlock x:Name="status" Text="Open a .tpl to begin.  Drag from a ruler to add a guide; double-click a guide to delete it."/>
         </StatusBar>
 
+        <!-- one tab per open template; switching re-points every view below (designer, source, outline, …) -->
+        <Border x:Name="docTabBar" DockPanel.Dock="Top" Background="#E1E5EA"
+                BorderBrush="#C4CCD6" BorderThickness="0,0,0,1" Visibility="Collapsed">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel x:Name="docTabs" Orientation="Horizontal" Margin="4,0,0,0"/>
+                    <Button x:Name="btnNewDoc" Content="+" Click="Open_Click" Width="22" Height="20"
+                            Margin="3,3,0,3" Padding="0" ToolTip="Open another template…"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
         <avalonDock:DockingManager x:Name="dockMgr">
           <avalonDock:LayoutRoot>
             <avalonDock:LayoutPanel Orientation="Horizontal">
@@ -289,7 +301,6 @@
                   <avalonDock:LayoutDocument Title="Designer" ContentId="designer" CanClose="False" CanFloat="True">
                     <Grid x:Name="designerHost">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="22"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
@@ -297,23 +308,12 @@
                             <ColumnDefinition Width="22"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <!-- open-template tab strip (populated in code by RefreshDocTabs) -->
-                        <Border x:Name="docTabBar" Grid.Row="0" Grid.ColumnSpan="2" Background="#E1E5EA"
-                                BorderBrush="#C4CCD6" BorderThickness="0,0,0,1" Visibility="Collapsed">
-                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                                <StackPanel Orientation="Horizontal">
-                                    <StackPanel x:Name="docTabs" Orientation="Horizontal"/>
-                                    <Button x:Name="btnNewDoc" Content="+" Click="Open_Click" Width="22" Height="20"
-                                            Margin="3,2,0,2" Padding="0,-2,0,0" ToolTip="Open another template…"/>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Border>
-                        <Border Grid.Row="1" Grid.Column="0" Background="#EEF1F5" BorderBrush="#D4DAE2" BorderThickness="0,0,1,1"/>
-                        <local:RulerControl x:Name="hRuler" Grid.Row="1" Grid.Column="1" Orientation="Horizontal"
+                        <Border Grid.Row="0" Grid.Column="0" Background="#EEF1F5" BorderBrush="#D4DAE2" BorderThickness="0,0,1,1"/>
+                        <local:RulerControl x:Name="hRuler" Grid.Row="0" Grid.Column="1" Orientation="Horizontal"
                                             MouseLeftButtonDown="HRuler_Down" Cursor="SizeNS"/>
-                        <local:RulerControl x:Name="vRuler" Grid.Row="2" Grid.Column="0" Orientation="Vertical"
+                        <local:RulerControl x:Name="vRuler" Grid.Row="1" Grid.Column="0" Orientation="Vertical"
                                             MouseLeftButtonDown="VRuler_Down" Cursor="SizeWE"/>
-                        <ScrollViewer x:Name="scroller" Grid.Row="2" Grid.Column="1"
+                        <ScrollViewer x:Name="scroller" Grid.Row="1" Grid.Column="1"
                                       HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                                       ScrollChanged="Scroller_Scroll" Background="#E7EAEF">
                             <Canvas x:Name="canvas" Background="White" Width="1000" Height="1200"
