@@ -132,7 +132,8 @@ public partial class MainWindow : Window
         LoadRecent();
         RefreshRecentMenus();
         Loaded += (_, _) => TryLoadSavedLayout();
-        Closing += (_, _) => { SaveLayout(); SavePrefs(); };
+        Closing += (_, _) => { SaveLayout(); SavePrefs(); StopWatching(); };
+        Activated += (_, _) => CheckExternalChanges();   // re-check on focus: catches saves made while unfocused or any FS event we missed
     }
 
     // ---------- file ----------
@@ -164,6 +165,7 @@ public partial class MainWindow : Window
             Validate();
             PopulateSymbols();
             AddRecent(path);
+            StartWatching();          // watch this file (and its #INCLUDEs) for external edits
         }
         catch (Exception ex) { MessageBox.Show("Parse failed:\n" + ex.Message); }
     }
@@ -292,6 +294,7 @@ public partial class MainWindow : Window
         {
             bool structural = AllElements().Any(el => el.Inserted || el.Deleted || el.Moved);
             TplWriter.Save(_doc);
+            RecordWriteTimes();                    // our own write — re-baseline so it isn't flagged as an external change
             if (structural) ReloadFromDisk();      // re-sync the model so re-saving can't duplicate/re-drop
             else foreach (var f in _doc.Files) f.Dirty = false;   // raw-text edits (rename) are now on disk
             LoadSource();                          // reflect what's now on disk
@@ -423,6 +426,256 @@ public partial class MainWindow : Window
         _undo.Clear(); _redo.Clear();   // line indices changed on disk; old snapshots no longer apply
         _sel = null;
         PopulateParts(partIdx, tabIdx);
+        StartWatching();                // re-baseline write-times and watchers against what's now on disk
+    }
+
+    // ---------- external-change detection ----------
+    // The designer holds an in-memory model of the open .tpl set; if another tool (VS Code, an AI
+    // assistant, etc.) rewrites one of those files on disk, the model goes stale and a later Save here
+    // would silently clobber those edits. These watchers notice such writes and reload (or prompt).
+    readonly List<System.IO.FileSystemWatcher> _watchers = new();
+    readonly Dictionary<string, DateTime> _fileWriteTimes = new(StringComparer.OrdinalIgnoreCase); // path -> last write time we know about
+    System.Windows.Threading.DispatcherTimer? _extChangeTimer;   // debounces bursts of FS events into one check
+    bool _extPromptOpen;                                          // a reload prompt is already showing — don't stack another
+    readonly HashSet<string> _deletedWarned = new(StringComparer.OrdinalIgnoreCase); // files we've already flagged as deleted
+
+    static string FileNames(IEnumerable<TplFile> files) =>
+        string.Join(", ", files.Select(f => System.IO.Path.GetFileName(f.Path)).Distinct(StringComparer.OrdinalIgnoreCase));
+
+    void StopWatching()
+    {
+        foreach (var w in _watchers) { try { w.EnableRaisingEvents = false; w.Dispose(); } catch { } }
+        _watchers.Clear();
+    }
+
+    // Re-baseline the last-known write times to whatever is on disk right now. Called after our own
+    // writes and after every (re)load so those changes are never mistaken for an external edit.
+    void RecordWriteTimes()
+    {
+        _fileWriteTimes.Clear();
+        _deletedWarned.Clear();   // a fresh baseline means everything we track currently exists
+        if (_doc == null) return;
+        foreach (var f in _doc.Files)
+        {
+            if (string.IsNullOrEmpty(f.Path)) continue;
+            try { if (System.IO.File.Exists(f.Path)) _fileWriteTimes[f.Path] = System.IO.File.GetLastWriteTimeUtc(f.Path); }
+            catch { }
+        }
+    }
+
+    void StartWatching()
+    {
+        StopWatching();
+        RecordWriteTimes();
+        if (_doc == null) return;
+        var dirs = _doc.Files
+            .Where(f => !string.IsNullOrEmpty(f.Path))
+            .Select(f => SafeDir(f.Path))
+            .Where(d => !string.IsNullOrEmpty(d) && System.IO.Directory.Exists(d))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        foreach (var dir in dirs)
+        {
+            try
+            {
+                var w = new System.IO.FileSystemWatcher(dir!)
+                {
+                    NotifyFilter = System.IO.NotifyFilters.LastWrite | System.IO.NotifyFilters.Size
+                                 | System.IO.NotifyFilters.FileName | System.IO.NotifyFilters.CreationTime,
+                    IncludeSubdirectories = false,
+                };
+                w.Changed += OnFsEvent;
+                w.Created += OnFsEvent;
+                w.Deleted += OnFsEvent;
+                w.Renamed += OnFsEvent;
+                w.Error   += OnFsError;
+                w.EnableRaisingEvents = true;
+                _watchers.Add(w);
+            }
+            catch { /* watching is best-effort; the Activated re-check still covers us */ }
+        }
+    }
+
+    static string? SafeDir(string path)
+    {
+        try { return System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path)); } catch { return null; }
+    }
+
+    static string? SafeFull(string path)
+    {
+        try { return System.IO.Path.GetFullPath(path); } catch { return null; }
+    }
+
+    bool IsTrackedPath(string? path)
+    {
+        if (_doc == null || string.IsNullOrEmpty(path)) return false;
+        var full = SafeFull(path);
+        if (full == null) return false;
+        foreach (var f in _doc.Files)
+            if (!string.IsNullOrEmpty(f.Path) && string.Equals(SafeFull(f.Path), full, StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
+    }
+
+    // FileSystemWatcher fires on a background thread; just hop to the UI thread and (re)arm the debounce.
+    void OnFsEvent(object sender, System.IO.FileSystemEventArgs e)
+    {
+        bool relevant = IsTrackedPath(e.FullPath)
+                     || (e is System.IO.RenamedEventArgs re && IsTrackedPath(re.OldFullPath));
+        if (!relevant) return;
+        try { Dispatcher.BeginInvoke(new Action(ScheduleExternalCheck)); } catch { }
+    }
+
+    // Buffer overflow (an event storm) or the watched directory going away. Events may have been dropped,
+    // so re-check from scratch. We don't restart watchers here — that would re-baseline and could hide a
+    // pending change; a plain check (plus the Activated re-check) surfaces anything we missed.
+    void OnFsError(object sender, System.IO.ErrorEventArgs e)
+    {
+        try { Dispatcher.BeginInvoke(new Action(ScheduleExternalCheck)); } catch { }
+    }
+
+    void ScheduleExternalCheck()
+    {
+        if (_extChangeTimer == null)
+        {
+            _extChangeTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _extChangeTimer.Tick += (_, _) => CheckExternalChanges();
+        }
+        _extChangeTimer.Stop();   // editors often write in several steps; collapse the burst into one check
+        _extChangeTimer.Start();
+    }
+
+    // Compare disk state against what we last recorded. A newer write-time means an external edit; a
+    // tracked file that has vanished means an external delete/move. (A delete+recreate atomic save resolves
+    // within the debounce window, so it shows up here as a change, not a deletion.)
+    void CheckExternalChanges()
+    {
+        _extChangeTimer?.Stop();
+        if (_doc == null || _extPromptOpen) return;
+        var changed = new List<TplFile>();
+        var deleted = new List<TplFile>();
+        foreach (var f in _doc.Files)
+        {
+            if (string.IsNullOrEmpty(f.Path)) continue;
+            bool tracked = _fileWriteTimes.TryGetValue(f.Path, out var known);
+            bool exists;
+            try { exists = System.IO.File.Exists(f.Path); } catch { continue; }
+            if (!exists)
+            {
+                if (tracked && _deletedWarned.Add(f.Path)) deleted.Add(f);   // flag each disappearance once
+                continue;
+            }
+            _deletedWarned.Remove(f.Path);   // it's back on disk
+            try
+            {
+                var disk = System.IO.File.GetLastWriteTimeUtc(f.Path);
+                if (tracked && disk != known) changed.Add(f);
+            }
+            catch { }
+        }
+        if (deleted.Count > 0) HandleDeleted(deleted);
+        if (changed.Count > 0) HandleExternalChange(changed);
+    }
+
+    void HandleExternalChange(List<TplFile> changed)
+    {
+        string names = FileNames(changed);
+
+        if (HasUnsavedEdits())
+        {
+            bool discard;
+            _extPromptOpen = true;
+            try
+            {
+                discard = MessageBox.Show(
+                    $"{names} was changed by another program, but you have unsaved changes in the designer.\n\n" +
+                    "Reload from disk and discard your unsaved changes?",
+                    "File changed on disk", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No)
+                    == MessageBoxResult.Yes;
+            }
+            finally { _extPromptOpen = false; }
+
+            if (!discard)
+            {
+                RecordWriteTimes();   // keep the edits; don't nag again until the next external write
+                status.Text = $"{names} changed on disk — kept your unsaved edits (Save will overwrite the external change).";
+                return;
+            }
+        }
+
+        // Auto-reload (no unsaved edits) or the user chose to discard them.
+        if (TryReload())
+            status.Text = $"{names} changed on disk — reloaded.";
+        else
+        {
+            // Couldn't read it yet — most likely still being written or briefly locked. Force a re-check on
+            // the next FS event / focus so we retry once it settles, and leave the current model untouched.
+            foreach (var f in changed) _fileWriteTimes[f.Path] = DateTime.MinValue;
+            status.Text = $"{names} changed on disk — couldn't reload yet (file in use?); will retry.";
+        }
+    }
+
+    // The file (or a #INCLUDEd one) was deleted or moved away. Don't touch the in-memory model — it's the
+    // only surviving copy — just tell the user so a later Save isn't a silent resurrection out of nowhere.
+    void HandleDeleted(List<TplFile> gone)
+    {
+        string names = FileNames(gone);
+        _extPromptOpen = true;
+        try
+        {
+            MessageBox.Show(
+                $"{names} was deleted or moved outside the designer.\n\n" +
+                "Your in-memory copy is kept — use Save to write it back to disk, or close it to discard it.",
+                "File removed on disk", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally { _extPromptOpen = false; }
+        status.Text = $"{names} was removed on disk — kept your in-memory copy (Save to restore it).";
+    }
+
+    // Reload from disk without letting a locked / half-written / vanished file crash the app.
+    // ReloadFromDisk parses into _doc as its first action, so a parse failure leaves the model intact.
+    bool TryReload()
+    {
+        try { ReloadPreservingView(() => { ReloadFromDisk(); LoadSource(); }); return true; }
+        catch { return false; }
+    }
+
+    bool HasUnsavedEdits() =>
+        _srcDirty
+        || (_doc != null && (_doc.Files.Any(f => f.Dirty)
+                             || AllElements().Any(el => el.Dirty || el.Inserted || el.Deleted || el.Moved)));
+
+    // Run a reload that rewrites srcEditor.Text (which sends AvalonEdit back to line 1) while keeping
+    // the source editor looking at roughly the same place — same caret line and same first visible row —
+    // so an external-change reload doesn't yank the user to the top of the file. Best-effort: when the
+    // external edit added or removed lines above the viewport the row numbers still line up; the content
+    // may shift, which matches how editors like VS Code behave on an on-disk reload.
+    void ReloadPreservingView(Action reload)
+    {
+        int caretLine = srcEditor.TextArea.Caret.Line;
+        int caretCol  = srcEditor.TextArea.Caret.Column;
+        var tv = srcEditor.TextArea.TextView;
+        double lh = tv.DefaultLineHeight > 0 ? tv.DefaultLineHeight : srcEditor.FontSize * 1.3;
+        int firstVisible = lh > 0 ? (int)(srcEditor.VerticalOffset / lh) : 0;   // 0-based top row
+
+        reload();
+
+        var doc = srcEditor.Document;
+        int lines = doc?.LineCount ?? 0;
+        if (doc == null || lines <= 0) return;
+        try
+        {
+            int line = Math.Min(Math.Max(caretLine, 1), lines);                  // file may have shrunk below the old line
+            var dl = doc.GetLineByNumber(line);
+            int col = Math.Min(Math.Max(caretCol, 1), dl.Length + 1);            // and the line itself may now be shorter
+            srcEditor.CaretOffset = dl.Offset + (col - 1);                       // set by offset so the position is always valid
+        }
+        catch { }
+        // Defer the scroll until the new document has laid out, otherwise the offset clamps against stale metrics.
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            double target = Math.Min(Math.Max(firstVisible, 0), Math.Max(lines - 1, 0)) * lh;
+            try { srcEditor.ScrollToVerticalOffset(target); } catch { }
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     // Give every positionable control an explicit AT(x,y,w,h) from the current layout,
