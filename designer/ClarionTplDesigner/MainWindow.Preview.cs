@@ -325,7 +325,8 @@ public partial class MainWindow
         if (b.Tag is not TplElement el) return;
         if ((Keyboard.Modifiers & ModifierKeys.Control) != 0) ToggleSelect(el); else Select(el);
         b.BorderBrush = _selection.Contains(el) ? new SolidColorBrush(Color.FromRgb(220, 70, 60)) : Brushes.Transparent;
-        _dragPreviewEl = el.IsPositionable || el.Kind == TplKind.Button ? el : null;   // leaves, boxes, buttons
+        // read-only #INSERT content is selectable (to inspect) but not draggable
+        _dragPreviewEl = !el.Foreign && (el.IsPositionable || el.Kind == TplKind.Button) ? el : null;   // leaves, boxes, buttons
         _dragPreviewStart = e.GetPosition(canvas);
         _dragPreviewing = false;
         b.CaptureMouse();
@@ -574,6 +575,8 @@ public partial class MainWindow
 
     void MoveTo(TplElement el, TplElement newParent, TplElement? insertBefore)
     {
+        // read-only #INSERT content can't be reparented, nor can anything be moved into it
+        if (el.Foreign || newParent.Foreign) { status.Text = "Inlined #INSERT content is read-only."; return; }
         PushUndo();
         el.Parent?.Children.Remove(el);
         int idx = insertBefore != null ? newParent.Children.IndexOf(insertBefore) : -1;
@@ -586,7 +589,8 @@ public partial class MainWindow
         for (int i = pos + 1; i < newParent.Children.Count; i++)
         {
             var sib = newParent.Children[i];
-            if (!sib.Inserted && !sib.Deleted && sib.LineIndex >= 0) { el.MoveAnchorLine = sib.LineIndex; break; }
+            // skip foreign siblings: their LineIndex points into the #GROUP's file, not this one
+            if (!sib.Inserted && !sib.Deleted && !sib.Foreign && sib.LineIndex >= 0) { el.MoveAnchorLine = sib.LineIndex; break; }
         }
     }
 
@@ -635,10 +639,12 @@ public partial class MainWindow
             var (np, before) = PreviewDropTarget(p);
             np ??= _tab;
             if (np == null) return;
+            if (np.Foreign) { status.Text = "Can't add controls inside read-only #INSERT content."; return; }
             AddControlAt(kind, title, pt, w, h, np, before);
         }
         else if (_tab != null)                       // positioner: drop at the cursor with that AT
         {
+            if (_tab.Foreign) { status.Text = "Can't add controls inside read-only #INSERT content."; return; }
             PushUndo();
             var el = MakeControl(kind, title, pt, w, h);
             el.Parent = _tab; _tab.Children.Add(el);

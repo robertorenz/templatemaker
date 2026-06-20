@@ -398,7 +398,7 @@ public partial class MainWindow : Window
 
     static bool DocDirty(TplDocument? doc) =>
         doc != null && (doc.Files.Any(f => f.Dirty) ||
-            doc.Components.SelectMany(c => c.Tabs).SelectMany(Flat).Any(el => el.Dirty || el.Inserted || el.Deleted || el.Moved));
+            doc.Components.SelectMany(c => c.Tabs).SelectMany(Flat).Any(HasPendingEdit));
 
     // Rebuild the tab strip from _sessions (manual, matching the codebase's code-driven UI style).
     void RefreshDocTabs()
@@ -571,7 +571,7 @@ public partial class MainWindow : Window
         if (_doc == null) return;
         try
         {
-            bool structural = AllElements().Any(el => el.Inserted || el.Deleted || el.Moved);
+            bool structural = AllElements().Any(el => !el.Foreign && (el.Inserted || el.Deleted || el.Moved));
             TplWriter.Save(_doc);
             RecordWriteTimes();                    // our own write — re-baseline so it isn't flagged as an external change
             if (structural) ReloadFromDisk();      // re-sync the model so re-saving can't duplicate/re-drop
@@ -924,7 +924,7 @@ public partial class MainWindow : Window
     bool HasUnsavedEdits() =>
         _srcDirty
         || (_doc != null && (_doc.Files.Any(f => f.Dirty)
-                             || AllElements().Any(el => el.Dirty || el.Inserted || el.Deleted || el.Moved)));
+                             || AllElements().Any(HasPendingEdit)));
 
     // Run a reload that rewrites srcEditor.Text (which sends AvalonEdit back to line 1) while keeping
     // the source editor looking at roughly the same place — same caret line and same first visible row —
@@ -1818,7 +1818,7 @@ public partial class MainWindow : Window
     {
         var f = CurrentFile();
         if (f == null || !_srcDirty) return;
-        if (AllElements().Any(el => el.Dirty || el.Inserted || el.Deleted || el.Moved) &&
+        if (AllElements().Any(HasPendingEdit) &&
             MessageBox.Show("Applying source edits re-reads the file and discards unsaved canvas changes. Continue?",
                 "Apply source edits", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
             return;
@@ -1914,6 +1914,9 @@ public partial class MainWindow : Window
         foreach (var c in e.Children)
             foreach (var x in Flat(c)) yield return x;
     }
+
+    // An element carrying an unsaved edit. Foreign (#INSERT'd) content is read-only, so it never counts as dirty.
+    static bool HasPendingEdit(TplElement el) => !el.Foreign && (el.Dirty || el.Inserted || el.Deleted || el.Moved);
 
     // ---------- part / tab / render ----------
     int _pendingTabIdx;   // tab to select after the next Part_Changed populates cmbTabs
@@ -2143,8 +2146,9 @@ public partial class MainWindow : Window
         if (_clip.Count == 0) { status.Text = "Nothing to paste."; return; }
         var tab = TargetTab();
         if (tab == null) { status.Text = "Pick a tab to paste into."; return; }
-        // paste into the selected group box, else the current/visible tab
-        var parent = _sel is { Kind: TplKind.Boxed, Deleted: false } ? _sel : tab;
+        if (tab.Foreign) { status.Text = "Can't paste into read-only #INSERT content."; return; }
+        // paste into the selected group box, else the current/visible tab (never a read-only foreign box)
+        var parent = _sel is { Kind: TplKind.Boxed, Deleted: false, Foreign: false } ? _sel : tab;
         PushUndo();
         var added = new List<TplElement>();
         foreach (var src in _clip)
@@ -2172,6 +2176,7 @@ public partial class MainWindow : Window
     static void PrepInserted(TplElement c)
     {
         c.Inserted = true; c.Dirty = true; c.Moved = false; c.Deleted = false;
+        c.Foreign = false;          // a pasted/duplicated copy is a real editable control, not read-only
         c.LineIndex = -1; c.EndLineIndex = -1; c.MoveAnchorLine = -1;
         foreach (var ch in c.Children) PrepInserted(ch);
     }
@@ -2184,9 +2189,10 @@ public partial class MainWindow : Window
 
     void DeleteSelection()
     {
-        var items = _selection.Count > 0 ? _selection.ToList()
-                  : (_sel != null ? new List<TplElement> { _sel } : new List<TplElement>());
-        if (items.Count == 0) return;
+        var items = (_selection.Count > 0 ? _selection.ToList()
+                  : (_sel != null ? new List<TplElement> { _sel } : new List<TplElement>()))
+                  .Where(x => !x.Foreign).ToList();   // read-only #INSERT content can't be deleted
+        if (items.Count == 0) { status.Text = "Nothing to delete (inlined #INSERT content is read-only)."; return; }
         if (items.Count == 1) { DeleteControl(items[0]); return; }   // single keeps the detailed warning
 
         int refd = items.Count(el => ExternalReferences(el).Count > 0);
@@ -2204,6 +2210,7 @@ public partial class MainWindow : Window
 
     void DeleteControl(TplElement el)
     {
+        if (el.Foreign) { status.Text = "Inlined #INSERT content is read-only — edit it in its source template."; return; }
         var refs = ExternalReferences(el);
         if (refs.Count > 0)
         {
@@ -3051,8 +3058,8 @@ public partial class MainWindow : Window
 
     void GroupSelection()
     {
-        var items = _selection.Where(x => !x.Deleted && (x.IsPositionable || x.Kind == TplKind.Button)).ToList();
-        if (items.Count == 0) { status.Text = "Select control(s) to group into a box."; return; }
+        var items = _selection.Where(x => !x.Deleted && !x.Foreign && (x.IsPositionable || x.Kind == TplKind.Button)).ToList();
+        if (items.Count == 0) { status.Text = "Select editable control(s) to group into a box."; return; }
         var parent = items[0].Parent;
         if (parent == null || items.Any(x => x.Parent != parent))
         {
@@ -3093,6 +3100,7 @@ public partial class MainWindow : Window
     {
         var box = _sel;
         if (box is not { Kind: TplKind.Boxed } || box.Deleted) { status.Text = "Select a group box to ungroup."; return; }
+        if (box.Foreign) { status.Text = "Inlined #INSERT content is read-only — edit it in its source template."; return; }
         var parent = box.Parent;
         if (parent == null) return;
         PushUndo();
@@ -3443,6 +3451,12 @@ public partial class MainWindow : Window
         else if (!_selection.Contains(el)) Select(el);
         else { _sel = el; RefreshSelectionVisual(); PopulateProps(el); }   // click a member -> keep group, set primary
 
+        if (el.Foreign)   // selectable to inspect, but read-only: no drag/move
+        {
+            status.Text = $"{el.Display} comes from a #GROUP via #INSERT — read-only here. Edit it in its source template.";
+            e.Handled = true; return;
+        }
+
         BeginGesture();
         _drag = Drag.Element; _dragEl = el; _dragMoved = false; _dragLabel = false;
         _dragStart = e.GetPosition(canvas);
@@ -3522,10 +3536,11 @@ public partial class MainWindow : Window
 
     void PopulateProps(TplElement? el)
     {
-        propGrid.IsEnabled = el != null;
+        propGrid.IsEnabled = el is { Foreign: false };   // inlined #INSERT content is read-only
         propTitle.Text = _selection.Count > 1 ? $"{_selection.Count} controls selected"
                                               : el?.Display ?? "(none)";
-        propKind.Text = el == null ? "" : $"{el.Kind}   line {el.LineIndex + 1}";
+        propKind.Text = el == null ? ""
+                      : $"{el.Kind}   line {el.LineIndex + 1}" + (el.Foreign ? "   • read-only (from #INSERT)" : "");
 
         var refs = el == null ? new List<(string Symbol, List<int> Lines)>() : ExternalReferences(el);
         if (refs.Count > 0)
@@ -3683,9 +3698,9 @@ public partial class MainWindow : Window
     // Apply a style change to every selected control (one undo entry per editing burst).
     void ApplyStyle(Action<TplElement> set)
     {
-        if (_sel == null) return;
+        if (_sel == null || _selection.All(x => x.Foreign)) return;   // read-only #INSERT content can't be restyled
         BeginStyleEdit();
-        foreach (var el in _selection) { set(el); el.FontDirty = true; }
+        foreach (var el in _selection) if (!el.Foreign) { set(el); el.FontDirty = true; }
         Render();                                  // chips reflect the new font/size/colour
         propSource.Text = SourceOf(_sel);          // per-control source preview (primary)
         srcHdr.Visibility = propSource.Visibility = Visibility.Visible;
@@ -3959,6 +3974,7 @@ public partial class MainWindow : Window
 
     void MoveElement(TplElement el, double lx, double ly)
     {
+        if (el.Foreign) return;        // inlined #INSERT content is read-only
         _gestureChanged = true;
         lx = Math.Max(0, lx); ly = Math.Max(0, ly);
         double dX = lx - el.LX, dY = ly - el.LY;       // incremental shift for any contents
@@ -4040,7 +4056,7 @@ public partial class MainWindow : Window
     void ShowHandles(TplElement? el)
     {
         ClearHandles();
-        if (el == null || !_chips.ContainsKey(el)) return;
+        if (el == null || el.Foreign || !_chips.ContainsKey(el)) return;   // no resize handles on read-only content
         foreach (var (edge, fx, fy) in HandleSpec)
         {
             var r = new Rectangle
@@ -4093,6 +4109,7 @@ public partial class MainWindow : Window
 
     void ResizeElement(TplElement el, double lx, double ly, double lw, double lh)
     {
+        if (el.Foreign) return;        // inlined #INSERT content is read-only
         _gestureChanged = true;
         lw = Math.Max(MinDlu, lw); lh = Math.Max(MinDlu, lh);
         lx = Math.Max(0, lx); ly = Math.Max(0, ly);

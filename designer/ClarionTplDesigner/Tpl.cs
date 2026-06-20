@@ -18,6 +18,7 @@ public class TplElement
     public bool Deleted;           // marked for removal -> its source line(s) are dropped on Save
     public bool Inserted;          // brand-new control with no source yet -> emitted on Save
     public bool Moved;             // existing control reparented/reordered -> its source line relocates on Save
+    public bool Foreign;           // pulled in via #INSERT(%group) from a #GROUP (possibly another file): read-only, never saved
     public int MoveAnchorLine = -1; // emit it before this original source line (reorder); -1 = container end
     public string Title = "";      // tab name / box title / display text / prompt label / image file
     public string Symbol = "";     // %Symbol (prompts/images target a feq)
@@ -63,7 +64,7 @@ public class TplElement
         var c = new TplElement
         {
             Kind = Kind, LineIndex = LineIndex, EndLineIndex = EndLineIndex,
-            Deleted = Deleted, Inserted = Inserted, Moved = Moved, MoveAnchorLine = MoveAnchorLine,
+            Deleted = Deleted, Inserted = Inserted, Moved = Moved, Foreign = Foreign, MoveAnchorLine = MoveAnchorLine,
             Title = Title, Symbol = Symbol, PromptType = PromptType, Req = Req, DefaultExpr = DefaultExpr, Where = Where, Section = Section,
             HasAt = HasAt, HasX = HasX, HasY = HasY, HasW = HasW, HasH = HasH,
             X = X, Y = Y, W = W, H = H,
@@ -130,7 +131,13 @@ public static class TplParser
     public static TplDocument Parse(string path)
     {
         var doc = new TplDocument { Path = path };
+        // Load every file first (main + #INCLUDE chain), THEN parse — a #GROUP referenced by
+        // #INSERT can live in an include that follows the file using it, so the registry of
+        // groups must be complete before any #SHEET is resolved.
         LoadFile(doc, path, included: false, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        var groups = BuildGroupRegistry(doc);
+        for (int fi = 0; fi < doc.Files.Count; fi++)
+            ParseComponents(doc, fi, doc.Files[fi].Lines, groups);
         return doc;
     }
 
@@ -141,7 +148,9 @@ public static class TplParser
         var nl = text.Contains("\r\n") ? "\r\n" : "\n";
         var lines = text.Split(new[] { nl }, StringSplitOptions.None);
         doc.Files.Add(new TplFile { Path = path, Newline = nl, Lines = lines });
-        ParseComponents(doc, 0, lines);
+        // Single-file preview: only groups defined in this same text resolve (cross-file inserts
+        // can't, since the includes aren't loaded here) — that's fine for a transient edit preview.
+        ParseComponents(doc, 0, lines, BuildGroupRegistry(doc));
         return doc;
     }
 
@@ -154,10 +163,7 @@ public static class TplParser
         var text = File.ReadAllText(full);
         var nl = text.Contains("\r\n") ? "\r\n" : "\n";
         var lines = text.Split(new[] { nl }, StringSplitOptions.None);
-        int fileIndex = doc.Files.Count;
         doc.Files.Add(new TplFile { Path = full, Newline = nl, Lines = lines, Included = included });
-
-        ParseComponents(doc, fileIndex, lines);
 
         // follow #INCLUDE('xxx.tpw') (ignoring commented #! lines), relative to this file's folder
         string dir = System.IO.Path.GetDirectoryName(full) ?? ".";
@@ -170,7 +176,31 @@ public static class TplParser
         }
     }
 
-    static void ParseComponents(TplDocument doc, int fileIndex, string[] lines)
+    /// <summary>One #GROUP(%name) body — the lines and range a #INSERT(%name) pastes in.</summary>
+    sealed class GroupDef { public string[] Lines = Array.Empty<string>(); public int Start, End; }
+
+    // Index every #GROUP(%name) across all loaded files so #INSERT(%name) inside a #SHEET can be resolved.
+    static Dictionary<string, GroupDef> BuildGroupRegistry(TplDocument doc)
+    {
+        var reg = new Dictionary<string, GroupDef>(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in doc.Files)
+        {
+            var lines = file.Lines;
+            var starts = ComponentStarts(lines);
+            for (int s = 0; s < starts.Count; s++)
+            {
+                int start = starts[s];
+                if (!Directive(lines[start].TrimStart()).Equals("GROUP", StringComparison.OrdinalIgnoreCase)) continue;
+                var m = Regex.Match(lines[start], @"#group\s*\(\s*(%\w+)", RegexOptions.IgnoreCase);
+                if (!m.Success) continue;
+                int end = (s + 1 < starts.Count ? starts[s + 1] : lines.Length) - 1;
+                reg[m.Groups[1].Value] = new GroupDef { Lines = lines, Start = start, End = end };   // last definition wins
+            }
+        }
+        return reg;
+    }
+
+    static List<int> ComponentStarts(string[] lines)
     {
         var starts = new List<int>();
         for (int i = 0; i < lines.Length; i++)
@@ -179,12 +209,18 @@ public static class TplParser
             if (t.Length == 0 || t[0] != '#' || t.StartsWith("#!")) continue;
             if (ComponentKinds.Contains(Directive(t))) starts.Add(i);
         }
+        return starts;
+    }
+
+    static void ParseComponents(TplDocument doc, int fileIndex, string[] lines, Dictionary<string, GroupDef> groups)
+    {
+        var starts = ComponentStarts(lines);
         for (int s = 0; s < starts.Count; s++)
         {
             int start = starts[s];
             int end = (s + 1 < starts.Count ? starts[s + 1] : lines.Length) - 1;
             var comp = NewComponent(lines[start], fileIndex, start, end);
-            ParseSheet(lines, start, end, comp);
+            ParseSheet(lines, start, end, comp, groups);
             doc.Components.Add(comp);
         }
     }
@@ -201,11 +237,12 @@ public static class TplParser
         return comp;
     }
 
-    static void ParseSheet(string[] lines, int from, int to, TplComponent comp)
+    static void ParseSheet(string[] lines, int from, int to, TplComponent comp, Dictionary<string, GroupDef> groups)
     {
         var stack = new Stack<TplElement>();
         var sheetRoot = new TplElement { Kind = TplKind.Sheet };
         bool inSheet = false;
+        var inserting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);   // recursion guard across #INSERTs
 
         for (int i = from; i <= to && i < lines.Length; i++)
         {
@@ -224,29 +261,61 @@ public static class TplParser
             }
             if (!inSheet) continue;
 
-            switch (dir)
-            {
-                case "TAB":
-                    var tab = NewEl(TplKind.Tab, lines[i], i);
-                    Add(stack, tab); comp.Tabs.Add(tab); stack.Push(tab); break;
-                case "ENDTAB": Close(stack, i); break;
-                case "BOXED":
-                    var box = NewEl(TplKind.Boxed, lines[i], i);
-                    Add(stack, box); stack.Push(box); break;
-                case "ENDBOXED": Close(stack, i); break;
-                case "BUTTON":
-                    var btn = NewEl(TplKind.Button, lines[i], i);
-                    Add(stack, btn); stack.Push(btn); break;
-                case "ENDBUTTON": Close(stack, i); break;
-                case "ENABLE":
-                    var en = NewEl(TplKind.Enable, lines[i], i);
-                    Add(stack, en); stack.Push(en); break;
-                case "ENDENABLE": Close(stack, i); break;
-                case "PROMPT": Add(stack, NewEl(TplKind.Prompt, lines[i], i)); break;
-                case "DISPLAY": Add(stack, NewEl(TplKind.Display, lines[i], i)); break;
-                case "IMAGE": Add(stack, NewEl(TplKind.Image, lines[i], i)); break;
-            }
+            HandleElement(dir, lines, i, stack, comp, foreign: false, groups, inserting);
         }
+    }
+
+    // Build the one prompt-UI element on `lines[i]` and slot it into the current container, or —
+    // for #INSERT(%group) — inline that group's prompts here. `foreign` marks inlined (read-only) content.
+    static void HandleElement(string dir, string[] lines, int i, Stack<TplElement> stack,
+                              TplComponent comp, bool foreign, Dictionary<string, GroupDef> groups, HashSet<string> inserting)
+    {
+        switch (dir)
+        {
+            case "TAB":
+                var tab = NewEl(TplKind.Tab, lines[i], i, foreign);
+                Add(stack, tab); comp.Tabs.Add(tab); stack.Push(tab); break;
+            case "ENDTAB": Close(stack, i); break;
+            case "BOXED":
+                var box = NewEl(TplKind.Boxed, lines[i], i, foreign);
+                Add(stack, box); stack.Push(box); break;
+            case "ENDBOXED": Close(stack, i); break;
+            case "BUTTON":
+                var btn = NewEl(TplKind.Button, lines[i], i, foreign);
+                Add(stack, btn); stack.Push(btn); break;
+            case "ENDBUTTON": Close(stack, i); break;
+            case "ENABLE":
+                var en = NewEl(TplKind.Enable, lines[i], i, foreign);
+                Add(stack, en); stack.Push(en); break;
+            case "ENDENABLE": Close(stack, i); break;
+            case "PROMPT": Add(stack, NewEl(TplKind.Prompt, lines[i], i, foreign)); break;
+            case "DISPLAY": Add(stack, NewEl(TplKind.Display, lines[i], i, foreign)); break;
+            case "IMAGE": Add(stack, NewEl(TplKind.Image, lines[i], i, foreign)); break;
+            case "INSERT": InlineGroup(lines[i], stack, comp, groups, inserting); break;
+        }
+    }
+
+    // #INSERT(%group[,args]) inside a sheet pastes the prompts a #GROUP(%group) declares.
+    // We parse the group's body in place as children of the current container, flagged read-only.
+    static void InlineGroup(string line, Stack<TplElement> stack, TplComponent comp,
+                            Dictionary<string, GroupDef> groups, HashSet<string> inserting)
+    {
+        var m = Regex.Match(line, @"#insert\s*\(\s*(%\w+)", RegexOptions.IgnoreCase);
+        if (!m.Success) return;
+        string name = m.Groups[1].Value;
+        if (!groups.TryGetValue(name, out var g)) return;   // not a prompt group we can see -> leave the tab as-is
+        if (!inserting.Add(name)) return;                   // guard against a group inserting itself (directly or via a cycle)
+
+        for (int i = g.Start + 1; i <= g.End && i < g.Lines.Length; i++)
+        {
+            var trimmed = g.Lines[i].TrimStart();
+            if (trimmed.Length == 0 || trimmed[0] != '#' || trimmed.StartsWith("#!")) continue;
+            var dir = Directive(trimmed);
+            if (dir is "SHEET" or "ENDSHEET" or "GROUP") continue;   // a prompt group has no sheet wrapper of its own
+            HandleElement(dir, g.Lines, i, stack, comp, foreign: true, groups, inserting);
+        }
+
+        inserting.Remove(name);
     }
 
     static string Directive(string t)
@@ -266,9 +335,9 @@ public static class TplParser
         if (s.Count > 1) { var e = s.Pop(); e.EndLineIndex = endLine; }
     }
 
-    static TplElement NewEl(TplKind kind, string line, int idx)
+    static TplElement NewEl(TplKind kind, string line, int idx, bool foreign = false)
     {
-        var e = new TplElement { Kind = kind, LineIndex = idx };
+        var e = new TplElement { Kind = kind, LineIndex = idx, Foreign = foreign };
         var q = Regex.Match(line, @"'((?:[^']|'')*)'");
         if (q.Success) e.Title = q.Groups[1].Value.Replace("''", "'");
 
@@ -582,6 +651,7 @@ public static class TplWriter
 
     static IEnumerable<TplElement> Flatten(TplElement e)
     {
+        if (e.Foreign) yield break;   // #INSERT(%group) content is read-only: never dropped, rewritten or re-emitted
         yield return e;
         foreach (var c in e.Children)
             foreach (var x in Flatten(c)) yield return x;
