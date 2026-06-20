@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>myBackground — Programmer's Documentation</title>
+<style>
+  :root{
+    --blue:#0A66C2; --blue-d:#084d93; --navy:#0E1A2B; --navy-2:#16263c;
+    --ink:#22303f; --muted:#6b7785; --line:#e3e8ef; --bg:#f5f7fa;
+    --card:#ffffff; --green:#1e7c5a; --amber:#9a6a12; --amber-bg:#fff7e8;
+    --green-bg:#eef8f3; --blue-bg:#eef4fc;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:15px/1.65 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg)}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:flex;min-height:100vh}
+  nav{width:280px;flex:0 0 280px;background:linear-gradient(180deg,var(--navy),var(--navy-2));
+    color:#cdd8e6;position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 0}
+  nav .brand{padding:0 22px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+  nav .brand h1{font-size:16px;margin:0;color:#fff} nav .brand span{font-size:12px;color:#8aa0bb}
+  nav a{display:block;color:#b9c7d8;padding:6px 22px;font-size:13.5px;border-left:3px solid transparent}
+  nav a:hover{background:rgba(255,255,255,.05);color:#fff;text-decoration:none}
+  nav a.h2{padding-left:34px;font-size:13px;color:#9fb2c8}
+  nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#6e85a1;
+    padding:14px 22px 4px;font-weight:700}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(120deg,#0c2a4d,var(--blue));color:#fff;padding:46px 52px 38px}
+  header.hero h1{margin:0 0 6px;font-size:30px;letter-spacing:-.3px}
+  header.hero p{margin:0;font-size:15.5px;color:#dbe8f8;max-width:780px}
+  header.hero .pill{display:inline-block;margin-top:16px;background:rgba(255,255,255,.16);
+    padding:4px 12px;border-radius:20px;font-size:12.5px}
+  .body{padding:14px 52px 80px;max-width:940px}
+  section{padding:22px 0;border-bottom:1px solid var(--line)} section:last-child{border-bottom:none}
+  h2{font-size:21px;margin:14px 0 10px;color:var(--navy);scroll-margin-top:14px}
+  h3{font-size:16px;margin:20px 0 6px;color:var(--blue-d)}
+  p{margin:9px 0} ul,ol{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  code,kbd,pre{font-family:"Cascadia Code",Consolas,monospace}
+  code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:13px;color:#1d3b5e}
+  kbd{background:#1d2a3a;color:#e7eef7;padding:2px 7px;border-radius:5px;font-size:12px;
+    border:1px solid #324558;box-shadow:0 1px 0 #0b1420}
+  pre{background:#0f1d2e;color:#dbe6f2;padding:16px 18px;border-radius:10px;overflow:auto;
+    font-size:13px;line-height:1.55;margin:12px 0}
+  pre .c{color:#7fa6c9} pre .k{color:#79c0ff} pre .s{color:#7ee0b8} pre .t{color:#ffd591}
+  .callout{border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;border:1px solid}
+  .tip{background:var(--green-bg);border-color:#bfe3d3;color:#155}
+  .note{background:var(--blue-bg);border-color:#c5dcf6;color:#13456f}
+  .warn{background:var(--amber-bg);border-color:#ecd9a6;color:#6f5210}
+  .callout b{display:block;margin-bottom:2px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f0f4f9;color:var(--navy);font-weight:600}
+  tr:hover td{background:#fafcff}
+  .lead{font-size:16px;color:#3a4756}
+  footer{padding:24px 52px;color:var(--muted);font-size:13px}
+  .top{font-size:12px;color:var(--muted);float:right}
+  .filetree{font-family:"Cascadia Code",Consolas,monospace;font-size:13px;background:#fff;
+    border:1px solid var(--line);border-radius:10px;padding:14px 18px;line-height:1.7;color:#37485a}
+  .filetree b{color:var(--blue-d)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><h1>myBackground</h1><span>Programmer's Documentation · v1.00</span></div>
+    <a href="#over">Overview</a>
+    <div class="grp">Using it</div>
+    <a href="#install" class="h2">Install &amp; register</a>
+    <a href="#prompts" class="h2">Prompts</a>
+    <a href="#runtime" class="h2">Runtime behaviour</a>
+    <a href="#chooser" class="h2">The Ctrl+Shift+B chooser</a>
+    <a href="#ini" class="h2">INI storage</a>
+    <div class="grp">Internals</div>
+    <a href="#embeds" class="h2">Embed points</a>
+    <a href="#helpers" class="h2">Helper API</a>
+    <a href="#facts" class="h2">Runtime facts</a>
+    <div class="grp">Reference</div>
+    <a href="#customise" class="h2">Customising</a>
+    <a href="#multidll" class="h2">Multi-DLL</a>
+    <a href="#trouble" class="h2">Troubleshooting</a>
+    <a href="#verify" class="h2">Verify checklist</a>
+  </nav>
+
+  <main>
+  <header class="hero">
+    <h1>myBackground</h1>
+    <p>A self-contained, global Clarion 12 ABC extension that gives every window a default background —
+       a solid colour or an image — and lets the user set a personal background per window with
+       <strong>Ctrl+Shift+B</strong>, persisted to an INI file. This is the programmer's reference: prompts,
+       generated code, embed points, the helper API, and the runtime properties it relies on.</p>
+    <span class="pill">myBackground · version 1.00 · FAMILY('ABC')</span>
+  </header>
+
+  <div class="body">
+
+  <section id="over">
+    <h2>Overview <a class="top" href="#over">↑ top</a></h2>
+    <p class="lead">One <code>APPLICATION</code>-scope extension, added once at the global level, with no
+       per-procedure setup. It does three things:</p>
+    <ol>
+      <li><b>Global default</b> — every window opens with a default background (a solid colour and/or an
+          image) you configure on the extension's prompts.</li>
+      <li><b>Per-window override</b> — pressing <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> on any window
+          pops a small chooser to set a personal colour or image for <em>that</em> window, or revert it to
+          the default.</li>
+      <li><b>Persistence</b> — each window's personal choice is written to its own section of an INI file and
+          re-applied automatically the next time the window opens. A personal background overrides the
+          global default.</li>
+    </ol>
+    <p>It is fully self-contained: two helper procedures are generated straight into the program module
+       (prototypes in the global <code>MAP</code>, bodies in <code>%ProgramProcedures</code>). There are
+       <b>no external <code>.inc</code>/<code>.clw</code> files</b> to ship.</p>
+    <div class="callout note"><b>Precedence</b> For any window: a stored <em>personal</em> background wins;
+       otherwise the global <em>default image</em> wins; otherwise the global <em>default colour</em>;
+       otherwise the window keeps its standard look.</div>
+  </section>
+
+  <section id="install">
+    <h2>Install &amp; register <a class="top" href="#over">↑ top</a></h2>
+    <ol>
+      <li>Copy <code>templates/myBackground/myBackground.tpl</code> into your app's template/source path
+          (or register it in place).</li>
+      <li>In the IDE: <b>Setup ▸ Template Registry ▸ Register</b> and pick <code>myBackground.tpl</code>.</li>
+      <li>Open your app, go to <b>Global ▸ Extensions</b>, and add
+          <b>myBackground - per-window background color / image</b>.</li>
+      <li>On the <b>General</b> tab set your defaults and INI name (all optional — see below).</li>
+      <li><b>Generate</b>, compile, and run.</li>
+    </ol>
+    <div class="callout tip"><b>Scope</b> Add it <em>once</em>, at the application/global level. Because it
+       injects into <code>WindowManager.TakeWindowEvent</code>, it automatically reaches every windowed
+       procedure in the app — there is nothing to add to individual procedures.</div>
+  </section>
+
+  <section id="prompts">
+    <h2>Prompts (General tab) <a class="top" href="#over">↑ top</a></h2>
+    <table>
+      <tr><th>Prompt</th><th>Symbol</th><th>Type / default</th><th>Purpose</th></tr>
+      <tr><td>Disable this template</td><td><code>%mbgDisable</code></td><td>CHECK · 0</td>
+          <td>Master kill-switch. When on, the template emits nothing (every <code>#AT</code> is guarded
+          <code>WHERE(%mbgDisable=0)</code>).</td></tr>
+      <tr><td>Default background color</td><td><code>%mbgDefColor</code></td><td>COLOR · <code>-1</code></td>
+          <td>Solid colour applied to windows with no personal setting. <code>-1</code> (<code>COLOR:None</code>)
+          means "no default colour".</td></tr>
+      <tr><td>Default background image</td><td><code>%mbgDefImage</code></td><td>@s255 · <em>(blank)</em></td>
+          <td>Image file applied to windows with no personal setting. Wins over the default colour when both
+          are set. Blank = no default image.</td></tr>
+      <tr><td>INI file name</td><td><code>%mbgIni</code></td><td>@s255 · <code>.\myBackground.INI</code> · REQ</td>
+          <td>Where personal per-window choices are stored and read.</td></tr>
+      <tr><td>Enable Ctrl+Shift+B picker</td><td><code>%mbgHotKey</code></td><td>CHECK · 1</td>
+          <td>When off, the hotkey is not armed and the chooser code is not generated — windows still get the
+          default/stored background, they just can't be changed at run time.</td></tr>
+    </table>
+    <div class="callout note"><b>Leave both defaults empty</b> to apply <em>no</em> default — windows keep
+       their designed look until the user sets a personal background with the hotkey.</div>
+  </section>
+
+  <section id="runtime">
+    <h2>Runtime behaviour <a class="top" href="#over">↑ top</a></h2>
+    <p>On <code>EVENT:OpenWindow</code> the template calls <code>myBackApply()</code> for the window and (if
+       the hotkey is enabled) arms <code>Ctrl+Shift+B</code>. <code>myBackApply</code> resolves the precedence:</p>
+    <pre><span class="c">! pseudocode of the decision in myBackApply</span>
+<span class="k">IF</span> window has a stored personal setting   <span class="c">! INI Mode = 'C' or 'I'</span>
+   apply that colour / image
+<span class="k">ELSIF</span> a default image is configured        <span class="c">! %mbgDefImage not blank</span>
+   apply the default image (stretched)
+<span class="k">ELSIF</span> a default colour is configured       <span class="c">! %mbgDefColor &lt;&gt; COLOR:None</span>
+   apply the default colour
+<span class="k">ELSE</span>
+   clear to the standard window look</pre>
+    <p>A <b>colour</b> is set with <code>0{PROP:Color}</code> (the current window). An <b>image</b> is set with
+       <code>0{PROP:WallPaper}</code> after turning <code>PROP:Tiled</code> and <code>PROP:Centered</code> off,
+       so the picture <b>stretches to fill</b> the whole client area. Applying a colour first clears any image,
+       and vice-versa, so the two modes never fight.</p>
+    <div class="callout note"><b>Why a draw at OpenWindow works</b> The handler is injected at
+       <code>PRIORITY(2000)</code> — a self-contained <code>CASE EVENT()</code> above the ABC framework's own
+       block (which opens at 2500) — and it never <code>RETURN</code>s, so normal event handling continues
+       untouched. This is the same proven pattern used by the sibling <em>myFontChanger</em> and
+       <em>myPixel</em> templates.</div>
+  </section>
+
+  <section id="chooser">
+    <h2>The Ctrl+Shift+B chooser <a class="top" href="#over">↑ top</a></h2>
+    <p>When the user presses the hotkey, <code>EVENT:AlertKey</code> fires and the template calls
+       <code>myBackChoose()</code>, which opens a small modal window:</p>
+    <div class="filetree">
+Window Background<br>
+&nbsp;&nbsp;Set the background for this window:<br>
+&nbsp;&nbsp;[ <b>Background Color…</b> ]<br>
+&nbsp;&nbsp;[ <b>Background Image…</b> ]<br>
+&nbsp;&nbsp;[ Use Default ]&nbsp;&nbsp;[ Close ]
+    </div>
+    <table>
+      <tr><th>Button</th><th>Action</th></tr>
+      <tr><td><b>Background Color…</b></td><td>Opens <code>COLORDIALOG</code>. On OK, saves
+          <code>Mode=C</code> + the chosen colour, clears the image entry, and applies it.</td></tr>
+      <tr><td><b>Background Image…</b></td><td>Opens <code>FILEDIALOG</code> (BMP/JPG/GIF/PNG/ICO/WMF).
+          On OK, saves <code>Mode=I</code> + the path, clears the colour entry, and applies it stretched.</td></tr>
+      <tr><td><b>Use Default</b></td><td>Deletes this window's whole INI section and re-applies the global
+          default.</td></tr>
+      <tr><td><b>Close</b></td><td>Dismisses the chooser with no change.</td></tr>
+    </table>
+    <div class="callout warn"><b>Targeting the right window</b> The chooser opens its own window, so it
+       <code>CLOSE</code>s that window <em>before</em> re-applying the background. After the close, the
+       caller's window is again the top window on the thread, so <code>0{PROP:…}</code> inside
+       <code>myBackApply</code> correctly targets the window the user was on — not the chooser.</div>
+  </section>
+
+  <section id="ini">
+    <h2>INI storage <a class="top" href="#over">↑ top</a></h2>
+    <p>Each window is keyed by its <b>procedure name</b> (unique within an app), so every window gets its own
+       <code>[section]</code>. Three entries per section:</p>
+    <table>
+      <tr><th>Entry</th><th>Values</th><th>Meaning</th></tr>
+      <tr><td><code>Mode</code></td><td><code>C</code> / <code>I</code> / <em>(absent)</em></td>
+          <td>Colour, Image, or no personal setting (use the global default).</td></tr>
+      <tr><td><code>Color</code></td><td>COLORREF LONG</td><td>The solid colour when <code>Mode=C</code>.</td></tr>
+      <tr><td><code>Image</code></td><td>file path</td><td>The image when <code>Mode=I</code>.</td></tr>
+    </table>
+    <p>Example <code>myBackground.INI</code>:</p>
+    <pre><span class="t">[BrowseClients]</span>
+<span class="k">Mode</span>  = C
+<span class="k">Color</span> = 16771818          <span class="c">! a pale blue COLORREF</span>
+<span class="k">Image</span> =
+
+<span class="t">[UpdateOrder]</span>
+<span class="k">Mode</span>  = I
+<span class="k">Color</span> = -1
+<span class="k">Image</span> = .\art\linen.jpg</pre>
+    <p>The default path <code>.\myBackground.INI</code> is relative to the program's working directory.
+       Point <code>%mbgIni</code> at a per-user writable location (e.g. under <code>%APPDATA%</code>) if the
+       install folder is read-only.</p>
+  </section>
+
+  <section id="embeds">
+    <h2>Embed points &amp; generated code <a class="top" href="#over">↑ top</a></h2>
+    <p>The template injects at three embed points, all guarded by <code>WHERE(%mbgDisable=0)</code>:</p>
+    <table>
+      <tr><th>Embed</th><th>What it emits</th></tr>
+      <tr><td><code>%GlobalMap</code></td><td>Short-form prototypes for <code>myBackApply</code> and
+          <code>myBackChoose</code> (short form survives the MAP's auto-indent).</td></tr>
+      <tr><td><code>%ProgramProcedures</code></td><td>The two helper bodies, long-form, at column 1
+          (this region is not auto-indented).</td></tr>
+      <tr><td><code>%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'</code><br>
+          <code>PRIORITY(2000), WHERE(… AND %Window)</code></td>
+          <td>The per-window handler — apply background + arm the hotkey on open, pop the chooser on the key.</td></tr>
+    </table>
+    <p>The generated handler (with the hotkey enabled) looks like:</p>
+    <pre>  <span class="k">CASE</span> EVENT()
+  <span class="k">OF</span> EVENT:OpenWindow
+    myBackApply(<span class="s">'BrowseClients'</span>, <span class="s">'.\myBackground.INI'</span>, -1, <span class="s">''</span>)
+    ALERT(CtrlShiftB)
+  <span class="k">OF</span> EVENT:AlertKey
+    <span class="k">IF</span> KEYCODE() = CtrlShiftB
+      myBackChoose(<span class="s">'BrowseClients'</span>, <span class="s">'.\myBackground.INI'</span>, -1, <span class="s">''</span>)
+    <span class="k">END</span>
+  <span class="k">END</span></pre>
+    <div class="callout note"><b>Hotkey off</b> When <code>%mbgHotKey</code> is 0, the <code>ALERT</code> line
+       and the whole <code>OF EVENT:AlertKey</code> arm are <code>#IF</code>'d out — the <code>CASE</code> stays
+       well-formed with just the <code>OpenWindow</code> arm.</div>
+  </section>
+
+  <section id="helpers">
+    <h2>Helper API <a class="top" href="#over">↑ top</a></h2>
+    <p>Both helpers are generated into the program module and act on the <b>current window (handle 0)</b>.
+       You can call them yourself from embed code if you want to drive the background programmatically.</p>
+
+    <h3>myBackApply</h3>
+    <pre>myBackApply(<span class="k">STRING</span> pKey, <span class="k">STRING</span> pIni, <span class="k">LONG</span> pDefColor, <span class="k">STRING</span> pDefImage)</pre>
+    <table>
+      <tr><th>Param</th><th>Meaning</th></tr>
+      <tr><td><code>pKey</code></td><td>INI section name (the window's procedure name).</td></tr>
+      <tr><td><code>pIni</code></td><td>INI file path.</td></tr>
+      <tr><td><code>pDefColor</code></td><td>Global default colour, or <code>COLOR:None</code> (-1) for none.</td></tr>
+      <tr><td><code>pDefImage</code></td><td>Global default image path, or blank for none.</td></tr>
+    </table>
+    <p>Reads the section, resolves the precedence, and applies the result to window 0. Safe to call any time
+       the target window is the current window (e.g. <code>EVENT:OpenWindow</code>).</p>
+
+    <h3>myBackChoose</h3>
+    <pre>myBackChoose(<span class="k">STRING</span> pKey, <span class="k">STRING</span> pIni, <span class="k">LONG</span> pDefColor, <span class="k">STRING</span> pDefImage)</pre>
+    <p>Same parameters. Opens the chooser, writes the user's choice to the INI, then re-applies it to the
+       caller window via <code>myBackApply</code>. Call it from a button or menu if you want a "Change
+       background…" command somewhere other than the hotkey.</p>
+
+    <div class="callout tip"><b>Reapply after a programmatic change</b> If your own code edits the INI directly,
+       call <code>myBackApply(...)</code> on the live window to repaint it without reopening.</div>
+  </section>
+
+  <section id="facts">
+    <h2>Runtime facts it relies on <a class="top" href="#over">↑ top</a></h2>
+    <p>Every property, dialog and equate used was verified against the shipped Clarion 12 corpus
+       (<code>C:\clarion12</code>):</p>
+    <table>
+      <tr><th>Used for</th><th>API</th><th>Source</th></tr>
+      <tr><td>Solid window colour</td><td><code>0{PROP:Color} = rgb</code> (alias <code>PROP:FillColor</code>)</td>
+          <td>property.clw:246/248; mo.clw:103/136</td></tr>
+      <tr><td>Window image</td><td><code>0{PROP:WallPaper} = file</code></td>
+          <td>property.clw:277; ClaBarManager.clw:121</td></tr>
+      <tr><td>Stretch-to-fill</td><td><code>PROP:Tiled=0</code>, <code>PROP:Centered=0</code> (the default)</td>
+          <td>property.clw:278/279; LanguageReference (WALLPAPER)</td></tr>
+      <tr><td>Clear an image</td><td><code>0{PROP:WallPaper} = ''</code></td><td>mo.clw:102</td></tr>
+      <tr><td>Colour picker</td><td><code>COLORDIALOG(&lt;title&gt;, *? rgb)</code> — non-zero on OK</td>
+          <td>builtins.clw:583</td></tr>
+      <tr><td>File picker</td><td><code>FILEDIALOG(&lt;title&gt;, *? name, &lt;ext&gt;, flag)</code> — true on OK</td>
+          <td>builtins.clw:837</td></tr>
+      <tr><td>Hotkey</td><td><code>CtrlShiftB</code> EQUATE(0342H)</td><td>KEYCODES.CLW:485</td></tr>
+      <tr><td>"No colour"</td><td><code>COLOR:None</code> EQUATE(-1)</td><td>EQUATES.CLW:186</td></tr>
+      <tr><td>Long paths</td><td><code>FILE:LongName</code> flag · <code>File:MaxFilePath</code> buffer</td>
+          <td>EQUATES.CLW:462/434</td></tr>
+    </table>
+  </section>
+
+  <section id="customise">
+    <h2>Customising <a class="top" href="#over">↑ top</a></h2>
+    <ul>
+      <li><b>Different hotkey</b> — change both <code>ALERT(CtrlShiftB)</code> and the
+          <code>IF KEYCODE() = CtrlShiftB</code> test in the <code>%WindowManagerMethodCodeSection</code> block
+          to another keycode equate (see <code>KEYCODES.CLW</code>).</li>
+      <li><b>Tiled or centered images</b> — in <code>myBackApply</code>'s image branches set
+          <code>0{PROP:Tiled}=1</code> (or <code>PROP:Centered=1</code>) instead of <code>0</code>.</li>
+      <li><b>Per-window opt-out</b> — change the <code>#AT</code> guard to also test a per-procedure symbol, or
+          add a <code>#EXTENSION(...),PROCEDURE</code> disable flag, if some windows should be skipped.</li>
+      <li><b>Image filter</b> — edit the extension string in the <code>FILEDIALOG</code> call inside
+          <code>myBackChoose</code> to narrow or widen the accepted formats.</li>
+    </ul>
+  </section>
+
+  <section id="multidll">
+    <h2>Multi-DLL note <a class="top" href="#over">↑ top</a></h2>
+    <p>The helper bodies are emitted into <code>%ProgramProcedures</code> (the program/EXE module), matching the
+       sibling templates (<em>myFontChanger</em>, <em>myFuncs</em>). This targets <b>single-EXE</b> apps. For a
+       multi-DLL app where windowed procedures live in DLLs, move the helper bodies to a shared module and add
+       the prototypes (and exports) to the DLLs that call them — the same retrofit any self-contained helper
+       template needs.</p>
+  </section>
+
+  <section id="trouble">
+    <h2>Troubleshooting <a class="top" href="#over">↑ top</a></h2>
+    <table>
+      <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
+      <tr><td>Template won't register</td><td>A literal <code>%</code> in an emitted line, or an unbalanced
+          block. This template is clean; if you edit it, escape any literal <code>%</code> as <code>%%</code>
+          and keep <code>#SHEET/#TAB/#BOXED/#AT/#IF</code> pairs matched.</td></tr>
+      <tr><td>Default image ignored</td><td>The path must be reachable at run time. Relative paths resolve from
+          the working directory; use a full path or ship the art folder.</td></tr>
+      <tr><td>Hotkey does nothing</td><td>"Enable Ctrl+Shift+B picker" is off, or another extension consumes
+          the key. The alert is armed on <code>EVENT:OpenWindow</code> per window.</td></tr>
+      <tr><td>Colour shows but image doesn't</td><td>Unsupported image format for this build, or a bad path —
+          confirm the file opens in an IMAGE control normally.</td></tr>
+      <tr><td>Setting doesn't persist</td><td>The INI path isn't writable. Point <code>%mbgIni</code> at a
+          per-user writable location.</td></tr>
+      <tr><td>Background appears on a frame/MDI app shell</td><td>Setting colour on an MDI frame can misbehave
+          on some Windows builds; the guard is <code>WHERE(… AND %Window)</code>, but if needed exclude the
+          frame procedure explicitly.</td></tr>
+    </table>
+  </section>
+
+  <section id="verify">
+    <h2>Verify checklist <a class="top" href="#over">↑ top</a></h2>
+    <p>Claude can't run AppGen — after generating, confirm:</p>
+    <ol>
+      <li>The <code>.tpl</code> registers without error.</li>
+      <li>A window with a default colour/image set shows it on open.</li>
+      <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> opens the chooser; Colour and Image both apply at once.</li>
+      <li>The choice survives closing and reopening the window (check the INI section was written).</li>
+      <li><b>Use Default</b> removes the personal setting and reverts to the global default.</li>
+    </ol>
+    <div class="callout tip"><b>Source</b> <code>templates/myBackground/myBackground.tpl</code> — fully
+       commented, including the corpus citations behind every runtime property it uses.</div>
+  </section>
+
+  </div>
+  <footer>myBackground — Programmer's Documentation · version 1.00 &nbsp;·&nbsp; © 2026 Reddin Assessments ·
+     part of the Clarion Template Maker toolset.</footer>
+  </main>
+</div>
+</body>
+</html>
