@@ -166,7 +166,9 @@ chooser on `EVENT:AlertKey`). At run time a solid color is set with `0{PROP:Colo
 `FILEDIALOG`, `GETINI`/`PUTINI`, and an armed `Ctrl+Shift+B` alert. The extension has a **General** tab
 (default color, default image, INI name, hotkey toggle) and an **Instructions** tab. Register it, add
 **myBackground - per-window background color / image** under Global → Extensions, set your defaults +
-INI name, generate and build.
+INI name, generate and build. Full programmer's documentation (prompts, generated code, embed points,
+the `myBackApply`/`myBackChoose` helper API, and the runtime properties it uses) is in
+[`docs/myBackground-template.html`](docs/myBackground-template.html).
 
 ## Install
 
