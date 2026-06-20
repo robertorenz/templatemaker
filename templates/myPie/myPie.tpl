@@ -19,7 +19,12 @@
 #!    BOX(x,y,w,h,fill)                                       builtins.clw:467
 #!    SHOW(x,y,str)  - draw text, dialog units                builtins.clw:1820
 #!    SETTARGET(window,?image) - band = IMAGE control         builtins.clw:1791
+#!    GETPOSITION(?image,x,y) - control X,Y in the window     builtins.clw
 #!    SETPENCOLOR(color)                                      builtins.clw:1764
+#!
+#!  Issue #5: SETTARGET(,?image) (window omitted) draws WINDOW-relative, so
+#!  (0,0) is the window corner, not the image. We GETPOSITION the image and
+#!  draw at its X,Y so the pie + legend land on the control.
 #!-----------------------------------------------------------------------------
 #!#############################################################################
 #!  GLOBAL EXTENSION - myPieGlobal
@@ -53,15 +58,24 @@ myPieDraw(SIGNED pImageFeq,*SIGNED[] pSlices,*LONG[] pColors,SIGNED pPieW,SIGNED
 #!-----------------------------------------------------------------------------
 #AT(%ProgramProcedures),WHERE(%myPieDisable=0)
 myPieDraw  PROCEDURE(SIGNED pImageFeq,*SIGNED[] pSlices,*LONG[] pColors,SIGNED pPieW,SIGNED pPieH,SIGNED pDepth=0,LONG pBackColor=COLOR:White)
+ImgX  LONG                                                    ! image position in the window (see below)
+ImgY  LONG
+Indt  LONG                                                    ! pie inset so it isn't on the box edge
   CODE
   SETTARGET(,pImageFeq)                                       ! draw into the IMAGE control
+  GETPOSITION(pImageFeq,ImgX,ImgY)                            ! draw AT the image's X,Y - SETTARGET(,feq) is
+                                                              !   window-relative, so (0,0) is the WINDOW
+                                                              !   corner, not the image (GitHub issue #5).
   BLANK                                                       ! WIPE all prior graphics (no resize artifacts).
                                                               !   A filled BOX only paints over - old/larger
                                                               !   drawings survive a shrink; BLANK truly clears.
-  SETPENCOLOR(pBackColor)                                     ! paint the chosen background
-  BOX(0,0,pImageFeq{PROP:Width},pImageFeq{PROP:Height},pBackColor)
+  IF pBackColor <> COLOR:None                                 ! COLOR:None = keep the image's own backdrop
+    SETPENCOLOR(pBackColor)                                   ! paint the chosen background
+    BOX(ImgX,ImgY,pImageFeq{PROP:Width},pImageFeq{PROP:Height},pBackColor)
+  END
   SETPENCOLOR(COLOR:Black)                                    ! slice outlines
-  PIE(0,0,pPieW,pPieH,pSlices,pColors,pDepth)                 ! the pie itself
+  Indt = pPieW * .02                                          ! small inset so the pie clears the box edge
+  PIE(ImgX+Indt,ImgY+Indt,pPieW-Indt*2,pPieH-Indt*2,pSlices,pColors,pDepth)   ! the pie itself
   SETTARGET()                                                 ! restore previous target
 #ENDAT
 #!#############################################################################
@@ -130,6 +144,8 @@ myPie:H              SIGNED                                  ! current image hei
 myPie:PieDim         SIGNED                                  ! pie diameter
 myPie:LegX           SIGNED                                  ! legend left
 myPie:LegY           SIGNED                                  ! legend row y
+myPie:ImgX           SIGNED                                  ! image X,Y in the window (issue #5)
+myPie:ImgY           SIGNED
 myPie:Pct            SIGNED                                  ! a slice percentage
 #ENDAT
 #!-----------------------------------------------------------------------------
@@ -179,8 +195,9 @@ myPieRepaint ROUTINE
     myPie:Total = myPie:Total + myPie:Slices[%(INSTANCE(%myPieSeg))]
     #ENDFOR
     SETTARGET(,%myPieImage)                                   ! add the legend to the same image
-    myPie:LegX = myPie:PieDim + 8
-    myPie:LegY = 6
+    GETPOSITION(%myPieImage,myPie:ImgX,myPie:ImgY)            ! offset by the image X,Y (issue #5)
+    myPie:LegX = myPie:ImgX + myPie:PieDim + 8
+    myPie:LegY = myPie:ImgY + 6
     #FOR(%myPieSeg)
     SETPENCOLOR(%myPieSegColor)
     BOX(myPie:LegX,myPie:LegY,9,8,%myPieSegColor)             ! color swatch
