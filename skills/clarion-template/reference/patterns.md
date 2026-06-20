@@ -194,9 +194,22 @@ Clarion has graphics primitives — `PIE`, `ELLIPSE`, `BOX`, `ROUNDBOX`, `ARC`, 
 (see `builtins.clw`) — plus `SETPENCOLOR`/`SETPENWIDTH`. `PIE(x,y,w,h, *SIGNED[] slices, *LONG[] colors,
 depth=0, wholeValue=0, startAngle=0)` draws a whole pie from arrays of relative sizes + colors.
 
-- **Target a control as the canvas:** `SETTARGET(<window>, ?imageControl)` aims primitives at an IMAGE
-  control (the `band` param). Coordinates are relative to the control; `SETTARGET()` with no args restores.
-  (`svgraph.clw` creates an image and draws into it this way.)
+- **Target a control as the canvas — and you MUST pass the window.** The **two-argument** form
+  `SETTARGET(<window>, ?imageControl)` aims primitives at an IMAGE control, with coordinates **relative to
+  the control** (its top-left is `0,0`, so `PIE(0,0,w,h,…)` fills the image). The **one-argument** form
+  **`SETTARGET(,?imageControl)` (window omitted) does NOT do this** — primitives then draw on the *window*
+  at absolute coordinates, so `BOX(0,0,…)`/`PIE(0,0,…)` land at the **window's** top-left, not on the image.
+  (Real bug — myPie GitHub issue #5: "MyPieDraw wrong to position Pie at (0,0), it needs to be at the Image
+  X,Y".) Always supply the window:
+    - In window/procedure-embed code the window is in scope — pass it: `SETTARGET(MyWindow, ?Image)`.
+    - In a **standalone helper PROCEDURE** there is no implicit window. Give it a `WINDOW` parameter and pass
+      it through: `MyPieDraw(WINDOW pWnd, SIGNED pImageFeq, …)` → `SETTARGET(pWnd, pImageFeq)`. You *can* use
+      `System{PROP:Target}` for "the current window", but passing it is cleaner (and lets the same helper
+      target a `REPORT, ?Band`).
+    - **Fallback when you can't pass the window:** read the control's window position with
+      `GETPOSITION(pImageFeq, ImgX, ImgY)` and draw window-relative at `BOX(ImgX,ImgY,…)` / `PIE(ImgX,ImgY,…)`.
+  `SETTARGET()` with no args restores the previous target. (`svgraph.clw` draws into an image via the
+  two-arg form.)
 - **Image graphics PERSIST and accumulate** — they are NOT auto-cleared. Before redrawing, clear with
   **`BLANK`** (no args = wipe the whole current target's graphics; `svgraph.clw` calls `blank` at the top
   of every redraw). A filled `BOX` is NOT a real clear — it only paints over, so when the control shrinks
@@ -208,6 +221,10 @@ depth=0, wholeValue=0, startAngle=0)` draws a whole pie from arrays of relative 
   (`EQUATE(EVENT:User+nnn)`) on `EVENT:Sized` (and on `EVENT:OpenWindow` for the first draw), and do the
   actual draw when that posted event is handled — by then the window has finished opening / resizing and
   the control reports its new size. Re-read `PROP:Width/Height` inside the draw so it fits the new size.
+- **Background + inset niceties (from the myPie fix):** let `COLOR:None` mean "no background box" so the
+  caller can keep the image's own backdrop — `IF pBackColor <> COLOR:None THEN SETPENCOLOR(pBackColor);
+  BOX(x,y,w,h,pBackColor) END`. And inset the drawing a little so it isn't flush on the box edge:
+  `Indt = pPieW * .02; x += Indt; y += Indt; w -= Indt*2; h -= Indt*2` before `PIE(x,y,w,h,…)`.
 
 ## Gotchas checklist
 

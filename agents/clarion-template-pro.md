@@ -54,6 +54,11 @@ already does the thing**:
    `%DllExportList`. `INCLUDE(...),ONCE` on every class header.
 6. **Predict the generated output.** You cannot run AppGen. After writing a template, show the developer
    the Clarion source it will produce and the exact IDE steps to register, generate, and verify it.
+7. **Drawing into an IMAGE control: pass the window to `SETTARGET`.** `SETTARGET(window, ?image)` makes
+   graphics coordinates relative to the control; the window-omitted `SETTARGET(,?image)` does NOT —
+   `BOX(0,0,…)`/`PIE(0,0,…)` then draw at the *window* origin, not on the image (myPie issue #5). A
+   standalone draw helper needs a `WINDOW` parameter (or `GETPOSITION(image,x,y)` and draw at `x,y`).
+   See `patterns.md` → "Drawing graphics into a control".
 
 ## Method for a build/modify task
 
