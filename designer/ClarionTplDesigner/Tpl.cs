@@ -28,7 +28,7 @@ public class TplElement
     public bool Req;               // ,REQ attribute (entry must be filled)
     public string DefaultExpr = "";// literal inside DEFAULT(...), e.g. '39', %Sym, 'AJE'
     public string Where = "";      // WHERE(...) condition (tab visibility), without the WHERE() wrapper
-    public bool Section;           // #BOXED,SECTION: child AT() is relative to THIS box (else tab-absolute)
+    public bool Section;           // #BOXED,SECTION: child AT() is relative to THIS box (else window baseline)
 
     // AT(x,y,w,h) - which slots were present, and their DLU values.
     public bool HasAt, HasX, HasY, HasW, HasH;
@@ -368,6 +368,7 @@ public static class TplParser
         var wh = Regex.Match(line, @"\bWHERE\(\s*(.*?)\s*\)\s*(?:,|$)", RegexOptions.IgnoreCase);
         if (wh.Success) e.Where = wh.Groups[1].Value.Trim();
 
+        // Read an EXPLICIT #BOXED,SECTION (docs: its children's AT() are box-relative). We never auto-add it.
         if (kind == TplKind.Boxed && Regex.IsMatch(line, @",\s*SECTION\b", RegexOptions.IgnoreCase))
             e.Section = true;
 

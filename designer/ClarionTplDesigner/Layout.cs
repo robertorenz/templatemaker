@@ -11,9 +11,13 @@ public static class Layout
     const double Pad = 4, Gap = 3, Indent = 6;
     const double TabWidth = 480;
 
-    public static void Run(TplElement tab) => LayoutContainer(tab, 0, 0, TabWidth);
+    public static void Run(TplElement tab) => LayoutContainer(tab, 0, 0, TabWidth, 0, 0);
 
-    static double LayoutContainer(TplElement c, double ox, double oy, double width)
+    // ox/oy: where this container's contents stack (visual nesting origin).
+    // atOx/atOy: the origin an explicit AT(x,y) resolves against — the window baseline, or the nearest
+    // enclosing #BOXED,SECTION. Plain boxes / buttons / enables are NOT coordinate frames: per the
+    // Template Language reference, only #BOXED,SECTION rebases child AT(); everything else passes through.
+    static double LayoutContainer(TplElement c, double ox, double oy, double width, double atOx, double atOy)
     {
         double cursor = oy + (c.Kind == TplKind.Tab ? 2 : Pad + 6); // box title eats a row
         double bottom = cursor;
@@ -25,7 +29,7 @@ public static class Layout
             double h = ch.HasH && ch.H > 0 ? ch.H : DefaultH(ch);
 
             double x, y;
-            if (ch.HasX && ch.HasY) { x = ox + ch.X; y = oy + ch.Y; }   // AT is frame-relative
+            if (ch.HasX && ch.HasY) { x = atOx + ch.X; y = atOy + ch.Y; }   // AT resolves against the section/window origin
             else { x = ox + Indent; y = cursor; cursor += h + Gap; }
 
             ch.LX = x; ch.LY = y; ch.LW = w; ch.LH = h;
@@ -33,7 +37,10 @@ public static class Layout
 
             if (ch.IsContainer)
             {
-                double consumed = LayoutContainer(ch, x, y, (w > 0 ? w : width) - Indent);
+                // children of a #BOXED,SECTION rebase to THIS box; any other container keeps the inherited origin
+                double cax = ch.Kind == TplKind.Boxed && ch.Section ? x : atOx;
+                double cay = ch.Kind == TplKind.Boxed && ch.Section ? y : atOy;
+                double consumed = LayoutContainer(ch, x, y, (w > 0 ? w : width) - Indent, cax, cay);
                 if (!(ch.HasH && ch.H > 0)) ch.LH = Math.Max(h, consumed + Pad);
                 cursor = Math.Max(cursor, y + ch.LH + Gap);
             }

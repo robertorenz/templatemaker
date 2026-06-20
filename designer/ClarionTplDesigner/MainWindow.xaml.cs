@@ -4102,12 +4102,13 @@ public partial class MainWindow : Window
         }
     }
 
+    // The origin an element's AT(x,y) resolves against — must mirror Layout: the nearest enclosing
+    // #BOXED,SECTION, else the window baseline (0,0). Plain boxes don't rebase child coordinates.
     (double, double) FrameOrigin(TplElement el)
     {
-        var p = el.Parent;
-        while (p != null && p.Kind != TplKind.Boxed && p.Kind != TplKind.Tab) p = p.Parent;
-        if (p == null || p.Kind == TplKind.Tab) return (0, 0);
-        return (p.LX, p.LY);
+        for (var p = el.Parent; p != null; p = p.Parent)
+            if (p.Kind == TplKind.Boxed && p.Section) return (p.LX, p.LY);
+        return (0, 0);
     }
 
     // ---------- resize handles ----------
