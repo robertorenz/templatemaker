@@ -1771,6 +1771,21 @@ public partial class MainWindow : Window
         catch (Exception ex) { MessageBox.Show("Apply failed:\n" + ex.Message); }
     }
 
+    // Bring the selected part into view in the source editor. A part has no chip to scroll to, so
+    // selecting one would otherwise leave the editor wherever it happened to be (or at the top after a
+    // cross-file reload). The live preview is regenerated text whose line numbers don't track the part's
+    // on-disk StartLine, so only reposition in normal (non-live) mode.
+    void ScrollSourceToComponent()
+    {
+        if (!_srcOpen || _srcLive || _component == null || srcEditor.Document == null) return;
+        int line = _component.StartLine + 1;   // StartLine is 0-based; editor lines are 1-based
+        if (line < 1 || line > srcEditor.Document.LineCount) return;
+        var dl = srcEditor.Document.GetLineByNumber(line);
+        srcEditor.CaretOffset = dl.Offset;
+        srcEditor.Select(dl.Offset, dl.Length);
+        srcEditor.ScrollToLine(line);
+    }
+
     void ScrollSourceTo(TplElement? el)
     {
         UpdateSourceHighlights();
@@ -1850,6 +1865,7 @@ public partial class MainWindow : Window
         _previewTabIndex = 0;
         Select(null);
         LoadSource();           // current part may live in a different file
+        ScrollSourceToComponent();   // ...and bring that part into view rather than leaving the editor where it was
         cmbTabs.ItemsSource = LiveTabs().Select(t => t.Title).ToList();
         int want = _pendingTabIdx; _pendingTabIdx = 0;
         var lts = LiveTabs();
@@ -1864,6 +1880,7 @@ public partial class MainWindow : Window
         _tab = lts[cmbTabs.SelectedIndex];
         Select(null);
         Render();
+        ScrollSourceTo(_tab);   // bring the chosen tab's line into view (works in live mode too, via LineOf)
     }
 
     void Zoom_Changed(object s, RoutedPropertyChangedEventArgs<double> e) => Render();
