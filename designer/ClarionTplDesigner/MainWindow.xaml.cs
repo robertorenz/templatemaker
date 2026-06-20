@@ -550,13 +550,24 @@ public partial class MainWindow : Window
         if (_doc == null) return;
         _parts = _doc.Components.Where(c => c.HasSheet).ToList();
         _pendingTabIdx = tabIdx;
-        // Clear first: WPF preserves a ComboBox selection by VALUE across an ItemsSource swap, so switching to
-        // a document whose part label matches would leave SelectedIndex unchanged and Part_Changed would never
-        // fire (stale canvas). Dropping to -1 guarantees the real selection raises the event and refreshes.
-        cmbParts.SelectedIndex = -1;
+        // WPF preserves a ComboBox selection by VALUE across an ItemsSource swap, so switching to a document
+        // whose part label matches would leave SelectedIndex unchanged and Part_Changed would never fire
+        // (stale canvas). ForceSelect bounces through -1 so the real selection always raises the event.
         cmbParts.ItemsSource = _parts.Select(PartLabel).ToList();
-        if (_parts.Count > 0) cmbParts.SelectedIndex = Math.Min(Math.Max(partIdx, 0), _parts.Count - 1);
+        if (_parts.Count > 0) ForceSelect(cmbParts, Math.Min(Math.Max(partIdx, 0), _parts.Count - 1));
         else { cmbParts.SelectedIndex = -1; _component = null; _tab = null; cmbTabs.ItemsSource = null; Render(); }
+    }
+
+    // The designer is driven purely through cmbParts/cmbTabs SelectionChanged handlers.
+    // After swapping a combo's ItemsSource to another document's parts/tabs, WPF can
+    // preserve the selected *value* (e.g. an identically-labelled part) so the index
+    // never changes — and assigning SelectedIndex the value it already holds raises no
+    // event, so Part_Changed/Tab_Changed never run and the canvas keeps showing the
+    // previous template. Bounce through -1 so the handler always fires for `index`.
+    static void ForceSelect(ComboBox cmb, int index)
+    {
+        if (cmb.SelectedIndex == index) cmb.SelectedIndex = -1;
+        cmb.SelectedIndex = index;
     }
 
     string PartLabel(TplComponent c)
@@ -1930,7 +1941,7 @@ public partial class MainWindow : Window
         cmbTabs.ItemsSource = LiveTabs().Select(t => t.Title).ToList();
         int want = _pendingTabIdx; _pendingTabIdx = 0;
         var lts = LiveTabs();
-        if (lts.Count > 0) cmbTabs.SelectedIndex = Math.Min(Math.Max(want, 0), lts.Count - 1);
+        if (lts.Count > 0) ForceSelect(cmbTabs, Math.Min(Math.Max(want, 0), lts.Count - 1));
         else { _tab = null; Render(); }
     }
 
