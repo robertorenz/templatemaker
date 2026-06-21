@@ -73,7 +73,7 @@
 <body>
 <div class="wrap">
   <nav>
-    <div class="brand"><h1>Template Designer</h1><span>User Manual · v2.3</span></div>
+    <div class="brand"><h1>Template Designer</h1><span>User Manual · v2.8</span></div>
     <a href="#intro">Welcome</a>
     <div class="grp">Getting started</div>
     <a href="#open" class="h2">Opening a template</a>
@@ -91,7 +91,7 @@
     <a href="#symbols" class="h2">Symbols &amp; rename</a>
     <a href="#arrange" class="h2">Z-order &amp; groups</a>
     <a href="#delete" class="h2">Deleting safely</a>
-    <a href="#guides" class="h2">Rulers &amp; guides</a>
+    <a href="#guides" class="h2">Rulers, guides &amp; fidelity</a>
     <a href="#outline" class="h2">Outline &amp; find</a>
     <a href="#problems" class="h2">Problems panel</a>
     <div class="grp">Preview &amp; source</div>
@@ -109,7 +109,7 @@
     <p>A visual designer for the <em>prompt UI</em> of Clarion templates. Open a <code>.tpl</code>,
        see every control where it really sits, then drag, style, re-order and rename — and save changes
        back into the template with surgical precision.</p>
-    <span class="pill">User Manual · version 2.3</span>
+    <span class="pill">User Manual · version 2.8</span>
   </header>
 
   <div class="body">
@@ -146,6 +146,9 @@
     </ul>
     <div class="callout tip"><b>Tip</b> Switching parts also reloads the Source panel to the file that
        part lives in, so the source view always matches what you see.</div>
+    <div class="callout note"><b>Several templates at once</b> Open multiple <code>.tpl</code> files and switch
+       between them with the <b>document tabs</b> — each one remembers its own part, tab, source view and undo
+       history, and the canvas refreshes to that document's view the moment you switch to it.</div>
   </section>
 
   <section id="tour">
@@ -189,6 +192,12 @@
        Some controls have no explicit position yet. <b>Edit ▸ Add AT to all controls</b> gives each
        positionable control an <code>AT(x,y,w,h)</code> from the current layout so it can be dragged.
        Prompts that Clarion auto-builds (dropdowns, “…” buttons) are skipped on purpose.</div>
+    <div class="callout note"><b>A prompt's label and entry move separately</b>
+       Clarion positions a <code>#PROMPT</code>'s <b>label</b> (<code>PROMPTAT</code>) and its <b>entry</b> field
+       (<code>AT</code>) independently, and the canvas now shows both at their real spots. <b>Drag the entry</b>
+       and the label follows it; <b>drag the label</b> on its own to place it where you want. Both are written
+       on save. The <a href="#guides">visibility guides</a> warn you if a label ends up too wide for the gap to
+       its entry (Clarion would clip it).</div>
   </section>
 
   <section id="align">
@@ -282,11 +291,17 @@
     <ul>
       <li><b>Text / label / file</b> — the control's caption or image file (editable for controls you add).</li>
       <li><b>X / Y / W / H</b> — position and size in dialog units.</li>
-      <li><b>Style</b> — font, size, bold and colour. Changes are reflected on the canvas and written
-          back as the control's <code>PROP(…)</code> on save.</li>
+      <li><b>Style</b> — <b>Bold</b>, <b>Italic</b>, <b>Underline</b> and <b>Colour</b>, reflected on the canvas
+          and written back as the control's <code>PROP(PROP:FontStyle,…)</code> / <code>PROP(PROP:FontColor,…)</code>
+          on save. The <b>dialog font</b> is shown <em>read-only</em>.</li>
       <li><b>Source</b> — the control's exact template line(s), read-only.</li>
     </ul>
-    <p>The <b>Style</b> command bar offers the same font / size / colour changes for fast edits.</p>
+    <p>The <b>Style</b> command bar offers <b>B</b> / <b>I</b> / <b>U</b> and <b>Colour…</b> for fast edits.</p>
+    <div class="callout note"><b>Why no font name or size?</b> Clarion renders every prompt sheet in the IDE's
+       <b>Dialogs</b> font (<b>Options ▸ IDE ▸ Fonts</b>), so a per-control face/size has no effect there. The
+       designer reads that font from your Clarion install and shows it read-only, and renders the canvas in it
+       so what you lay out matches what AppGen draws. Only <b>bold / italic / underline / colour</b> are honoured
+       per control, so those are all you can set.</div>
   </section>
 
   <section id="symbols">
@@ -324,7 +339,7 @@
   </section>
 
   <section id="guides">
-    <h2>Rulers &amp; guides <a class="top" href="#intro">↑ top</a></h2>
+    <h2>Rulers, guides &amp; fidelity <a class="top" href="#intro">↑ top</a></h2>
     <ul>
       <li><b>Drag from the top ruler</b> to create a horizontal guide; <b>from the left ruler</b> for a
           vertical guide.</li>
@@ -332,6 +347,16 @@
       <li>Drag a guide back onto a ruler to remove it, or use <b>Guides ▸ Clear guides</b>.</li>
       <li>Controls snap to guides when <b>Snap to guides</b> is on.</li>
     </ul>
+    <h3>Visibility guides</h3>
+    <p><b>Preferences ▸ Highlight clipped / overlapping controls</b> (on by default) draws the
+       <b>Clarion window edge</b> and flags trouble before you ever generate:</p>
+    <ul>
+      <li><b>Red</b> — a control off the top/left of the window, or a prompt whose <b>label is too wide for the
+          gap to its entry</b> (Clarion would clip it).</li>
+      <li><b>Amber</b> — a control that <b>spills outside its group box</b>.</li>
+    </ul>
+    <p>Hover any highlight for the reason. Because the canvas now renders text in Clarion's real dialog font,
+       these checks reflect exactly what AppGen will do.</p>
   </section>
 
   <section id="outline">
@@ -419,9 +444,10 @@
 
   <section id="prefs">
     <h2>Preferences &amp; layout <a class="top" href="#intro">↑ top</a></h2>
-    <p>The <b>Preferences</b> menu toggles <b>Show grid</b>, <b>Snap to grid</b>, <b>Snap to guides</b> and
-       <b>Show minimap</b> — all of which persist between sessions, along with your panel layout. Re-dock
-       or float any panel; <b>View ▸ Reset panel layout</b> restores the default arrangement.</p>
+    <p>The <b>Preferences</b> menu toggles <b>Show grid</b>, <b>Snap to grid</b>, <b>Snap to guides</b>,
+       <b>Smart guides</b>, <b>Highlight clipped / overlapping controls</b> and <b>Show minimap</b> — all of
+       which persist between sessions, along with your panel layout. Re-dock or float any panel;
+       <b>View ▸ Reset panel layout</b> restores the default arrangement.</p>
   </section>
 
   <section id="keys">
@@ -447,7 +473,7 @@
   </section>
 
   </div>
-  <footer>Clarion Template Designer — User Manual · version 2.3 &nbsp;·&nbsp; See also the Programmer's Reference in the Help menu.</footer>
+  <footer>Clarion Template Designer — User Manual · version 2.8 &nbsp;·&nbsp; See also the Programmer's Reference in the Help menu.</footer>
   </main>
 </div>
 </body>

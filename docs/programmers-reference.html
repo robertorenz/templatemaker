@@ -62,7 +62,7 @@
 <body>
 <div class="wrap">
   <nav>
-    <div class="brand"><h1>Template Designer</h1><span>Programmer's Reference · v2.3</span></div>
+    <div class="brand"><h1>Template Designer</h1><span>Programmer's Reference · v2.8</span></div>
     <a href="#over">Overview</a>
     <div class="grp">Internals</div>
     <a href="#arch" class="h2">Architecture</a>
@@ -89,7 +89,7 @@
     <p>How the Clarion Template Designer is built — the parse/model/write pipeline, the relocation engine
        that keeps edits surgical, and a working reference to the slice of the Clarion template language the
        designer understands.</p>
-    <span class="pill">Programmer's Reference · version 2.3</span>
+    <span class="pill">Programmer's Reference · version 2.8</span>
   </header>
 
   <div class="body">
@@ -124,10 +124,14 @@ TplWriter.Save(doc)     <span class="c">→ rewrites only changed lines, per fil
     <table>
       <tr><th>Type</th><th>Key members</th></tr>
       <tr><td><code>TplElement</code></td><td>One control or container. <code>Kind</code>, <code>Title</code>,
-        <code>Symbol</code>, <code>PromptType</code>; position <code>X,Y,W,H</code> + <code>HasX/Y/W/H</code>;
-        style <code>FontName,FontSize,FontColor,FontStyle,Bold</code>; line span <code>LineIndex,EndLineIndex</code>;
-        edit flags <code>Dirty, Inserted, Deleted, Moved, FontDirty</code>; relocation <code>MoveAnchorLine</code>;
-        tree <code>Parent, Children</code>. <code>Clone()</code> deep-copies for undo.</td></tr>
+        <code>Symbol</code>, <code>PromptType</code>; entry position <code>X,Y,W,H</code> + <code>HasX/Y/W/H</code>;
+        label position <code>PX,PY</code> + <code>HasPromptAt</code> (the <code>PROMPTAT</code> for a prompt);
+        <code>Section</code> (the box is a <code>#BOXED,SECTION</code>); style <code>FontName,FontSize,FontColor,
+        FontStyle,Bold</code> with computed <code>Italic/Underline/Strikeout</code> from the style flag bits;
+        line span <code>LineIndex,EndLineIndex</code>; edit flags <code>Dirty, Inserted, Deleted, Moved,
+        FontDirty</code>; relocation <code>MoveAnchorLine</code>; tree <code>Parent, Children</code>;
+        computed layout <code>LX/LY/LW/LH</code> (entry) and <code>PLX/PLY/PLW/PLH</code> (label).
+        <code>Clone()</code> deep-copies for undo.</td></tr>
       <tr><td><code>TplFile</code></td><td><code>Path, Newline, Lines[], Included, Dirty</code>. <code>Dirty</code>
         flags raw-text edits (e.g. a symbol rename) so the writer saves the file even with no element changes.</td></tr>
       <tr><td><code>TplComponent</code></td><td>A <code>#EXTENSION/#CONTROL/#PROCEDURE/#CODE/#GROUP/…</code>:
@@ -228,17 +232,28 @@ TplWriter.Save(doc)     <span class="c">→ rewrites only changed lines, per fil
 
   <section id="at">
     <h2>AT() &amp; PROP() <a class="top" href="#over">↑ top</a></h2>
-    <p><code>AT(x, y, w, h)</code> positions a control in <b>dialog units</b>. Any omitted slot is left to
-       Clarion's auto-layout — the designer tracks <code>HasX/HasY/HasW/HasH</code> so it never invents a
-       coordinate the author didn't write.</p>
+    <p><code>AT(x, y, w, h)</code> positions a control's <b>entry</b> in <b>dialog units</b>; a prompt's
+       <b>label</b> is positioned separately by <code>PROMPTAT(x, y)</code>. Any omitted slot is left to
+       Clarion's auto-layout — the designer tracks <code>HasX/HasY/HasW/HasH</code> (and <code>HasPromptAt</code>)
+       so it never invents a coordinate the author didn't write. <code>ApplyAt</code> rewrites <code>AT</code>
+       and <code>ApplyPromptAt</code> the <code>PROMPTAT</code>; <code>\bAT\(</code> deliberately doesn't match
+       inside <code>PROMPTAT(</code>.</p>
+    <p>Inside a <code>#BOXED</code>, child coordinates are <b>tab-absolute</b> unless the box has
+       <code>SECTION</code> (then they're box-relative). The designer's model is box-relative, so the writer
+       <b>auto-adds <code>SECTION</code></b> to any box holding positioned children.</p>
     <p>Style is carried as <code>PROP</code> attributes, rewritten on style edits:</p>
     <table>
       <tr><th>PROP</th><th>Carries</th></tr>
-      <tr><td><code>PROP:Font</code></td><td>Font face name.</td></tr>
+      <tr><td><code>PROP:FontName</code></td><td>Font face name — the string element (<code>PROP:Font</code> is the 4-value array, so the face must use <code>PROP:FontName</code>).</td></tr>
       <tr><td><code>PROP:FontSize</code></td><td>Point size.</td></tr>
-      <tr><td><code>PROP:FontStyle</code></td><td>Weight/style (bold etc.).</td></tr>
+      <tr><td><code>PROP:FontStyle</code></td><td>Weight (400/700) <b>plus</b> flag bits: italic <code>0x1000</code>, underline <code>0x2000</code>, strikeout <code>0x4000</code>.</td></tr>
       <tr><td><code>PROP:FontColor</code></td><td>Text colour as a COLORREF.</td></tr>
     </table>
+    <div class="callout note"><b>Prompt-sheet face is the IDE font</b> Clarion renders prompt sheets in the
+       AppGen Dialogs font (<code>ClarionProperties.xml</code> ▸ <code>AppGen Dialogs</code>, e.g. Segoe UI 9),
+       which the designer reads on startup to drive rendering and the dialog-unit calibration. Per-control
+       <code>PROP:FontName</code>/<code>PROP:FontSize</code> aren't honoured there, so the UI exposes only
+       bold/italic/underline/colour and shows the face read-only.</div>
   </section>
 
   <section id="color">
@@ -313,7 +328,7 @@ pwsh installer/build-installer.ps1</pre>
   </section>
 
   </div>
-  <footer>Clarion Template Designer — Programmer's Reference · version 2.3 &nbsp;·&nbsp; See also the User Manual in the Help menu.</footer>
+  <footer>Clarion Template Designer — Programmer's Reference · version 2.8 &nbsp;·&nbsp; See also the User Manual in the Help menu.</footer>
   </main>
 </div>
 </body>
