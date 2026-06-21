@@ -178,6 +178,12 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         LoadClarionDialogFont();       // render/measure prompt text in Clarion's actual AppGen dialog font
+        // Let the layout reserve an image's real footprint (native px ~= DLU) so controls flow below it.
+        Layout.ImageIntrinsic = file =>
+        {
+            var b = ResolveImage(file);
+            return b == null ? null : ((double)b.PixelWidth, (double)b.PixelHeight);
+        };
         PreviewKeyDown += OnKeyDown;   // tunnel: see arrows before the ScrollViewer scrolls on them
         canvas.Focusable = true;       // so the canvas can hold keyboard focus for nudging
         lblDialogFont.Text = lblBarDialogFont.Text = $"{_ideFontName} · {_ideFontSize:0} pt  (Clarion IDE)";
@@ -2516,8 +2522,8 @@ public partial class MainWindow : Window
         {
             border.Background = Brushes.Transparent;
             border.BorderBrush = new SolidColorBrush(Color.FromRgb(175, 185, 200));
-            if (!el.HasW) border.Width = bmp.PixelWidth;     // no explicit size -> native pixels
-            if (!el.HasH) border.Height = bmp.PixelHeight;
+            // Border size comes from Layout (el.LW/LH * Scale), which now reserves the image's real footprint
+            // via Layout.ImageIntrinsic — so the image scales with zoom and following controls flow below it.
             border.Child = new Image
             {
                 Source = bmp, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.Both,

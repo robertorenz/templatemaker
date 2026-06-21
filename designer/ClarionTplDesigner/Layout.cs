@@ -11,6 +11,11 @@ public static class Layout
     const double Pad = 4, Gap = 3, Indent = 6;
     const double TabWidth = 480;
 
+    // Host-supplied resolver for an image file's intrinsic size in native pixels (treated 1:1 as DLU — the
+    // same basis the flow preview uses). Lets layout reserve an image's REAL footprint so following controls
+    // flow below it instead of being drawn on top of it. Returns null when the file can't be resolved.
+    public static Func<string, (double w, double h)?>? ImageIntrinsic;
+
     public static void Run(TplElement tab) => LayoutContainer(tab, 0, 0, TabWidth);
 
     static double LayoutContainer(TplElement c, double ox, double oy, double width)
@@ -21,8 +26,10 @@ public static class Layout
         foreach (var ch in c.Children)
         {
             if (ch.Deleted) continue;
-            double w = ch.HasW && ch.W > 0 ? ch.W : DefaultW(ch, width);
-            double h = ch.HasH && ch.H > 0 ? ch.H : DefaultH(ch);
+            double w, h;
+            if (ch.Kind == TplKind.Image) (w, h) = ImageRect(ch, width);   // reserve the image's real footprint
+            else { w = ch.HasW && ch.W > 0 ? ch.W : DefaultW(ch, width);
+                   h = ch.HasH && ch.H > 0 ? ch.H : DefaultH(ch); }
 
             double x, y;
             if (ch.HasX && ch.HasY) { x = ox + ch.X; y = oy + ch.Y; }   // AT is frame-relative
@@ -69,6 +76,23 @@ public static class Layout
         }
         else { plx = ch.LX - plw; ply = ch.LY; }   // no PROMPTAT yet: label immediately left of the entry
         ch.PLX = plx; ch.PLY = ply; ch.PLW = plw; ch.PLH = plh;
+    }
+
+    // An #IMAGE's display rectangle. Explicit AT(w,h) wins; otherwise the intrinsic size (px ~= DLU),
+    // proportionally scaled down to fit the frame width so a large logo doesn't overflow the canvas.
+    // Falls back to the 14x14 placeholder when the file can't be resolved.
+    static (double w, double h) ImageRect(TplElement e, double width)
+    {
+        var nat = ImageIntrinsic?.Invoke(e.Title);
+        double w = e.HasW && e.W > 0 ? e.W : (nat?.w ?? 14);
+        double h = e.HasH && e.H > 0 ? e.H : (nat?.h ?? 14);
+        double maxW = Math.Max(20, width - 2 * Indent);
+        if (!(e.HasW && e.W > 0) && w > maxW)        // unconstrained intrinsic image wider than the frame
+        {
+            if (!(e.HasH && e.H > 0)) h *= maxW / w; // keep aspect when the height is also intrinsic
+            w = maxW;
+        }
+        return (w, h);
     }
 
     static double DefaultW(TplElement e, double width) => e.Kind switch
