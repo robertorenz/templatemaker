@@ -26,7 +26,14 @@ public static class Layout
 
             double x, y;
             if (ch.HasX && ch.HasY) { x = ox + ch.X; y = oy + ch.Y; }   // AT is frame-relative
-            else { x = ox + Indent; y = cursor; cursor += h + Gap; }
+            else
+            {
+                // Auto-flow. A side-label prompt's label is drawn to the LEFT of its entry, so reserve the
+                // label-column width here — otherwise the entry sits at the indent and the label underflows
+                // off the left of the frame (negative PLX, clipped into the margin).
+                double labelW = HasSideLabel(ch) ? (ch.HasPW && ch.PW > 0 ? ch.PW : EstLabelW(ch)) : 0;
+                x = ox + Indent + labelW; y = cursor; cursor += h + Gap;
+            }
 
             ch.LX = x; ch.LY = y; ch.LW = w; ch.LH = h;
             LayoutPromptLabel(ch, ox, oy);
