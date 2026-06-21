@@ -468,20 +468,11 @@ public static class TplWriter
     {
         var lines = (string[])file.Lines.Clone();
 
-        // The designer positions a box's children with BOX-RELATIVE coordinates, but Clarion only honours
-        // that when the box carries SECTION; without it AppGen reads each child AT as tab-absolute and they
-        // pile up at the window top. So any box that holds a positioned child must be a SECTION box. Set the
-        // flag (so GenLine/EmitUnit emit it for new/moved boxes) and patch the open line of existing boxes
-        // directly here — without touching Dirty, so this is safe to run during a read-only preview too.
-        foreach (var tab in docTabs)
-            foreach (var e in Flatten(tab))
-                if (e.Kind == TplKind.Boxed && !e.Deleted
-                    && e.Children.Any(c => !c.Deleted && c.IsPositionable && (c.HasX || c.HasY)))
-                {
-                    e.Section = true;
-                    if (!e.Inserted && !e.Moved && e.LineIndex >= 0 && e.LineIndex < lines.Length)
-                        lines[e.LineIndex] = EnsureSection(lines[e.LineIndex], e);
-                }
+        // NOTE: the designer does NOT auto-promote boxes to ,SECTION. The docs make SECTION an optional
+        // attribute that re-bases a box's child AT() to the box; a plain #BOXED keeps child AT() on the
+        // window baseline (#BOXED reference: AT is "relative to the first prompt placed on the window").
+        // We only ever honour an EXPLICIT ,SECTION (parsed above) and preserve it on round-trip via
+        // EnsureSection; we never inject one, so a faithfully-authored plain box is left untouched.
 
         // Lines to remove: deleted elements (containers span to #END...) and relocated controls' old line.
         var drop = new HashSet<int>();
