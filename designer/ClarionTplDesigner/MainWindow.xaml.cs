@@ -3952,8 +3952,9 @@ public partial class MainWindow : Window
         }
         if (_drag == Drag.Guide && _dragGuide != null && InRulerZone(e.GetPosition(scroller)))
             DeleteGuide(_dragGuide);
-        else if (_drag == Drag.Element && !_dragLabel && _dragEl != null && !_dragEl.IsContainer && _selection.Count <= 1)
-            TryReparent(_dragEl);            // dropping a single control may move it in/out of a group box
+        else if (_drag == Drag.Element && _dragMoved && !_dragLabel && _dragEl != null && !_dragEl.IsContainer && _selection.Count <= 1)
+            TryReparent(_dragEl);            // dropping a *dragged* single control may move it in/out of a group box
+                                             // (_dragMoved guard: a plain click must never reparent or dirty anything)
         bool wasElementGesture = _drag is Drag.Element or Drag.Resize;
         ClearSmartGuides();
         canvas.ReleaseMouseCapture();
@@ -3990,9 +3991,21 @@ public partial class MainWindow : Window
     void TryReparent(TplElement el)
     {
         double cx = el.LX + el.LW / 2, cy = el.LY + el.LH / 2;     // the control's centre
-        TplElement newParent = DeepestBoxAt(cx, cy, el) ?? _tab!;
-        if (newParent == null || newParent == el.Parent) return;
-        Reparent(el, newParent);
+        TplElement newBox = DeepestBoxAt(cx, cy, el) ?? _tab!;
+        // Compare against the control's current enclosing BOX, not its immediate Parent: a control can be
+        // nested in a non-box wrapper (#ENABLE / #BUTTON) inside a box. If it hasn't crossed into a different
+        // box, leave it exactly where it is — including that #ENABLE membership. (Comparing to Parent would
+        // always see box != #ENABLE and wrongly yank the control out of the enable. See issue #10.)
+        if (newBox == EnclosingBox(el)) return;
+        Reparent(el, newBox);
+    }
+
+    // The nearest ancestor #BOXED, or the tab if the control sits in no box. Skips #ENABLE/#BUTTON wrappers.
+    TplElement EnclosingBox(TplElement el)
+    {
+        for (var p = el.Parent; p != null; p = p.Parent)
+            if (p.Kind == TplKind.Boxed) return p;
+        return _tab!;
     }
 
     TplElement? DeepestBoxAt(double x, double y, TplElement exclude)
