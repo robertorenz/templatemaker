@@ -70,7 +70,8 @@
     #BOXED('Options'),AT(,,250)
       #PROMPT('&Disable this template',CHECK),%myQRDisable,DEFAULT(0),AT(10)
       #PROMPT('&Image control:',CONTROL),%myQRImage,REQ,PROMPTAT(8),AT(96,,140)
-      #PROMPT('&Value (literal or variable/expression):',@s255),%myQRValue,DEFAULT('https://www.softvelocity.com'),REQ,PROMPTAT(8),AT(96,,140)
+      #PROMPT('&Value:',@s255),%myQRValue,DEFAULT('https://www.softvelocity.com'),REQ,PROMPTAT(8),AT(96,,140)
+      #PROMPT('Value is a varia&ble / expression (untick = literal text)',CHECK),%myQRValueIsVar,DEFAULT(0),AT(10)
       #PROMPT('&Size (pixels):',SPIN(@n4,40,1000,10)),%myQRSize,DEFAULT(200),PROMPTAT(8),AT(96,,50)
       #PROMPT('Error &correction:',DROP('Low (L)|Medium (M)|Quartile (Q)|High (H)')),%myQREcc,DEFAULT('Medium (M)'),PROMPTAT(8),AT(96,,90)
       #PROMPT('&Quiet zone (margin, 0-50):',SPIN(@n2,0,50,1)),%myQRMargin,DEFAULT(1),PROMPTAT(8),AT(96,,50)
@@ -81,8 +82,8 @@
         #DISPLAY('already uses the window timer, turn auto-refresh OFF and call DO myQRRefresh.')
       #ENDENABLE
     #ENDBOXED
-    #DISPLAY('Value: a QUOTED literal e.g. ''Hello'' for a fixed code, OR a variable/')
-    #DISPLAY('expression e.g. Cus:Email or loc:URL to drive it from your code.')
+    #DISPLAY('Value: leave "is a variable" UNticked for fixed text (auto-quoted), or')
+    #DISPLAY('tick it and enter a variable/expression e.g. Cus:Email or loc:URL.')
   #ENDTAB
   #TAB('&Instructions')
     #BOXED('How to use myQR')
@@ -91,12 +92,13 @@
       #DISPLAY('2. Add this extension to the PROCEDURE (Extensions button).')
       #DISPLAY('3. On the General tab pick that control in "Image control", and set the')
       #DISPLAY('   Size, Error correction and Quiet zone.')
-      #DISPLAY('4. Set the Value. TWO MODES:')
-      #DISPLAY('     a) FIXED  - type a quoted literal, e.g.  ''https://example.com''')
-      #DISPLAY('                 or  ''Hello World''  (with the quotes).')
-      #DISPLAY('     b) DRIVEN - type a Clarion variable or expression with NO quotes,')
-      #DISPLAY('                 e.g.  Cus:Email   or   loc:URL   or   ''ID:'' & CLIP(Cus:Id)')
-      #DISPLAY('   The value is emitted into the code verbatim and read at RUN TIME.')
+      #DISPLAY('4. Set the Value. TWO MODES (the "is a variable" check):')
+      #DISPLAY('     a) FIXED text (UNticked) - just type the text, e.g.')
+      #DISPLAY('                 https://example.com   or   Hello World')
+      #DISPLAY('                 (no quotes needed - it is auto-quoted for you).')
+      #DISPLAY('     b) VARIABLE (ticked) - type a Clarion variable or expression, e.g.')
+      #DISPLAY('                 Cus:Email   or   loc:URL   or   ''ID:'' & CLIP(Cus:Id)')
+      #DISPLAY('                 it is read live at run time.')
       #DISPLAY('5. Generate, build, run.')
       #DISPLAY('')
       #DISPLAY('REFRESH')
@@ -219,18 +221,17 @@ SW_HIDE              EQUATE(0)                             ! OddJobEq.inc:35
 CREATE_NO_WINDOW    EQUATE(08000000h)                     ! OddJobEq.inc:390 - no console window for a console app
 INFINITE            EQUATE(0FFFFFFFFh)                     ! WaitForSingleObject: wait with no timeout
   MAP
-    !kernel32 prototypes - local to this helper. TYPE-ONLY parameters: a Clarion MAP
-    !prototype takes parameter TYPES, not names. Named params make the compiler read the
-    !name as an attribute ("Unknown attribute: lpProcessInformation"). Param order/types
-    !per Win32 CreateProcessA (and CapeSoft OddJob JobObjectApi.clw:134); Wait/Close per
-    !windows.inc:38/63 / svapifnc.inc:219/273. HANDLE = SIGNED (windows.inc:5).
-    !CreateProcessA args, in order: lpApplicationName, lpCommandLine, lpProcessAttributes,
+    !kernel32 prototypes - local to this helper. TYPE-ONLY parameters (a Clarion MAP
+    !prototype takes parameter TYPES, not names). ALL params are LONG and everything that
+    !is really a pointer (the command string, the two GROUPs) is passed by ADDRESS() at the
+    !call - the simplest, most portable Win32 mapping (no *type, no RAW). Param order is the
+    !Win32 CreateProcessA: lpApplicationName, lpCommandLine, lpProcessAttributes,
     !lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory,
-    !lpStartupInfo, lpProcessInformation.
+    !lpStartupInfo, lpProcessInformation. Wait/Close per windows.inc:38/63 (HANDLE=LONG).
     MODULE('kernel32')
-CreateProcessA(LONG,*CSTRING,LONG,LONG,LONG,ULONG,LONG,LONG,LONG,LONG),LONG,RAW,PASCAL,PROC
-WaitForSingleObject(SIGNED,ULONG),LONG,PASCAL
-CloseHandle(SIGNED),LONG,PASCAL,PROC
+CreateProcessA(LONG,LONG,LONG,LONG,LONG,ULONG,LONG,LONG,LONG,LONG),LONG,PASCAL,PROC
+WaitForSingleObject(LONG,ULONG),LONG,PASCAL
+CloseHandle(LONG),LONG,PASCAL,PROC
     END
   END
   CODE
@@ -258,9 +259,10 @@ CloseHandle(SIGNED),LONG,PASCAL,PROC
   si.cb         = SIZE(si)
   si.dwFlags    = STARTF_USESHOWWINDOW
   si.wShowWindow = SW_HIDE
-  !appName=0 (parse from command line), inherit=0, env/dir=0. RAW passes the addresses of
-  !loc:Cmd / si / pi. loc:Ok = 0 means curl could not even be launched (curl.exe missing).
-  loc:Ok = CreateProcessA(0, loc:Cmd, 0, 0, 0, CREATE_NO_WINDOW, 0, 0, ADDRESS(si), ADDRESS(pi))
+  !appName=0 (parse from command line), inherit=0, env/dir=0. All params are LONG; the
+  !command string and the two GROUPs are passed by ADDRESS(). loc:Ok=0 means curl could
+  !not be launched (curl.exe missing).
+  loc:Ok = CreateProcessA(0, ADDRESS(loc:Cmd), 0, 0, 0, CREATE_NO_WINDOW, 0, 0, ADDRESS(si), ADDRESS(pi))
   IF loc:Ok
     !Synchronous: block until curl exits, then release the handles it handed back.
     WaitForSingleObject(pi.hProcess, INFINITE)
@@ -309,7 +311,11 @@ myQR:Ecc             STRING(1)                             ! 1-letter ECC (set a
 #ENDCASE
 myQRRefresh ROUTINE
   myQR:Ecc = '%myQREccLetter'                              ! error-correction level
-  myQR:Cur = %myQRValue                                    ! the value (literal or variable/expression - verbatim)
+#IF(%myQRValueIsVar)
+  myQR:Cur = %myQRValue                                    ! a variable/expression - emitted verbatim, read live
+#ELSE
+  myQR:Cur = '%myQRValue'                                  ! a literal - auto-quoted (use variable mode, or double any internal <39>, for a value with a quote)
+#ENDIF
   myQRLoad(%myQRImage, myQR:Cur, %myQRSize, myQR:Ecc, %myQRMargin)
   myQR:Last = myQR:Cur                                     ! remember what we just rendered
 #ENDAT
@@ -333,7 +339,11 @@ myQRRefresh ROUTINE
     DO myQRRefresh                                         ! first render
 #IF(%myQRAuto)
   OF EVENT:Timer
-    myQR:Cur = %myQRValue                                  ! read the live value (verbatim expression)
+#IF(%myQRValueIsVar)
+    myQR:Cur = %myQRValue                                  ! read the live variable/expression
+#ELSE
+    myQR:Cur = '%myQRValue'                                ! a literal never changes (poll is a no-op)
+#ENDIF
     IF myQR:Cur <> myQR:Last                               ! only hit the network when it changed
       DO myQRRefresh
     END
