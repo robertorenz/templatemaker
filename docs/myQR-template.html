@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>myQR — Programmer's Documentation</title>
+<style>
+  :root{
+    --blue:#0A66C2; --blue-d:#084d93; --navy:#0E1A2B; --navy-2:#16263c;
+    --ink:#22303f; --muted:#6b7785; --line:#e3e8ef; --bg:#f5f7fa;
+    --card:#ffffff; --green:#1e7c5a; --amber:#9a6a12; --amber-bg:#fff7e8;
+    --green-bg:#eef8f3; --blue-bg:#eef4fc; --red-bg:#fcecec; --red:#b23a2e;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:15px/1.65 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg)}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:flex;min-height:100vh}
+  nav{width:280px;flex:0 0 280px;background:linear-gradient(180deg,var(--navy),var(--navy-2));
+    color:#cdd8e6;position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 0}
+  nav .brand{padding:0 22px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+  nav .brand h1{font-size:16px;margin:0;color:#fff} nav .brand span{font-size:12px;color:#8aa0bb}
+  nav a{display:block;color:#b9c7d8;padding:6px 22px;font-size:13.5px;border-left:3px solid transparent}
+  nav a:hover{background:rgba(255,255,255,.05);color:#fff;text-decoration:none}
+  nav a.h2{padding-left:34px;font-size:13px;color:#9fb2c8}
+  nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#6e85a1;
+    padding:14px 22px 4px;font-weight:700}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(120deg,#0c2a4d,var(--blue));color:#fff;padding:46px 52px 38px}
+  header.hero h1{margin:0 0 6px;font-size:30px;letter-spacing:-.3px}
+  header.hero p{margin:0;font-size:15.5px;color:#dbe8f8;max-width:780px}
+  header.hero .pill{display:inline-block;margin-top:16px;background:rgba(255,255,255,.16);
+    padding:4px 12px;border-radius:20px;font-size:12.5px}
+  .body{padding:14px 52px 80px;max-width:940px}
+  section{padding:22px 0;border-bottom:1px solid var(--line)} section:last-child{border-bottom:none}
+  h2{font-size:21px;margin:14px 0 10px;color:var(--navy);scroll-margin-top:14px}
+  h3{font-size:16px;margin:20px 0 6px;color:var(--blue-d)}
+  p{margin:9px 0} ul,ol{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  code,kbd,pre{font-family:"Cascadia Code",Consolas,monospace}
+  code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:13px;color:#1d3b5e}
+  kbd{background:#1d2a3a;color:#e7eef7;padding:2px 7px;border-radius:5px;font-size:12px;
+    border:1px solid #324558;box-shadow:0 1px 0 #0b1420}
+  pre{background:#0f1d2e;color:#dbe6f2;padding:16px 18px;border-radius:10px;overflow:auto;
+    font-size:13px;line-height:1.55;margin:12px 0}
+  pre .c{color:#7fa6c9} pre .k{color:#79c0ff} pre .s{color:#7ee0b8} pre .t{color:#ffd591}
+  .callout{border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;border:1px solid}
+  .tip{background:var(--green-bg);border-color:#bfe3d3;color:#155}
+  .note{background:var(--blue-bg);border-color:#c5dcf6;color:#13456f}
+  .warn{background:var(--amber-bg);border-color:#ecd9a6;color:#6f5210}
+  .danger{background:var(--red-bg);border-color:#e6b8b2;color:#7c241b}
+  .callout b{display:block;margin-bottom:2px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f0f4f9;color:var(--navy);font-weight:600}
+  tr:hover td{background:#fafcff}
+  .lead{font-size:16px;color:#3a4756}
+  footer{padding:24px 52px;color:var(--muted);font-size:13px}
+  .top{font-size:12px;color:var(--muted);float:right}
+  .filetree{font-family:"Cascadia Code",Consolas,monospace;font-size:13px;background:#fff;
+    border:1px solid var(--line);border-radius:10px;padding:14px 18px;line-height:1.7;color:#37485a}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><h1>myQR</h1><span>Programmer's Documentation · v1.00</span></div>
+    <a href="#over">Overview</a>
+    <div class="grp">Using it</div>
+    <a href="#install" class="h2">Install &amp; register</a>
+    <a href="#prompts" class="h2">Prompts</a>
+    <a href="#value" class="h2">The value: literal vs code</a>
+    <a href="#refresh" class="h2">Rendering &amp; auto-refresh</a>
+    <div class="grp">Internals</div>
+    <a href="#how" class="h2">How the image is made</a>
+    <a href="#embeds" class="h2">Embed points &amp; code</a>
+    <a href="#helpers" class="h2">Helper API</a>
+    <a href="#facts" class="h2">Runtime facts</a>
+    <div class="grp">Reference</div>
+    <a href="#privacy" class="h2">Privacy &amp; internet</a>
+    <a href="#customise" class="h2">Customising / offline</a>
+    <a href="#multidll" class="h2">Multi-DLL</a>
+    <a href="#trouble" class="h2">Troubleshooting</a>
+    <a href="#verify" class="h2">Verify checklist</a>
+  </nav>
+
+  <main>
+  <header class="hero">
+    <h1>myQR</h1>
+    <p>A self-contained Clarion 12 ABC procedure extension that renders a <strong>QR code</strong> into an
+       <code>IMAGE</code> control. The QR value can be a design-time literal or any variable/expression you
+       change in code, and the image <strong>auto-refreshes</strong> when the value changes. This is the
+       programmer's reference: prompts, generated code, the helper API, and the runtime facts behind it.</p>
+    <span class="pill">myQR · version 1.00 · FAMILY('ABC')</span>
+  </header>
+
+  <div class="body">
+
+  <section id="over">
+    <h2>Overview <a class="top" href="#over">↑ top</a></h2>
+    <p class="lead">Drop the extension on a window procedure, point it at a sized <code>IMAGE</code> control,
+       and give it a value. At run time the window shows a QR code for that value.</p>
+    <ul>
+      <li><b>Value in the template or in code</b> — type a quoted literal for a fixed code, or a Clarion
+          variable/expression to drive it from your logic.</li>
+      <li><b>Auto-refresh</b> — a window timer watches the value and reloads the QR whenever it changes; or
+          call <code>DO&nbsp;myQRRefresh</code> yourself.</li>
+      <li><b>No QR library</b> — Clarion has no built-in QR encoder, so the PNG is fetched from a free public
+          web service and loaded into the image. Self-contained: no external <code>.inc</code>/<code>.clw</code>.</li>
+    </ul>
+    <div class="callout danger"><b>Reads this first</b> The QR value is sent over <b>HTTPS to a third-party
+       service</b> (<code>api.qrserver.com</code>) on every render, and an internet connection is required.
+       See <a href="#privacy">Privacy &amp; internet</a> before encoding anything sensitive.</div>
+  </section>
+
+  <section id="install">
+    <h2>Install &amp; register <a class="top" href="#over">↑ top</a></h2>
+    <ol>
+      <li>Add an <b>IMAGE</b> control to the window (an Image — not a Region) and size it.</li>
+      <li>IDE: <b>Setup ▸ Template Registry ▸ Register</b> → pick
+          <code>templates/myQR/myQR.tpl</code>.</li>
+      <li>Open the window procedure, click <b>Extensions</b>, add
+          <b>myQR - QR code into an image control</b>.</li>
+      <li>On the <b>General</b> tab pick the image control and set the value/size/ECC; <b>Generate</b>, build, run.</li>
+    </ol>
+    <div class="callout note"><b>Per procedure</b> myQR is a <em>procedure</em> extension (like <em>myPie</em>),
+       so add one per window that needs a QR. Two QR images on one window each get their own temp file
+       (keyed by the control field number), so they never clash.</div>
+  </section>
+
+  <section id="prompts">
+    <h2>Prompts (General tab) <a class="top" href="#over">↑ top</a></h2>
+    <table>
+      <tr><th>Prompt</th><th>Symbol</th><th>Type / default</th><th>Purpose</th></tr>
+      <tr><td>Disable this template</td><td><code>%myQRDisable</code></td><td>CHECK · 0</td>
+          <td>Master kill-switch; every <code>#AT</code> is guarded <code>WHERE(%myQRDisable=0 AND %myQRImage)</code>.</td></tr>
+      <tr><td>Image control</td><td><code>%myQRImage</code></td><td>CONTROL · REQ</td>
+          <td>The <code>IMAGE</code> control the QR is loaded into.</td></tr>
+      <tr><td>Value (literal or variable/expression)</td><td><code>%myQRValue</code></td><td>@s255 · <code>'https://www.softvelocity.com'</code> · REQ</td>
+          <td>The QR data — emitted verbatim into the generated code. See <a href="#value">below</a>.</td></tr>
+      <tr><td>Size (pixels)</td><td><code>%myQRSize</code></td><td>SPIN 40–1000 · 200</td>
+          <td>The requested PNG size (<code>size=SxS</code>).</td></tr>
+      <tr><td>Error correction</td><td><code>%myQREcc</code></td><td>DROP L/M/Q/H · Medium (M)</td>
+          <td>Reed–Solomon level; higher survives more damage but is denser. Resolved to one letter at generate time.</td></tr>
+      <tr><td>Quiet zone (margin)</td><td><code>%myQRMargin</code></td><td>SPIN 0–50 · 1</td>
+          <td>The white border modules around the code (<code>margin=</code>).</td></tr>
+      <tr><td>Auto-refresh when the value changes</td><td><code>%myQRAuto</code></td><td>CHECK · 1</td>
+          <td>When on, a window timer polls the value and reloads on change.</td></tr>
+      <tr><td>Refresh poll (1/100 sec)</td><td><code>%myQRTimer</code></td><td>SPIN 10–6000 · 50</td>
+          <td>The window timer interval used when auto-refresh is on (50 = ½ second).</td></tr>
+    </table>
+  </section>
+
+  <section id="value">
+    <h2>The value: literal vs code <a class="top" href="#over">↑ top</a></h2>
+    <p><code>%myQRValue</code> is emitted <b>verbatim</b> into the generated source, so it is evaluated at run
+       time. That gives you two modes from one prompt:</p>
+    <table>
+      <tr><th>Mode</th><th>Type in the prompt</th><th>Generated</th></tr>
+      <tr><td><b>Fixed</b> (literal)</td><td><code>'https://example.com'</code> (with quotes)</td>
+          <td><code>myQR:Cur = 'https://example.com'</code></td></tr>
+      <tr><td><b>Driven</b> (from code)</td><td><code>Cus:Email</code> or <code>loc:URL</code> or <code>'ID:' &amp; CLIP(Cus:Id)</code></td>
+          <td><code>myQR:Cur = Cus:Email</code></td></tr>
+    </table>
+    <div class="callout tip"><b>Driving it</b> Change your variable anywhere in the procedure; with auto-refresh
+       on, the next timer tick notices and reloads. Or do it immediately after you set the value with
+       <code>DO myQRRefresh</code>.</div>
+  </section>
+
+  <section id="refresh">
+    <h2>Rendering &amp; auto-refresh <a class="top" href="#over">↑ top</a></h2>
+    <ul>
+      <li><b>On window open</b> — the QR is rendered once; if auto-refresh is on, the window timer is started.</li>
+      <li><b>Auto-refresh</b> — on each <code>EVENT:Timer</code> the value is re-read and compared to what was
+          last rendered; the network is only hit when it actually changed.</li>
+      <li><b>Manual</b> — <code>DO myQRRefresh</code> from any embed re-renders the current value immediately
+          (works whether or not auto-refresh is on).</li>
+    </ul>
+    <div class="callout warn"><b>Window-timer caveat</b> Auto-refresh sets <code>0{PROP:Timer}</code>. If the
+       procedure already uses the window timer for something else, turn <b>auto-refresh off</b> and call
+       <code>DO myQRRefresh</code> yourself after you change the value.</div>
+  </section>
+
+  <section id="how">
+    <h2>How the image is made <a class="top" href="#over">↑ top</a></h2>
+    <p>There is no QR drawing in Clarion. <code>myQRLoad</code> builds a request to the free
+       <b>goqr.me</b> service and downloads the PNG:</p>
+    <pre>https://api.qrserver.com/v1/create-qr-code/?size=SxS&amp;margin=M&amp;ecc=L|M|Q|H&amp;data=&lt;url-encoded value&gt;</pre>
+    <p>The download uses <b><code>curl.exe</code></b> (ships with Windows 10/11 at
+       <code>%SystemRoot%\System32\curl.exe</code>), launched <b>hidden</b> (no console flash) and
+       <b>synchronously</b> (we wait for it) so the file is on disk before the image loads:</p>
+    <ol>
+      <li>Clear the image's hold on the temp file: <code>?img{PROP:Text} = ''</code>, then
+          <code>REMOVE(tempfile)</code>.</li>
+      <li>Build <code>curl -s -L --max-time 15 -o "tempfile" "url"</code> and run it with
+          <code>CreateProcessA</code> (<code>CREATE_NO_WINDOW</code> + <code>SW_HIDE</code>), then
+          <code>WaitForSingleObject</code>.</li>
+      <li><b>Trust the file, not the exit code</b>: if the temp PNG now exists and is non-empty
+          (<code>DIRECTORY()</code> size &gt; 0), load it with <code>?img{PROP:Text} = tempfile</code> and
+          return success.</li>
+    </ol>
+    <p>The temp file is <code>.\myQR_&lt;feq&gt;.png</code> in the working directory, keyed by the image
+       control's field number.</p>
+  </section>
+
+  <section id="embeds">
+    <h2>Embed points &amp; generated code <a class="top" href="#over">↑ top</a></h2>
+    <p>All guarded by <code>WHERE(%myQRDisable=0 AND %myQRImage)</code>:</p>
+    <table>
+      <tr><th>Embed</th><th>Emits</th></tr>
+      <tr><td><code>%GlobalMap</code></td><td>Short-form prototypes for <code>myQRUrlEncode</code> and <code>myQRLoad</code>.</td></tr>
+      <tr><td><code>%ProgramProcedures</code></td><td>The two helper bodies (the kernel32 prototypes live in <code>myQRLoad</code>'s own local <code>MAP</code>).</td></tr>
+      <tr><td><code>%DataSection</code></td><td><code>myQR:Last</code>, <code>myQR:Cur</code> (change detection), <code>myQR:Ecc</code>.</td></tr>
+      <tr><td><code>%ProcedureRoutines</code></td><td>The <code>myQRRefresh</code> routine.</td></tr>
+      <tr><td><code>%WindowManagerMethodCodeSection,'TakeWindowEvent'</code><br>PRIORITY(2000)</td>
+          <td>Open + timer handler (self-contained <code>CASE EVENT()</code>, never <code>RETURN</code>s).</td></tr>
+    </table>
+    <p>For an image <code>?QR</code> with value <code>loc:URL</code>, auto-refresh on, size 200, ECC Medium,
+       margin 1, poll 50, the per-procedure code is:</p>
+    <pre>myQRRefresh <span class="k">ROUTINE</span>
+  myQR:Ecc = <span class="s">'M'</span>                          <span class="c">! ECC letter, resolved at generate time</span>
+  myQR:Cur = loc:URL                     <span class="c">! the value expression, verbatim</span>
+  myQRLoad(?QR, myQR:Cur, 200, myQR:Ecc, 1)
+  myQR:Last = myQR:Cur
+
+  <span class="c">! injected at the top of WindowManager.TakeWindowEvent</span>
+  <span class="k">CASE</span> EVENT()
+  <span class="k">OF</span> EVENT:OpenWindow
+    0{PROP:Timer} = 50                   <span class="c">! start the value-watch poll</span>
+    <span class="k">DO</span> myQRRefresh                       <span class="c">! first render</span>
+  <span class="k">OF</span> EVENT:Timer
+    myQR:Cur = loc:URL
+    <span class="k">IF</span> myQR:Cur &lt;&gt; myQR:Last           <span class="c">! only hit the network on a real change</span>
+      <span class="k">DO</span> myQRRefresh
+    <span class="k">END</span>
+  <span class="k">END</span></pre>
+    <p>A fixed value (e.g. <code>'Hello'</code>) with auto-refresh off generates just the
+       <code>OF EVENT:OpenWindow / DO myQRRefresh</code> arm.</p>
+  </section>
+
+  <section id="helpers">
+    <h2>Helper API <a class="top" href="#over">↑ top</a></h2>
+    <p>Both helpers are generated into the program module.</p>
+
+    <h3>myQRLoad</h3>
+    <pre>myQRLoad(<span class="k">SIGNED</span> pImageFeq, <span class="k">STRING</span> pData, <span class="k">SIGNED</span> pSize, <span class="k">STRING</span> pEccLetter, <span class="k">SIGNED</span> pMargin),<span class="k">BYTE</span></pre>
+    <p>Builds the URL, downloads the PNG with curl (hidden, synchronous), and on success loads it into the
+       image. Returns <code>1</code> if the temp PNG exists and is non-empty afterwards, else <code>0</code>
+       (curl missing / offline / service down). Call it directly if you want to drive a QR yourself.</p>
+
+    <h3>myQRUrlEncode</h3>
+    <pre>myQRUrlEncode(<span class="k">STRING</span> pText),<span class="k">STRING</span></pre>
+    <p>Percent-encodes the value for the URL query (RFC 3986 unreserved chars pass through; space →
+       <code>%20</code>; everything else → <code>%XX</code>).</p>
+
+    <h3>myQRRefresh (routine)</h3>
+    <p>A local <code>ROUTINE</code> in each procedure: reads the current value, calls <code>myQRLoad</code>,
+       and records what was rendered (for change detection). <code>DO myQRRefresh</code> to force a redraw.</p>
+  </section>
+
+  <section id="facts">
+    <h2>Runtime facts it relies on <a class="top" href="#over">↑ top</a></h2>
+    <table>
+      <tr><th>Used for</th><th>API</th><th>Source</th></tr>
+      <tr><td>Load a file into an IMAGE</td><td><code>?img{PROP:Text} = file</code> (and <code>= ''</code> to clear)</td>
+          <td>ActiveImage.clw:593/597/599; PROP:Text 7C00H, property.clw:8</td></tr>
+      <tr><td>Window poll timer</td><td><code>0{PROP:Timer} = 1/100 s</code></td><td>property.clw (PROP:Timer)</td></tr>
+      <tr><td>Hidden, synchronous launch</td><td><code>CreateProcessA</code> + <code>CREATE_NO_WINDOW</code> + <code>SW_HIDE</code>, then <code>WaitForSingleObject</code></td>
+          <td>CapeSoft OddJob: JobObjectApi.clw:134; OddJobEq.inc:305/328/35/349/390</td></tr>
+      <tr><td>Confirm the download</td><td><code>DIRECTORY()</code> + <code>EXISTS()</code> + size &gt; 0</td><td>standard Clarion</td></tr>
+    </table>
+    <div class="callout note"><b>Win32 / ANSI</b> The helper targets 32-bit Clarion: <code>HANDLE = SIGNED</code>,
+       <code>CreateProcessA</code> (ANSI). The <code>STARTUPINFO</code>/<code>PROCESS_INFORMATION</code> group
+       layouts are taken verbatim from OddJob so <code>SIZE()</code> matches the OS struct.</div>
+  </section>
+
+  <section id="privacy">
+    <h2>Privacy &amp; internet <a class="top" href="#over">↑ top</a></h2>
+    <div class="callout danger"><b>The value leaves the machine</b> Every render sends the QR value over HTTPS
+       to <code>api.qrserver.com</code> (a third party) and needs a live internet connection. Do <b>not</b>
+       encode passwords, tokens, account numbers or any data you aren't willing to transmit to that service.</div>
+    <p>A small temp PNG (<code>myQR_&lt;feq&gt;.png</code>) is written to the working directory and loaded into
+       the image; it is cleared and re-downloaded on each refresh. If that directory isn't writable, pick a
+       writable location (see <a href="#customise">Customising</a>).</p>
+  </section>
+
+  <section id="customise">
+    <h2>Customising / going offline <a class="top" href="#over">↑ top</a></h2>
+    <ul>
+      <li><b>Your own endpoint</b> — for a private/offline deployment, edit <code>myQRLoad</code>'s
+          <code>loc:URL</code> to point at an in-house QR service (same <code>?data=</code> contract), or
+          swap the download for a local QR library/DLL that writes a PNG.</li>
+      <li><b>Simpler download</b> — if you don't mind a brief console flash, the template contains a commented
+          one-line fallback using <code>RUN('curl …', 1)</code> instead of <code>CreateProcessA</code>.</li>
+      <li><b>Colours</b> — goqr.me also accepts <code>&amp;color=</code> and <code>&amp;bgcolor=</code> (RRGGBB);
+          add them to <code>loc:URL</code> if you want a coloured code.</li>
+      <li><b>Temp location</b> — change <code>loc:File</code> from <code>.\myQR_…</code> to a writable path
+          (e.g. under the user's profile) if the working directory is read-only.</li>
+    </ul>
+  </section>
+
+  <section id="multidll">
+    <h2>Multi-DLL note <a class="top" href="#over">↑ top</a></h2>
+    <p>The helper bodies are emitted into <code>%ProgramProcedures</code> (the program/EXE module), matching
+       <em>myPie</em>/<em>myFontChanger</em>. This targets <b>single-EXE</b> apps. For a multi-DLL app, host
+       the extension in the program (EXE) app, or move the helper prototypes/bodies to the shared/root DLL and
+       export them so every DLL that uses myQR can call them.</p>
+  </section>
+
+  <section id="trouble">
+    <h2>Troubleshooting <a class="top" href="#over">↑ top</a></h2>
+    <table>
+      <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
+      <tr><td>Template won't register</td><td>A literal <code>%</code> in an emitted line. The shipped template
+          escapes them (<code>%%</code>); if you edit the URL-encoder, keep that.</td></tr>
+      <tr><td>Image stays blank</td><td>No internet, the service is down, or <code>curl.exe</code> is missing
+          (older Windows) — install curl or repoint the helper. Confirm <code>myQR_&lt;feq&gt;.png</code> appears.</td></tr>
+      <tr><td>Nothing updates when the variable changes</td><td>Auto-refresh is off, or the value is a literal.
+          Turn it on, or call <code>DO myQRRefresh</code> after changing the value.</td></tr>
+      <tr><td>The window's own timer stopped working</td><td>Auto-refresh took <code>0{PROP:Timer}</code>.
+          Turn auto-refresh off and drive the QR with <code>DO myQRRefresh</code>.</td></tr>
+      <tr><td>Drawing doesn't appear / wrong control</td><td>The control must be an <b>IMAGE</b> (not a Region),
+          and selected in the <i>Image control</i> prompt.</td></tr>
+      <tr><td>A console window flashes</td><td>You switched to the <code>RUN()</code> fallback; switch back to
+          the <code>CreateProcessA</code> path for a hidden launch.</td></tr>
+    </table>
+  </section>
+
+  <section id="verify">
+    <h2>Verify checklist <a class="top" href="#over">↑ top</a></h2>
+    <p>Claude can't run AppGen — after generating, confirm:</p>
+    <ol>
+      <li>The <code>.tpl</code> registers without error.</li>
+      <li>The window opens and shows a scannable QR for the value (scan it with a phone).</li>
+      <li>Changing the bound variable updates the image within one poll interval (auto-refresh on), and
+          <code>DO myQRRefresh</code> updates it immediately.</li>
+      <li>A <code>myQR_&lt;feq&gt;.png</code> appears in the working directory and no console window flashes.</li>
+    </ol>
+    <div class="callout tip"><b>Source</b> <code>templates/myQR/myQR.tpl</code> — fully commented, with the
+       corpus citations behind <code>PROP:Text</code>, <code>CreateProcessA</code> and the struct layouts.</div>
+  </section>
+
+  </div>
+  <footer>myQR — Programmer's Documentation · version 1.00 &nbsp;·&nbsp; © 2026 Reddin Assessments ·
+     part of the Clarion Template Maker toolset.</footer>
+  </main>
+</div>
+</body>
+</html>

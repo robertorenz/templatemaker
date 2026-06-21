@@ -188,7 +188,9 @@ URL-encoder + a download/load helper in the program module; no external `.inc`/`
 caveat:** the value is sent over HTTPS to that third-party service every render and an internet connection is
 required — don't encode secrets, or repoint the helper at your own QR endpoint / a local library for
 offline use. Register it, add **myQR - QR code into an image control** to a window procedure's Extensions,
-pick a sized IMAGE control, set the value, generate and build.
+pick a sized IMAGE control, set the value, generate and build. Full programmer's documentation (prompts,
+the literal-vs-code value, generated code, the `myQRLoad`/`myQRUrlEncode`/`myQRRefresh` API, the curl/
+CreateProcess download, and the privacy caveat) is in [`docs/myQR-template.html`](docs/myQR-template.html).
 
 ## Install
 
