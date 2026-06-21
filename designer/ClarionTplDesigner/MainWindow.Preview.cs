@@ -17,7 +17,6 @@ public partial class MainWindow
     bool _preview;
     bool _previewTrueLayout;          // ON = lay out controls by their AT (same-Y on one row); OFF = stack top-to-bottom
     bool _previewPending = true;      // ON = current/unsaved work (interactive); OFF = the saved file on disk
-    string[]? _previewLines;          // when set (saved preview), prompt defaults/drops are read from these
     int _previewTabIndex;             // remembered across the rebuild that each selection triggers
     int _previewWidth = 480;          // prompt-window width: 480 (Clarion <=10) or 960 (Clarion 11/12)
     double PreviewFactor => _previewWidth / 480.0;
@@ -76,30 +75,22 @@ public partial class MainWindow
             : "Preview: the saved file on disk (read-only).";
     }
 
-    // The on-disk saved text (for the "saved" preview), independent of unsaved edits.
-    string SavedText(int fi)
-    {
-        var f = _doc!.Files[fi];
-        try { return System.IO.File.ReadAllText(f.Path); }
-        catch { return string.Join(f.Newline, f.Lines); }
-    }
-
     void RenderPreview()
     {
         if (_component == null) { canvas.Width = canvas.Height = 10; return; }
 
         TplComponent comp = _component;     // ON: live model (interactive, reflects unsaved edits)
-        _previewLines = null;
         if (!_previewPending)               // OFF: render the saved file on disk (read-only)
         {
             try
             {
-                int fi = _component.FileIndex;
-                var temp = TplParser.ParseText(SavedText(fi), _doc!.Files[fi].Path);
+                // Full disk parse — follows the #INCLUDE chain and resolves #INSERT(%group), so the saved
+                // preview shows inlined #GROUP content too (a single-file ParseText would drop it).
+                var temp = TplParser.Parse(_doc!.Path);
                 var match = temp.Components.FirstOrDefault(c => c.HasSheet
                                 && c.Kind == _component.Kind && c.Name == _component.Name)
                             ?? temp.Components.FirstOrDefault(c => c.HasSheet);
-                if (match != null) { comp = match; _previewLines = temp.Files[0].Lines; }
+                if (match != null) comp = match;
             }
             catch { /* unreadable saved file -> fall back to the model */ }
         }
@@ -136,7 +127,6 @@ public partial class MainWindow
             }
             tabs.Items.Add(new TabItem { Header = header, Content = sp, Tag = tab });
         }
-        _previewLines = null;
         if (tabs.Items.Count == 0) { canvas.Width = canvas.Height = 10; return; }
 
         tabs.SelectedIndex = Math.Min(Math.Max(0, _previewTabIndex), tabs.Items.Count - 1);
@@ -779,22 +769,19 @@ public partial class MainWindow
         if (el.FontColor is uint col) c.Foreground = FromColorRef(col);
     }
 
+    // Read from the parsed element (DefaultExpr / PromptType) rather than re-reading a source line: this works
+    // for #INSERT'd (foreign) controls whose source lives in another file, and reflects the active preview
+    // source (the live model, or the disk re-parse for the saved preview).
     string PromptDefault(TplElement el)
     {
-        var src = _previewLines ?? CurrentFile()?.Lines;
-        if (src == null || el.LineIndex < 0 || el.LineIndex >= src.Length) return "";
-        var line = src[el.LineIndex];
-        var m = Regex.Match(line, @"\bdefault\s*\(\s*'([^']*)'", RegexOptions.IgnoreCase);
-        if (m.Success) return m.Groups[1].Value;
-        var m2 = Regex.Match(line, @"\bdefault\s*\(\s*([^)]*)\)", RegexOptions.IgnoreCase);
-        return m2.Success ? m2.Groups[1].Value.Trim() : "";
+        var d = el.DefaultExpr.Trim();
+        if (d.Length >= 2 && d[0] == '\'' && d[^1] == '\'') d = d[1..^1].Replace("''", "'");   // unwrap a quoted literal
+        return d;
     }
 
     IEnumerable<string> DropItems(TplElement el)
     {
-        var src = _previewLines ?? CurrentFile()?.Lines;
-        if (src == null || el.LineIndex < 0 || el.LineIndex >= src.Length) yield break;
-        var m = Regex.Match(src[el.LineIndex], @"\bdrop\s*\(\s*'([^']*)'", RegexOptions.IgnoreCase);
+        var m = Regex.Match(el.PromptType, @"\bdrop\s*\(\s*'([^']*)'", RegexOptions.IgnoreCase);
         if (!m.Success) yield break;
         foreach (var part in m.Groups[1].Value.Split('|'))
         {

@@ -2704,13 +2704,12 @@ public partial class MainWindow : Window
         };
     }
 
-    // The numeric default(...) on a prompt's source line, if any (used to decode KEYCODE prompts).
+    // The numeric default(...) on a prompt, if any (used to decode KEYCODE prompts). Read from the parsed
+    // element so it works for #INSERT'd controls sourced from another file.
     int? PromptDefaultInt(TplElement el)
     {
-        var src = _previewLines ?? CurrentFile()?.Lines;
-        if (src == null || el.LineIndex < 0 || el.LineIndex >= src.Length) return null;
-        var m = Regex.Match(src[el.LineIndex], @"default\(\s*(\d+)\s*\)", RegexOptions.IgnoreCase);
-        return m.Success && int.TryParse(m.Groups[1].Value, out var v) ? v : null;
+        var d = el.DefaultExpr.Trim().Trim('\'');
+        return int.TryParse(d, out var v) ? v : null;
     }
 
     // ---------- images ----------
