@@ -219,13 +219,18 @@ SW_HIDE              EQUATE(0)                             ! OddJobEq.inc:35
 CREATE_NO_WINDOW    EQUATE(08000000h)                     ! OddJobEq.inc:390 - no console window for a console app
 INFINITE            EQUATE(0FFFFFFFFh)                     ! WaitForSingleObject: wait with no timeout
   MAP
-    !kernel32 prototypes - local to this helper. CreateProcessA prototype + GROUP types
-    !taken verbatim from CapeSoft OddJob (JobObjectApi.clw:134-136); Wait/Close match
-    !windows.inc:38/63 and svapifnc.inc:219/273. HANDLE = SIGNED (windows.inc:5).
+    !kernel32 prototypes - local to this helper. TYPE-ONLY parameters: a Clarion MAP
+    !prototype takes parameter TYPES, not names. Named params make the compiler read the
+    !name as an attribute ("Unknown attribute: lpProcessInformation"). Param order/types
+    !per Win32 CreateProcessA (and CapeSoft OddJob JobObjectApi.clw:134); Wait/Close per
+    !windows.inc:38/63 / svapifnc.inc:219/273. HANDLE = SIGNED (windows.inc:5).
+    !CreateProcessA args, in order: lpApplicationName, lpCommandLine, lpProcessAttributes,
+    !lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory,
+    !lpStartupInfo, lpProcessInformation.
     MODULE('kernel32')
-CreateProcessA(LONG lpApplicationName,*CSTRING lpCommandLine,LONG lpProcessAttributes,LONG lpThreadAttributes,LONG bInheritHandles,ULONG dwCreationFlags,LONG lpEnvironment,LONG lpCurrentDirectory,LONG lpStartupInfo,LONG lpProcessInformation),LONG,RAW,PASCAL,PROC
-WaitForSingleObject(SIGNED hHandle,ULONG dwMilliseconds),LONG,PASCAL
-CloseHandle(SIGNED hObject),LONG,PASCAL,PROC
+CreateProcessA(LONG,*CSTRING,LONG,LONG,LONG,ULONG,LONG,LONG,LONG,LONG),LONG,RAW,PASCAL,PROC
+WaitForSingleObject(SIGNED,ULONG),LONG,PASCAL
+CloseHandle(SIGNED),LONG,PASCAL,PROC
     END
   END
   CODE
