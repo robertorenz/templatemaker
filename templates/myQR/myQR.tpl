@@ -132,17 +132,26 @@
   #ENDTAB
 #ENDSHEET
 #!-----------------------------------------------------------------------------------
-#! Global MAP: ONLY the two short-form helper prototypes. Short form survives MAP
-#! auto-indent (SKILL gotcha 1). The kernel32 prototypes (CreateProcessA /
-#! WaitForSingleObject / CloseHandle) are NOT declared here on purpose - they live in
-#! myQRLoad's OWN local MAP (see %%ProgramProcedures below). Keeping them local (a) keeps
-#! the helper self-contained, and (b) avoids any duplicate-prototype clash with Clarion's
-#! own WinApi declarations (windows.inc / svapifnc.inc) that the ABC runtime may pull into
-#! the global MAP. Guarded so a disabled template emits nothing.
+#! Global MAP: the two short-form helper prototypes PLUS a MODULE('kernel32') for curl's
+#! hidden launch. The Win32 APIs MUST be declared in the GLOBAL map: a local (procedure)
+#! MAP does not accept a MODULE('dll') external declaration here, which is why the earlier
+#! local-MAP version failed to compile (the prototype params were read as attributes).
+#! Unique Clarion labels (myQR_CreateProcess / myQR_WaitObject / myQR_CloseHandle) + NAME()
+#! bind to the real exports, so there is NO clash with any CloseHandle / WaitForSingleObject
+#! the ABC runtime already declares. Short form survives the MAP auto-indent (SKILL gotcha 1).
+#! Guarded so a disabled template emits nothing.
+#! NOTE: this is a PROCEDURE extension - if you add myQR to more than ONE procedure these
+#! helpers duplicate. For multi-window use, split the helpers into an APPLICATION extension
+#! (the myPie / myPieGlobal pattern). For a single QR window this is fine.
 #!-----------------------------------------------------------------------------------
 #AT(%GlobalMap),WHERE(%myQRDisable=0 AND %myQRImage),DESCRIPTION('myQR - helper prototypes')
 myQRUrlEncode(STRING pText),STRING
 myQRLoad(SIGNED pImageFeq, STRING pData, SIGNED pSize, STRING pEccLetter, SIGNED pMargin),BYTE
+  MODULE('kernel32')
+myQR_CreateProcess(LONG,LONG,LONG,LONG,LONG,ULONG,LONG,LONG,LONG,LONG),LONG,PASCAL,PROC,NAME('CreateProcessA')
+myQR_WaitObject(LONG,ULONG),LONG,PASCAL,NAME('WaitForSingleObject')
+myQR_CloseHandle(LONG),LONG,PASCAL,PROC,NAME('CloseHandle')
+  END
 #ENDAT
 #!-----------------------------------------------------------------------------------
 #! Helper bodies, defined in the program module (%ProgramProcedures = DATA region, NOT
@@ -220,20 +229,6 @@ STARTF_USESHOWWINDOW EQUATE(00000001h)                   ! OddJobEq.inc:349
 SW_HIDE              EQUATE(0)                             ! OddJobEq.inc:35
 CREATE_NO_WINDOW    EQUATE(08000000h)                     ! OddJobEq.inc:390 - no console window for a console app
 INFINITE            EQUATE(0FFFFFFFFh)                     ! WaitForSingleObject: wait with no timeout
-  MAP
-    !kernel32 prototypes - local to this helper. TYPE-ONLY parameters (a Clarion MAP
-    !prototype takes parameter TYPES, not names). ALL params are LONG and everything that
-    !is really a pointer (the command string, the two GROUPs) is passed by ADDRESS() at the
-    !call - the simplest, most portable Win32 mapping (no *type, no RAW). Param order is the
-    !Win32 CreateProcessA: lpApplicationName, lpCommandLine, lpProcessAttributes,
-    !lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment, lpCurrentDirectory,
-    !lpStartupInfo, lpProcessInformation. Wait/Close per windows.inc:38/63 (HANDLE=LONG).
-    MODULE('kernel32')
-CreateProcessA(LONG,LONG,LONG,LONG,LONG,ULONG,LONG,LONG,LONG,LONG),LONG,PASCAL,PROC
-WaitForSingleObject(LONG,ULONG),LONG,PASCAL
-CloseHandle(LONG),LONG,PASCAL,PROC
-    END
-  END
   CODE
   !Per-image temp file in the current directory, keyed by the control FEQ so two QR
   !images on one window never clash. PNG, because the service returns PNG.
@@ -262,12 +257,12 @@ CloseHandle(LONG),LONG,PASCAL,PROC
   !appName=0 (parse from command line), inherit=0, env/dir=0. All params are LONG; the
   !command string and the two GROUPs are passed by ADDRESS(). loc:Ok=0 means curl could
   !not be launched (curl.exe missing).
-  loc:Ok = CreateProcessA(0, ADDRESS(loc:Cmd), 0, 0, 0, CREATE_NO_WINDOW, 0, 0, ADDRESS(si), ADDRESS(pi))
+  loc:Ok = myQR_CreateProcess(0, ADDRESS(loc:Cmd), 0, 0, 0, CREATE_NO_WINDOW, 0, 0, ADDRESS(si), ADDRESS(pi))
   IF loc:Ok
     !Synchronous: block until curl exits, then release the handles it handed back.
-    WaitForSingleObject(pi.hProcess, INFINITE)
-    CloseHandle(pi.hThread)
-    CloseHandle(pi.hProcess)
+    myQR_WaitObject(pi.hProcess, INFINITE)
+    myQR_CloseHandle(pi.hThread)
+    myQR_CloseHandle(pi.hProcess)
   END
   !Trust the FILE, not the exit code: success = the PNG now exists and is non-empty.
   !DIRECTORY() lists the temp file and gives us its byte size; >0 bytes = a real PNG.
