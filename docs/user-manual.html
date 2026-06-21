@@ -89,6 +89,7 @@
     <a href="#prompttype" class="h2">Prompt type &amp; attributes</a>
     <a href="#props" class="h2">Properties &amp; style</a>
     <a href="#symbols" class="h2">Symbols &amp; rename</a>
+    <a href="#inserts" class="h2">Reusable groups (#INSERT)</a>
     <a href="#arrange" class="h2">Z-order &amp; groups</a>
     <a href="#delete" class="h2">Deleting safely</a>
     <a href="#guides" class="h2">Rulers, guides &amp; fidelity</a>
@@ -319,6 +320,26 @@
     </ul>
     <div class="callout warn"><b>Pending vs saved</b> The Uses list reflects the file on disk. In Live
        (pending) source mode, a jump can land a line or two off until you save. Rename is fully undoable.</div>
+  </section>
+
+  <section id="inserts">
+    <h2>Reusable prompt groups (#INSERT) <a class="top" href="#intro">↑ top</a></h2>
+    <p>A prompt sheet can pull in a shared set of prompts with <code>#INSERT(%group)</code>, which pastes the
+       prompts declared by a <code>#GROUP(%group)</code> — often defined in another <code>#INCLUDE</code>d
+       file. The designer <b>resolves these</b> and lays the group's prompts out inline, so you always see the
+       complete sheet instead of a gap where the <code>#INSERT</code> sits.</p>
+    <p>Inlined prompts are <b>read-only</b> — they belong to the group's own template, so the designer won't
+       let you move, resize, restyle, delete or rename them here (the Properties pad is disabled and the
+       header shows <em>• read-only (from #INSERT)</em>). You can still:</p>
+    <ul>
+      <li><b>Select one to inspect it</b> — the Source panel switches to the <code>#GROUP</code>'s own file
+          (read-only) and jumps to the line that declares it.</li>
+      <li><b>Copy or duplicate it</b> (<kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>Ctrl</kbd>+<kbd>D</kbd>) — the copy
+          becomes a normal, editable control in your sheet.</li>
+    </ul>
+    <div class="callout note"><b>Edit at the source</b> To change an inlined prompt for real, open the
+       template that defines its <code>#GROUP</code> and edit it there — every sheet that
+       <code>#INSERT</code>s that group picks up the change.</div>
   </section>
 
   <section id="arrange">

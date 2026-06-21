@@ -129,7 +129,9 @@ TplWriter.Save(doc)     <span class="c">→ rewrites only changed lines, per fil
         <code>Section</code> (the box is a <code>#BOXED,SECTION</code>); style <code>FontName,FontSize,FontColor,
         FontStyle,Bold</code> with computed <code>Italic/Underline/Strikeout</code> from the style flag bits;
         line span <code>LineIndex,EndLineIndex</code>; edit flags <code>Dirty, Inserted, Deleted, Moved,
-        FontDirty</code>; relocation <code>MoveAnchorLine</code>; tree <code>Parent, Children</code>;
+        FontDirty</code>; <code>Foreign</code> (inlined from a <code>#INSERT(%group)</code> — read-only, never
+        saved) with <code>SrcFileIndex</code>/<code>AnchorLine</code>; relocation <code>MoveAnchorLine</code>;
+        tree <code>Parent, Children</code>;
         computed layout <code>LX/LY/LW/LH</code> (entry) and <code>PLX/PLY/PLW/PLH</code> (label).
         <code>Clone()</code> deep-copies for undo.</td></tr>
       <tr><td><code>TplFile</code></td><td><code>Path, Newline, Lines[], Included, Dirty</code>. <code>Dirty</code>
@@ -151,6 +153,11 @@ TplWriter.Save(doc)     <span class="c">→ rewrites only changed lines, per fil
           to map the live/pending editor text back onto the model.</li>
       <li><code>ParseComponents</code> walks the directive structure; <code>ParseSheet</code> builds the
           <code>#SHEET/#TAB/#BOXED/#PROMPT/#DISPLAY/#IMAGE</code> tree with line indices.</li>
+      <li><b><code>#INSERT(%group)</code></b> inside a sheet is resolved against a registry of every
+          <code>#GROUP(%group)</code> across all loaded files (<code>BuildGroupRegistry</code>): the group's
+          prompts are inlined as <code>Foreign</code> (read-only) elements anchored to the host
+          <code>#INSERT</code> line, with recursion guarded. The writer skips <code>Foreign</code> content,
+          and the source panel navigates a foreign control to its defining file via <code>SrcFileIndex</code>.</li>
     </ul>
   </section>
 
