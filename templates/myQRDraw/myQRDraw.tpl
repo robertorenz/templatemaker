@@ -764,7 +764,10 @@ myQRDrawRepaint ROUTINE
   #TAB('&General')
     #BOXED('Options')
       #PROMPT('&Disable this template',CHECK),%myQRDrawRptDisable,DEFAULT(0),AT(10)
-      #PROMPT('&Image control (in a report band) to draw into:',CONTROL),%myQRDrawRptImage,REQ
+      #! CONTROL lists WINDOW controls only; a report proc also has a progress window, so we must list
+      #! the REPORT's controls instead - FROM(%ReportControl,...) (corpus: blobsrv.tpw:20). Yields the
+      #! ?-prefixed field equate, same as a window CONTROL prompt, usable in GETPOSITION after SETTARGET(Report).
+      #PROMPT('&Image control (in a report band) to draw into:',FROM(%ReportControl,%ReportControlType = 'IMAGE')),%myQRDrawRptImage,REQ,DEFAULT('')
       #PROMPT('&Value:',@s255),%myQRDrawRptValue,DEFAULT('https://www.softvelocity.com')
       #PROMPT('Value is a &variable / expression (not literal text)',CHECK),%myQRDrawRptValueIsVar,DEFAULT(0),AT(10)
       #PROMPT('&Error correction level:',DROP('L - Low (most data)[1]|M - Medium[2]|Q - Quartile[3]|H - High (most robust)[4]')),%myQRDrawRptEcc,DEFAULT('2')
