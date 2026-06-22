@@ -192,6 +192,22 @@ pick a sized IMAGE control, set the value, generate and build. Full programmer's
 the literal-vs-code value, generated code, the `myQRLoad`/`myQRUrlEncode`/`myQRRefresh` API, the curl/
 CreateProcess download, and the privacy caveat) is in [`docs/myQR-template.html`](docs/myQR-template.html).
 
+### `templates/myQRDraw/` — offline QR code drawn with BOX primitives
+The **offline** companion to myQR: instead of downloading a PNG, it carries a complete **QR encoder** and
+draws every module as a filled `BOX` into an `IMAGE` control — exactly the way myPie draws a pie. **No
+internet, no `curl`, no temp files.** A **global** extension adds the encoder + the `QRDraw()` helper (add
+once per app); a **procedure** extension wires it to a window, redrawing on open/resize. The value can be a
+design-time **literal** or any **Clarion variable/expression** (change it and `DO myQRDrawRepaint`). Prompts:
+image control, value, ECC level (L/M/Q/H), dark/light colors, quiet-zone width, and a **self-test** that
+draws a fixed `HELLO WORLD` symbol so you can confirm the encoder works by scanning it.
+
+The encoder (byte mode, **versions 1–10**, automatic version + mask) is a line-for-line port of the
+ZXing-validated C# reference in [`designer/QrCodeCore/`](designer/QrCodeCore/); its exact `HELLO WORLD`/ECC-M
+matrix is pinned by a golden test, and that is the same symbol the self-test draws. Choose myQRDraw for
+kiosks, point-of-sale, field laptops, air-gapped networks, and reports that must render with zero external
+dependencies; choose myQR when an internet round-trip is acceptable. Full programmer's documentation is in
+[`docs/myQRDraw-template.html`](docs/myQRDraw-template.html).
+
 ## Install
 
 Copy the two folders into your Claude Code config (`~/.claude` on macOS/Linux,
@@ -273,9 +289,9 @@ See `installer/README.md` for what each option installs.
 ### QR encoder core (`designer/QrCodeCore/`)
 
 `designer/QrCodeCore/` is a small, dependency-free **.NET 9** QR-code encoder (versions 1–10, all four
-error-correction levels) written as a portable reference for an upcoming *offline* QR template that draws
-the symbol module-by-module with `BOX` primitives — the same approach as `myPie/` — so no internet round-trip
-is needed (unlike `templates/myQR/`, which fetches a PNG via `curl`). The encoder is developed test-first:
+error-correction levels) written as the portable reference for the *offline* [`templates/myQRDraw/`](templates/myQRDraw/)
+template, which draws the symbol module-by-module with `BOX` primitives — the same approach as `myPie/` — so no
+internet round-trip is needed (unlike `templates/myQR/`, which fetches a PNG via `curl`). The encoder is developed test-first:
 `designer/QrCodeCore.Tests/` round-trips every encode through an independent decoder (ZXing.Net) across all
 versions and ECC levels and pins the Reed–Solomon stage to the ISO/IEC 18004 worked example. Run the tests
 with `dotnet test designer/QrCodeCore.Tests`.

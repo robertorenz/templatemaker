@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>myQRDraw — Programmer's Documentation</title>
+<style>
+  :root{
+    --blue:#0A66C2; --blue-d:#084d93; --navy:#0E1A2B; --navy-2:#16263c;
+    --ink:#22303f; --muted:#6b7785; --line:#e3e8ef; --bg:#f5f7fa;
+    --card:#ffffff; --green:#1e7c5a; --amber:#9a6a12; --amber-bg:#fff7e8;
+    --green-bg:#eef8f3; --blue-bg:#eef4fc; --red-bg:#fcecec; --red:#b23a2e;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:15px/1.65 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg)}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:flex;min-height:100vh}
+  nav{width:280px;flex:0 0 280px;background:linear-gradient(180deg,var(--navy),var(--navy-2));
+    color:#cdd8e6;position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 0}
+  nav .brand{padding:0 22px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+  nav .brand h1{font-size:16px;margin:0;color:#fff} nav .brand span{font-size:12px;color:#8aa0bb}
+  nav a{display:block;color:#b9c7d8;padding:6px 22px;font-size:13.5px;border-left:3px solid transparent}
+  nav a:hover{background:rgba(255,255,255,.05);color:#fff;text-decoration:none}
+  nav a.h2{padding-left:34px;font-size:13px;color:#9fb2c8}
+  nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#6e85a1;
+    padding:14px 22px 4px;font-weight:700}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(120deg,#0c2a4d,var(--blue));color:#fff;padding:46px 52px 38px}
+  header.hero h1{margin:0 0 6px;font-size:30px;letter-spacing:-.3px}
+  header.hero p{margin:0;font-size:15.5px;color:#dbe8f8;max-width:780px}
+  header.hero .pill{display:inline-block;margin-top:16px;background:rgba(255,255,255,.16);
+    padding:4px 12px;border-radius:20px;font-size:12.5px}
+  .body{padding:14px 52px 80px;max-width:940px}
+  section{padding:22px 0;border-bottom:1px solid var(--line)} section:last-child{border-bottom:none}
+  h2{font-size:21px;margin:14px 0 10px;color:var(--navy);scroll-margin-top:14px}
+  h3{font-size:16px;margin:20px 0 6px;color:var(--blue-d)}
+  p{margin:9px 0} ul,ol{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  code,kbd,pre{font-family:"Cascadia Code",Consolas,monospace}
+  code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:13px;color:#1d3b5e}
+  kbd{background:#1d2a3a;color:#e7eef7;padding:2px 7px;border-radius:5px;font-size:12px;
+    border:1px solid #324558;box-shadow:0 1px 0 #0b1420}
+  pre{background:#0f1d2e;color:#dbe6f2;padding:16px 18px;border-radius:10px;overflow:auto;
+    font-size:13px;line-height:1.55;margin:12px 0}
+  pre .c{color:#7fa6c9} pre .k{color:#79c0ff} pre .s{color:#7ee0b8} pre .t{color:#ffd591}
+  .callout{border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;border:1px solid}
+  .tip{background:var(--green-bg);border-color:#bfe3d3;color:#155}
+  .note{background:var(--blue-bg);border-color:#c5dcf6;color:#13456f}
+  .warn{background:var(--amber-bg);border-color:#ecd9a6;color:#6f5210}
+  .danger{background:var(--red-bg);border-color:#e6b8b2;color:#7c241b}
+  .callout b{display:block;margin-bottom:2px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f0f4f9;color:var(--navy);font-weight:600}
+  tr:hover td{background:#fafcff}
+  .lead{font-size:16px;color:#3a4756}
+  footer{padding:24px 52px;color:var(--muted);font-size:13px}
+  .top{font-size:12px;color:var(--muted);float:right}
+  .filetree{font-family:"Cascadia Code",Consolas,monospace;font-size:13px;background:#fff;
+    border:1px solid var(--line);border-radius:10px;padding:14px 18px;line-height:1.7;color:#37485a}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><h1>myQRDraw</h1><span>Programmer's Documentation · v1.0</span></div>
+    <a href="#over">Overview</a>
+    <div class="grp">Using it</div>
+    <a href="#install" class="h2">Install &amp; register</a>
+    <a href="#quick" class="h2">Quick start</a>
+    <a href="#selftest" class="h2">Self-test</a>
+    <a href="#prompts" class="h2">Prompt reference</a>
+    <a href="#runtime" class="h2">Changing it at run time</a>
+    <div class="grp">How it works</div>
+    <a href="#arch" class="h2">Architecture</a>
+    <a href="#encoder" class="h2">The encoder</a>
+    <a href="#drawing" class="h2">Drawing</a>
+    <a href="#verify" class="h2">Verification &amp; tests</a>
+    <div class="grp">Reference</div>
+    <a href="#api" class="h2">QRDraw() API</a>
+    <a href="#limits" class="h2">Capacity &amp; limits</a>
+    <a href="#trouble" class="h2">Troubleshooting</a>
+  </nav>
+  <main>
+    <header class="hero">
+      <h1>myQRDraw</h1>
+      <p>An <b>offline</b> QR-code generator for Clarion windows. It encodes the QR symbol itself
+         at run time and draws every module as a filled <code>BOX</code> into an IMAGE control — no
+         internet, no <code>curl</code>, no temporary image files.</p>
+      <span class="pill">ABC &amp; Clarion · versions 1–10 · ECC L/M/Q/H · self-contained</span>
+    </header>
+    <div class="body">
+
+    <section id="over">
+      <h2>Overview <a href="#over" class="top">#</a></h2>
+      <p class="lead">myQRDraw turns any value — a URL, an order number, a vCard string — into a scannable
+        QR code painted directly onto a window, entirely on the local machine.</p>
+      <p>It is the companion to <b>myQR</b>. Where myQR downloads a PNG from
+        <code>api.qrserver.com</code> (and therefore needs a working internet connection), myQRDraw
+        carries a complete QR <b>encoder</b> and draws the result with the same graphics primitives
+        <b>myPie</b> uses for its chart. That makes it ideal for kiosks, point-of-sale, field laptops,
+        air-gapped networks, and reports that must render with zero external dependencies.</p>
+      <table>
+        <tr><th>&nbsp;</th><th>myQR (online)</th><th>myQRDraw (offline)</th></tr>
+        <tr><td>Needs internet</td><td>Yes (HTTP to qrserver)</td><td><b>No</b></td></tr>
+        <tr><td>How the image is made</td><td>Downloaded PNG via curl</td><td>Encoded + drawn as BOXes</td></tr>
+        <tr><td>Temp files</td><td>Yes (PNG on disk)</td><td>None</td></tr>
+        <tr><td>Symbol versions</td><td>Server-chosen</td><td>1–10 (auto)</td></tr>
+        <tr><td>Best for</td><td>Convenience when online</td><td>Kiosks, POS, offline, reports</td></tr>
+      </table>
+      <div class="callout note"><b>Two extensions, one job</b>
+        Add the <b>global</b> extension once (it carries the encoder + helper), then drop the
+        <b>procedure</b> extension on each window that should display a code.</div>
+    </section>
+
+    <section id="install">
+      <h2>Install &amp; register <a href="#install" class="top">#</a></h2>
+      <ol>
+        <li>Copy <code>templates/myQRDraw/myQRDraw.tpl</code> into your template folder.</li>
+        <li>In the IDE: <b>Setup ▸ Template Registry ▸ Register</b>, pick <code>myQRDraw.tpl</code>.</li>
+        <li>The chain <b>myQRDraw</b> registers two extensions: the global helper and the per-window drawer.</li>
+      </ol>
+    </section>
+
+    <section id="quick">
+      <h2>Quick start <a href="#quick" class="top">#</a></h2>
+      <ol>
+        <li>Open your application. On the <b>global Extensions</b> add
+          <b>“myQRDraw - Global Encoder + Helper”</b> (once).</li>
+        <li>On a window procedure, add an <b>IMAGE</b> control (not a Region — Clarion draws into
+          Image controls). Make it roughly square and big enough (≥ ~60×60 dialog units for small codes).</li>
+        <li>Add the procedure extension <b>“myQRDraw - Draw a QR Code on this window”</b>.</li>
+        <li>On its <b>General</b> tab: pick the IMAGE control, type the <b>Value</b> (e.g. a URL),
+          choose the <b>ECC level</b>, the <b>Dark/Light</b> colors and the <b>quiet-zone</b> width.</li>
+        <li>Generate, compile, run — then scan the code with a phone.</li>
+      </ol>
+      <div class="callout tip"><b>It draws on open and on resize</b>
+        The code repaints on <code>EVENT:OpenWindow</code> and <code>EVENT:Sized</code>. Set the IMAGE
+        to resize/anchor and the code follows the window, always re-centred and crisp.</div>
+    </section>
+
+    <section id="selftest">
+      <h2>Self-test <a href="#selftest" class="top">#</a></h2>
+      <p>Tick <b>“Draw self-test (HELLO WORLD, ECC M)”</b> on the General tab. The window then draws a
+        fixed <b>21×21</b> version-1 symbol that encodes the literal text <code>HELLO WORLD</code>,
+        ignoring the Value field.</p>
+      <p>Scanning it must read exactly <code>HELLO WORLD</code>. This is the fastest way to confirm the
+        offline encoder works correctly on your machine — the very same matrix is pinned by an automated
+        test (see <a href="#verify">Verification</a>).</p>
+    </section>
+
+    <section id="prompts">
+      <h2>Prompt reference <a href="#prompts" class="top">#</a></h2>
+      <h3>Global extension — <i>myQRDrawGlobal</i></h3>
+      <table>
+        <tr><th>Prompt</th><th>Symbol</th><th>Meaning</th></tr>
+        <tr><td>Disable this template</td><td><code>%myQRDrawDisable</code></td><td>Suppress all global code.</td></tr>
+      </table>
+      <h3>Procedure extension — <i>myQRDraw</i></h3>
+      <table>
+        <tr><th>Prompt</th><th>Symbol</th><th>Meaning</th></tr>
+        <tr><td>Disable this template</td><td><code>%myQRDrawDisableThis</code></td><td>Suppress this window's code.</td></tr>
+        <tr><td>Image control to draw into</td><td><code>%myQRDrawImage</code></td><td>The IMAGE control (required).</td></tr>
+        <tr><td>Value</td><td><code>%myQRDrawValue</code></td><td>The text/URL to encode (literal or variable).</td></tr>
+        <tr><td>Value is a variable / expression</td><td><code>%myQRDrawValueIsVar</code></td><td>Tick to treat Value as Clarion code, not literal text.</td></tr>
+        <tr><td>Error correction level</td><td><code>%myQRDrawEcc</code></td><td>L / M / Q / H (1–4). Higher = more robust, less capacity.</td></tr>
+        <tr><td>Dark (foreground) color</td><td><code>%myQRDrawDark</code></td><td>Module color (default black).</td></tr>
+        <tr><td>Light (background) color</td><td><code>%myQRDrawLight</code></td><td>Field + quiet-zone color (default white).</td></tr>
+        <tr><td>Quiet-zone modules</td><td><code>%myQRDrawQuiet</code></td><td>Light border width in modules (0–8, default 4 — the spec minimum).</td></tr>
+        <tr><td>Draw self-test</td><td><code>%myQRDrawSelfTest</code></td><td>Draw the fixed “HELLO WORLD” symbol instead of Value.</td></tr>
+      </table>
+      <div class="callout warn"><b>Apostrophes in literal text</b>
+        A literal Value is emitted as a Clarion string. If it contains an apostrophe (<code>'</code>),
+        use the <b>variable</b> path instead (point it at a CSTRING/STRING variable) — otherwise the
+        generated source will not compile.</div>
+    </section>
+
+    <section id="runtime">
+      <h2>Changing it at run time <a href="#runtime" class="top">#</a></h2>
+      <p>Tick <b>“Value is a variable”</b> and name a variable in the Value field. Change the variable,
+        then call the generated repaint routine:</p>
+<pre><span class="t">MyWebVar</span> = <span class="s">'https://newsite.example/order/4471'</span>
+<span class="k">DO</span> myQRDrawRepaint        <span class="c">! re-encodes and redraws into the image</span></pre>
+      <p><code>myQRDrawRepaint</code> simply posts a private event so the redraw happens cleanly inside
+        the window's event loop, after which the code is re-encoded from the current variable value.</p>
+    </section>
+
+    <section id="arch">
+      <h2>Architecture <a href="#arch" class="top">#</a></h2>
+      <p>The global extension emits three things, guarded by its Disable check:</p>
+      <ul>
+        <li><b><code>%GlobalData</code></b> — the encoder's working arrays, all <code>QR:</code>-prefixed
+          and sized for the largest supported symbol (version 10 = 57×57): the module matrix, the
+          function-module map, the GF(256) log/antilog tables, codeword buffers, and the capacity table.</li>
+        <li><b><code>%GlobalMap</code></b> — short-form prototypes for every encoder procedure.</li>
+        <li><b><code>%ProgramProcedures</code></b> — the procedure bodies: the encoder and the public
+          <code>QRDraw()</code> helper.</li>
+      </ul>
+      <p>The procedure extension adds a tiny per-window slice: a private repaint event, a value buffer,
+        a <code>myQRDrawRepaint</code> routine, and a handler at the top of <code>TakeWindowEvent</code>
+        that calls <code>QRDraw()</code> on open/resize — exactly the structure myPie uses.</p>
+      <div class="callout note"><b>Multi-DLL note</b>
+        Like myPie, the bodies live in <code>%ProgramProcedures</code> (the program module). For a
+        multi-DLL application, move the encoder to the root/shared DLL and export the prototypes.</div>
+    </section>
+
+    <section id="encoder">
+      <h2>The encoder <a href="#encoder" class="top">#</a></h2>
+      <p>The Clarion encoder is a faithful, line-for-line port of a C# reference implementation
+        (<code>designer/QrCodeCore</code>) that is validated by decoding its output with ZXing. It
+        implements the full byte-mode pipeline:</p>
+      <ul>
+        <li><b>Data codewords</b> — mode indicator, character count, the UTF-8/byte payload, terminator
+          and pad bytes (0xEC / 0x11).</li>
+        <li><b>Reed–Solomon</b> error correction over GF(256) with primitive polynomial 0x11D, the
+          generator built per block.</li>
+        <li><b>Block interleaving</b> for multi-block versions.</li>
+        <li><b>Function patterns</b> — finders, separators, timing, alignment, the dark module, and (for
+          versions ≥ 7) the 18-bit version information.</li>
+        <li><b>Codeword placement</b> — the zig-zag walk that skips function modules and the timing column.</li>
+        <li><b>Masking</b> — all eight mask patterns are tried; the one with the lowest penalty (the four
+          standard rules) wins.</li>
+        <li><b>Format information</b> — the 15-bit BCH format string (ECC + mask) placed in both copies.</li>
+      </ul>
+      <div class="callout tip"><b>Two Clarion-specific care points</b>
+        Clarion <i>rounds</i> on assignment to an integer, so every truncating divide uses
+        <code>INT()</code>; and modulus is done with a small <code>QRMod()</code> helper
+        (<code>a - INT(a/b)*b</code>) so no literal <code>%</code> ever appears in the emitted source.</div>
+    </section>
+
+    <section id="drawing">
+      <h2>Drawing <a href="#drawing" class="top">#</a></h2>
+      <p>Once the matrix is built, <code>QRDraw()</code> paints it just like myPie paints its pie:</p>
+      <ol>
+        <li><code>SETTARGET(,image)</code> to draw into the IMAGE control, then <code>GETPOSITION</code>
+          to read the control's X,Y (drawing is window-relative — GitHub issue&nbsp;#5).</li>
+        <li><code>BLANK</code> to wipe prior graphics (so a resize leaves no artifacts).</li>
+        <li>A single light <code>BOX</code> fills the whole control (the quiet zone is light too).</li>
+        <li>Each dark module becomes one filled <code>BOX</code> of <code>cell × cell</code> dialog units.</li>
+      </ol>
+      <p>The cell size is computed to fit the control — <code>cell = INT(min(width,height) / (modules +
+        2·quiet))</code> — and the whole symbol is centred. If the control is too small the cell floors
+        at 1 dialog unit.</p>
+    </section>
+
+    <section id="verify">
+      <h2>Verification &amp; tests <a href="#verify" class="top">#</a></h2>
+      <p>The encoder's correctness is anchored by an automated test project,
+        <code>designer/QrCodeCore.Tests</code>:</p>
+      <ul>
+        <li><b>Round-trip</b> — every encode is decoded back with ZXing across all versions and ECC levels.</li>
+        <li><b>Reed–Solomon</b> — pinned to the ISO/IEC 18004 worked example.</li>
+        <li><b>Golden matrix</b> — the exact 21×21 module grid for <code>HELLO WORLD</code> at ECC M is
+          locked. That is the same symbol the <b>Self-test</b> draws, so a phone scan that reads
+          <code>HELLO WORLD</code> proves the Clarion port reproduces the tested encoder module-for-module.</li>
+      </ul>
+      <p>Run them with <code>dotnet test designer/QrCodeCore.Tests</code>.</p>
+    </section>
+
+    <section id="api">
+      <h2>QRDraw() API <a href="#api" class="top">#</a></h2>
+<pre><span class="k">QRDraw</span>(<span class="t">SIGNED</span> pImageFeq, *<span class="t">CSTRING</span> pValue, <span class="t">LONG</span> pEcc, |
+       <span class="t">LONG</span> pDark, <span class="t">LONG</span> pLight, <span class="t">LONG</span> pQuiet)</pre>
+      <table>
+        <tr><th>Parameter</th><th>Meaning</th></tr>
+        <tr><td><code>pImageFeq</code></td><td>The IMAGE control's field-equate to draw into.</td></tr>
+        <tr><td><code>pValue</code></td><td>The text/bytes to encode.</td></tr>
+        <tr><td><code>pEcc</code></td><td>Error correction: 1=L, 2=M, 3=Q, 4=H.</td></tr>
+        <tr><td><code>pDark</code> / <code>pLight</code></td><td>Module / background colors.</td></tr>
+        <tr><td><code>pQuiet</code></td><td>Quiet-zone width in modules.</td></tr>
+      </table>
+      <p>The helper encodes and draws in one call and is safe to call repeatedly. If the value is too
+        large for versions 1–10 at the chosen ECC, it returns without drawing, leaving the control as-is.</p>
+    </section>
+
+    <section id="limits">
+      <h2>Capacity &amp; limits <a href="#limits" class="top">#</a></h2>
+      <ul>
+        <li><b>Versions 1–10</b> are supported (21×21 up to 57×57 modules).</li>
+        <li><b>Byte mode</b> is used for everything — URLs, numbers, and text all work; the version is
+          chosen automatically as the smallest that fits.</li>
+        <li>Approximate byte capacity at version 10: <b>L ≈ 271, M ≈ 213, Q ≈ 151, H ≈ 119</b> bytes.</li>
+        <li>Higher ECC survives more damage/dirt but stores fewer bytes. <b>M</b> is a good default.</li>
+      </ul>
+      <div class="callout note"><b>Need more than ~271 bytes?</b>
+        Shorten the payload (e.g. a short URL that redirects) or raise the image so a denser code still
+        scans. Versions above 10 are not currently generated.</div>
+    </section>
+
+    <section id="trouble">
+      <h2>Troubleshooting <a href="#trouble" class="top">#</a></h2>
+      <table>
+        <tr><th>Symptom</th><th>Cause / fix</th></tr>
+        <tr><td>Nothing draws</td><td>Control must be an <b>IMAGE</b> (not a Region). Confirm it is the
+          one selected in “Image control to draw into”, and the global extension was added.</td></tr>
+        <tr><td>Code won't scan</td><td>Give it a larger/squarer IMAGE so each module is ≥ ~2 px, keep a
+          light quiet-zone (≥ 4), and use strong dark/light contrast (black on white).</td></tr>
+        <tr><td>Code is tiny in a big control</td><td>Expected — the cell size is integer dialog units.
+          A larger control yields a larger code; the symbol is always centred.</td></tr>
+        <tr><td>Generated source won't compile</td><td>If using a literal Value with an apostrophe,
+          switch to the variable path.</td></tr>
+        <tr><td>Value looks truncated</td><td>The literal prompt caps at 255 chars; for longer values use
+          a variable (the buffer holds up to 511 bytes).</td></tr>
+      </table>
+    </section>
+
+    </div>
+    <footer>myQRDraw v1.0 — offline QR generator for Clarion. Part of the Clarion Template Maker toolkit.</footer>
+  </main>
+</div>
+</body>
+</html>
