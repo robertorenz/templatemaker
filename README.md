@@ -324,6 +324,15 @@ Claude cannot run AppGen. After it writes a template:
 3. Add the extension/control to a test procedure (or the app, for `APPLICATION` scope).
 4. Fill prompts, **Generate**, and confirm the produced `.clw` compiles.
 
+## Beta testing
+
+A ready-to-use **beta test plan** for the whole toolkit lives in
+[`testing/Clarion-Template-Maker-Beta-Test-Plan.xlsx`](testing/Clarion-Template-Maker-Beta-Test-Plan.xlsx) —
+a multi-sheet workbook (Read Me, Beta Testers roster, 53 **Test Cases** with Pass/Fail/Severity drop-downs and
+colour coding, a Bug Log, and an auto-tallying Summary) covering install, the visual designer, every shipped
+template, and the QR self-tests. Hand it to testers as their script. Regenerate or extend it with
+`python testing/build_beta_test_plan.py` (requires `openpyxl`).
+
 ## License
 
 Released under the [MIT License](LICENSE) — © 2026 Reddin Assessments. Free to use, modify, and
