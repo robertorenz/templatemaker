@@ -281,6 +281,15 @@ AppGen will: a side-label prompt **reserves its label column** (so the label no 
 left into the margin), and an `#IMAGE` **reserves its real footprint** (its intrinsic pixel size, scaled to
 fit) so following controls flow *below* it instead of being drawn underneath.
 
+**Offline QR codes, on windows *and* reports (v2.12).** New [`templates/myQRDraw/`](templates/myQRDraw/)
+draws a QR code with `BOX` primitives — **no internet, no `curl`, no temp files** — from a complete,
+self-contained Clarion **encoder** (byte mode, versions 1–10, ECC L/M/Q/H) ported line-for-line from the
+ZXing-validated [`designer/QrCodeCore/`](designer/QrCodeCore/) and pinned by a golden-matrix test. It ships
+**two extensions**: `myQRDraw` for **windows** (redraw on open/resize) and `myQRDrawReport` for **reports**
+(drawn per record in the *Before-Print-Detail* embed via `SETTARGET(Report)` — reports have no window event
+loop, and the report control picker lists the report's own controls). The `clarion-template` skill gained
+the hard-won lessons behind it (Clarion integer-rounding, `%`-free modulus, window-vs-report drawing).
+
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
 

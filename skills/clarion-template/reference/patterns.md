@@ -226,6 +226,45 @@ depth=0, wholeValue=0, startAngle=0)` draws a whole pie from arrays of relative 
   BOX(x,y,w,h,pBackColor) END`. And inset the drawing a little so it isn't flush on the box edge:
   `Indt = pPieW * .02; x += Indt; y += Indt; w -= Indt*2; h -= Indt*2` before `PIE(x,y,w,h,…)`.
 
+## Drawing on a REPORT (not a window) — needs a SEPARATE extension
+
+The same draw helper does NOT just work when an extension is dropped on a report. A report procedure has
+**two** structures — the print **progress WINDOW** and the **REPORT** — and the window-oriented wiring grabs
+the wrong one. Build a dedicated report extension (corpus: `myQRDraw` ships `myQRDraw` for windows +
+`myQRDrawReport` for reports; `blobsrv.tpw` for blob-in-report-control). Two gotchas, both of which make it
+silently target the window or draw nothing:
+
+- **A `#PROMPT(...,CONTROL)` lists WINDOW controls only.** On a report it offers the progress window's
+  controls (and their USE variables), never the report's — the developer picks a control that isn't on the
+  report. List the **report's** controls instead with a `FROM()` over `%ReportControl`, filtered by type:
+  ```
+  #PROMPT('&Image control:',FROM(%ReportControl,%ReportControlType = 'IMAGE')),%MyRptImage,REQ,DEFAULT('')
+  ```
+  `%ReportControl` yields the same `?`-prefixed field equate a window `CONTROL` prompt gives, so it drops
+  straight into `GETPOSITION(%MyRptImage,…)`. Corpus: `blobsrv.tpw:20`
+  (`FROM(%ReportControl, %ReportControlType = 'IMAGE' OR …)`).
+
+- **Reports render bands through the print engine, not a window event loop** — there is no
+  `EVENT:OpenWindow`/`Sized`/`TakeWindowEvent` for the printed content. Draw in the **print-loop** embed
+  **`%BeforePrint`** ('Before Printing Detail Section') — it fires before each DETAIL band prints, so a
+  graphic is produced **per record**. Make the **report** the graphics target with **`SETTARGET(%Report)`**
+  (`%Report` is the report-label symbol; `SETTARGET` accepts a `REPORT` target + band feq —
+  `builtins.clw:1791`), NOT `SETTARGET(,?image)`:
+  ```
+  #AT(%BeforePrint),WHERE(%MyDisable=0 AND %MyRptImage)
+    IF QRBuildMatrix(loc:Value, %MyEcc)        #! encode this row's value
+      SETTARGET(%Report)                       #! the report/band is the target
+      QRPaint(%MyRptImage, …)                  #! GETPOSITION the band image + draw
+      SETTARGET()
+    END
+  #ENDAT
+  ```
+  An extension may legitimately fill `%BeforePrint` (corpus: accessory `mytable.tpl:665`, "Blobs on Report -
+  Before Print Detail"). No repaint ROUTINE — there is no event loop; the code re-encodes from the live
+  field value every time the band prints. Band-draw **placement** is timing-sensitive and not statically
+  verifiable — give the report extension a fixed self-test value and confirm by scanning a printout. If a
+  single graphic per *page* (not per record) is wanted, target a page-header band / a different embed.
+
 ## Gotchas checklist
 
 - [ ] Every `#AT` honors the disable prompt via `WHERE()`.
@@ -251,6 +290,9 @@ depth=0, wholeValue=0, startAngle=0)` draws a whole pie from arrays of relative 
 - [ ] Literal `%` in emitted lines (modulus `x % 7`, etc.) escaped as `%%` — otherwise the template
       won't register (`Expected an identifier`). Avoid `%` in comments (write "MOD"). Watch for bare `%`
       in trailing parentheticals. Corpus: `ABUPDATE.TPW:866` (`SELF.RecordsProcessed %% %RecordsToCheckpoint`).
+- [ ] On a **REPORT**, use a SEPARATE extension: pick controls with `FROM(%ReportControl,…)` (a `,CONTROL`
+      prompt lists WINDOW controls only), and draw in the `%BeforePrint` embed via `SETTARGET(%Report)` —
+      reports have no window event loop. See "Drawing on a REPORT".
 - [ ] Block terminators balanced (`#ENDAT`, `#ENDIF`/`#END`, `#ENDFOR`, `#ENDTAB`, `#ENDSHEET`, …).
 - [ ] `.tpl` `#INCLUDE`s all its `.tpw` parts; `#TEMPLATE` header present and at column 1.
 - [ ] Default parameter values (`=0`, `=1`) appear ONLY in the **prototype** (the MAP / `.inc`),
