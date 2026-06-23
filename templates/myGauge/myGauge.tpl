@@ -118,7 +118,10 @@ INCLUDE('GaugeClass.INC'),ONCE
 %myGaugeObject       GaugeClass                              ! one gauge object for this instance
 #ENDAT
 #!
-#AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2500),WHERE(%myGaugeDisableThis=0 AND %myGaugeImage)
+#! PRIORITY(2000) puts this self-contained CASE EVENT() ABOVE the framework's own
+#! LOOP/CASE scaffolding (registered at PRIORITY 2500) - same proven spot myQRDraw
+#! and myPixel use. Using 2500 collides with the framework and duplicates CASE EVENT().
+#AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%myGaugeDisableThis=0 AND %myGaugeImage)
   CASE EVENT()
   OF EVENT:OpenWindow
     %myGaugeObject.SetRange(%myGaugeMin, %myGaugeMax)
