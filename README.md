@@ -61,6 +61,10 @@ templates/                      # ready-to-register Clarion templates
     CompressClass.inc           #     the codec class (config + method prototypes)
     CompressClass.clw           #     the implementation (inflate/deflate/containers)
     myCompress.tpl              #     one global extension (the shared object)
+  myPdfSign/                    #   pure-Clarion signed-PDF reader: who signed it (see below)
+    PdfSignClass.inc            #     the reader class (config + method prototypes)
+    PdfSignClass.clw            #     the implementation (PDF parse + PKCS#7/DER walk)
+    myPdfSign.tpl               #     one global extension (the shared object)
 designer/ClarionTplDesigner/    # WPF visual designer for the prompt UI (see below)
 installer/                      # builds the installer + a portable single-file exe
 README.md
@@ -278,6 +282,30 @@ that round-trips a corpus both ways (Clarion ↔ `GZipStream`/`ZLibStream`/`Defl
 documentation — the API, formats, run-time control, error codes, and troubleshooting — is in
 [`docs/myCompress-template.html`](docs/myCompress-template.html).
 
+### `templates/myPdfSign/` — read a signed PDF and see who signed it
+A self-contained **signed-PDF identity reader** written entirely in **pure Clarion** — no DLL, no external
+library, no network. One ANSI class, **`PdfSignClass`**, opens a digitally-signed PDF and surfaces the
+**authoritative signer identity** that lives in the embedded **PKCS#7 / CMS** signature: the signer
+certificate's **Subject** (`SubjectCN` / `SubjectO` / `SubjectOU` / `SubjectEmail`), the issuing CA
+(`IssuerCN`), the **signing time** (`SignTime`, ISO-8601 UTC, read from the signed attributes — not the
+spoofable `/M`), plus the signature dictionary's own `/Name` (`SignerName`), `/Reason`, `/Location`,
+`/SubFilter`, and a `SigCount`. It also reports **`CoversWholeFile`** — 1 when `/ByteRange` spans the whole
+file, 0 when bytes were appended after signing (a tamper / incremental-update hint). It works on **files**
+(`ReadFile`) or a **memory buffer** (`Read(*STRING,LONG)`), exposes a `Report()` block and a `SelfTest()`.
+Internally it finds the `/ByteRange` + `/Contents <hex>` signature dictionary, hex-decodes the DER blob, and
+a tiny **ASN.1 tag/length reader** walks `ContentInfo → SignedData → certificates[0] → tbsCertificate` to
+read the Subject/Issuer RDNs by OID and the `signingTime` attribute. **Scope (be honest):** it extracts the
+*named* signer + an integrity hint — it does **not** cryptographically verify the RSA/ECDSA signature or
+validate the certificate trust chain. Add **one global extension** — **myPdfSign - Global signed-PDF reader**
+— and reach the shared object (default `PdfSig`) from any embed; there is **no per-window or per-report
+wiring**. Validated end-to-end against the real Clarion compiler and a .NET golden-fixture oracle
+([`designer/PdfSignCore/`](designer/PdfSignCore/)) that **manufactures real signed PDFs** (CA-signed leaf
+certs, detached PKCS#7 over a proper `/ByteRange`, `signingTime` in the signed attributes) and publishes the
+ground-truth identity each one must yield — the Clarion `Report()` output matches **byte-for-byte across all
+three fixtures**, including a deliberately tampered case that correctly reports `CoversWholeFile=0`. Copy
+`PdfSignClass.inc` + `PdfSignClass.clw` (**ANSI, CRLF**) to the redirection path. Full programmer's
+documentation is in [`docs/myPdfSign-template.html`](docs/myPdfSign-template.html).
+
 ## Install
 
 Copy the two folders into your Claude Code config (`~/.claude` on macOS/Linux,
@@ -426,6 +454,20 @@ baked into the `clarion-template` skill/notes: **a single array can't exceed 64 
 be stored CRLF** (LF-only includes mis-compile as "Illegal data type"), and a **global object must not be
 named after a file field** (e.g. `Zip`) or it collides. A `.gitattributes` rule now keeps all Clarion
 source (`.tpl`/`.tpw`/`.inc`/`.clw`) CRLF.
+
+**myPdfSign — read a signed PDF and see who signed it (v2.18).** A new [`templates/myPdfSign/`](templates/myPdfSign/)
+adds a pure-Clarion **signed-PDF identity reader** — no DLL, no network. One global object (`PdfSignClass`,
+default `PdfSig`) opens a digitally-signed PDF and reads the **authoritative signer identity** out of the
+embedded **PKCS#7 / CMS** signature: the certificate Subject (`SubjectCN`/`SubjectO`/`SubjectOU`/
+`SubjectEmail`), the issuing CA (`IssuerCN`), the `signingTime` (ISO-8601 UTC, from the signed attributes),
+the dictionary's `/Name`/`/Reason`/`/Location`/`/SubFilter`, and **`CoversWholeFile`** (0 = bytes appended
+after signing). It finds the `/ByteRange` + `/Contents <hex>` dictionary, hex-decodes the DER, and a small
+**ASN.1 reader** walks to the signer cert's RDNs by OID — **identity + integrity only**, no RSA/ECDSA verify
+or trust-chain validation. Verified against the real Clarion compiler and a .NET golden-fixture oracle
+([`designer/PdfSignCore/`](designer/PdfSignCore/)) that **manufactures real signed PDFs** and publishes the
+expected identity; the Clarion `Report()` matches **byte-for-byte across all three fixtures**, including a
+tampered one that correctly reports `CoversWholeFile=0`. Programmer's manual in
+[`docs/myPdfSign-template.html`](docs/myPdfSign-template.html).
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
