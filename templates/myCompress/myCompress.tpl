@@ -27,9 +27,13 @@
       #DISPLAY('')
       #PROMPT('Default &format:',DROP('gzip (.gz)[2]|zlib[1]|raw DEFLATE[0]')),%myCompressFormat,DEFAULT('2')
       #PROMPT('Default &level (0 = store, 1 = fast .. 9 = best):',SPIN(@n1,0,9,1)),%myCompressLevel,DEFAULT(6)
+      #DISPLAY('')
+      #PROMPT('Compression &engine:',DROP('Pure Clarion - no extra files (default)[0]|C fast-path - ~4x faster compress, needs mc.c[1]')),%myCompressEngine,DEFAULT('0')
     #ENDBOXED
     #DISPLAY('The object is GLOBAL data - reach it from any procedure or embed.')
     #DISPLAY('Format and Level are just defaults; change them in code anytime.')
+    #DISPLAY('Engine = C fast-path also needs CompressClassC.inc/.clw + mc.c on')
+    #DISPLAY('the redirection path; the API is identical either way.')
   #ENDTAB
   #TAB('&Instructions')
     #BOXED('How to use myCompress')
@@ -61,21 +65,34 @@
 #! other template (or a second copy of this one) also includes it.
 #!-----------------------------------------------------------------------------
 #AT(%AfterGlobalIncludes),WHERE(%myCompressDisable=0)
-INCLUDE('CompressClass.INC'),ONCE
+#IF(%myCompressEngine = 1)
+INCLUDE('CompressClassC.INC'),ONCE                          ! C fast-path (also pulls in the base)
+#ELSE
+INCLUDE('CompressClass.INC'),ONCE                           ! pure Clarion
+#ENDIF
 #ENDAT
 #!
 #! The compressor instance is GLOBAL DATA, so it must be multi-DLL aware (ABC's
 #! %DefaultExternal / %DefaultExport / %ProgramExtension symbols): DEFINED in a
 #! single-EXE or the root DLL, declared EXTERNAL (imported) in every other
 #! DLL/EXE that uses it, and EXPORTED from the root DLL so those imports
-#! resolve. The class methods are non-VIRTUAL and the CLASS carries an
-#! unconditional LINK, so each target links its own copy of CompressClass.clw -
-#! only the shared instance needs exporting. (Same handling as myQRDraw.)
+#! resolve. The CLASS carries an unconditional LINK, so each target links its
+#! own copy of the .clw - only the shared instance needs exporting. (Same
+#! handling as myQRDraw.) The engine prompt picks CompressClass (pure Clarion)
+#! or CompressClassC (the C fast-path subclass).
 #AT(%GlobalData),WHERE(%myCompressDisable=0)
   #IF(%DefaultExternal = 'None External')
-%myCompressObject  CompressClass                             ! defined here (single-EXE or the root DLL)
+    #IF(%myCompressEngine = 1)
+%myCompressObject  CompressClassC                            ! C fast-path (single-EXE or the root DLL)
+    #ELSE
+%myCompressObject  CompressClass                             ! pure Clarion (single-EXE or the root DLL)
+    #ENDIF
   #ELSE
+    #IF(%myCompressEngine = 1)
+%myCompressObject  CompressClassC,EXTERNAL,DLL(dll_mode)     ! imported from the root DLL
+    #ELSE
 %myCompressObject  CompressClass,EXTERNAL,DLL(dll_mode)      ! imported from the root DLL
+    #ENDIF
   #ENDIF
 #ENDAT
 #!

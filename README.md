@@ -60,7 +60,10 @@ templates/                      # ready-to-register Clarion templates
   myCompress/                   #   pure-Clarion compression: DEFLATE/zlib/gzip (see below)
     CompressClass.inc           #     the codec class (config + method prototypes)
     CompressClass.clw           #     the implementation (inflate/deflate/containers)
-    myCompress.tpl              #     one global extension (the shared object)
+    CompressClassC.inc          #     optional C-backed subclass (the fast engine)
+    CompressClassC.clw          #     overrides Wrap/Unwrap to call mc.c
+    mc.c                        #     our own DEFLATE in C (compiled by Clarion's Clacpp)
+    myCompress.tpl              #     one global extension (engine prompt: Clarion / C)
   myPdfSign/                    #   pure-Clarion signed-PDF reader: who signed it (see below)
     PdfSignClass.inc            #     the reader class (config + method prototypes)
     PdfSignClass.clw            #     the implementation (PDF parse + PKCS#7/DER walk)
@@ -280,13 +283,14 @@ container. The codec is validated by a .NET golden-vector oracle, [`designer/Com
 that round-trips a corpus both ways (Clarion ↔ `GZipStream`/`ZLibStream`/`DeflateStream`). Copy
 `CompressClass.inc` + `CompressClass.clw` (**ANSI, CRLF**) to the redirection path.
 
-**Optional C fast-path (~4× faster).** For big files or high throughput, the class can route through an
-optional **C engine** — `mc.c`, our own clean-room DEFLATE port (not miniz/zlib/StringTheory) compiled by
-**Clarion's own C compiler** via `PRAGMA('compile(mc.c)')`. Flip one equate (`CmpUseC EQUATE(1)`) and copy
-`mc.c` alongside the class: compression of a 4 MB buffer drops from ~844 ms to ~200 ms (and gets a slightly
-better ratio, since C has no 64 KB-array limit so it uses the full 32 KB window). It's the same algorithm,
-so the two engines produce byte-compatible output and interoperate freely; when `CmpUseC=0` (the default)
-the C code is fully `OMIT`ted and **no `mc.c` is needed** — pure Clarion is unaffected.
+**Optional C fast-path (~4× faster).** For big files or high throughput, pick the **C engine** in the
+extension's *Compression engine* prompt. It's `CompressClassC` — a thin subclass that overrides the virtual
+`Wrap`/`Unwrap` to call **`mc.c`**, our own clean-room DEFLATE port (not miniz/zlib/StringTheory) compiled by
+**Clarion's own C compiler** via `PRAGMA('compile(mc.c)')`. Compression of a 4 MB buffer drops from ~844 ms
+to ~200 ms (and a slightly better ratio, since C has no 64 KB-array limit so it uses the full 32 KB window).
+It's the same algorithm, so the two engines produce byte-compatible output and interoperate freely. The
+switch is the **template prompt** (it declares the global object as `CompressClass` or `CompressClassC`), so
+a pure-Clarion app needs **no `mc.c` and no subclass** — copy the C files only when you choose that engine.
 
 Full programmer's documentation — the API, formats, run-time control, the C fast-path, error codes, and
 troubleshooting — is in [`docs/myCompress-template.html`](docs/myCompress-template.html).
@@ -517,6 +521,17 @@ compiler: the wired class round-trips, `SelfTest()` passes in both modes, and C 
 dynamic-Huffman gzip. Established a reusable lesson — **Clarion compiles bundled C** (`extern "C"` +
 `PRAGMA('compile(x.c)')` + a `MODULE('x.c')` prototype block) — so future templates can drop to C for
 hot paths without any external dependency.
+
+**myCompress C fast-path becomes a template choice (v2.20).** The C engine switch moved from a hand-edited
+equate into the **extension's prompt**. The C path is now a clean **subclass**, `CompressClassC` — it
+overrides the (now `VIRTUAL`) `Wrap`/`Unwrap` to call `mc.c`, inherits the rest of the API unchanged, and is
+selected by a *Compression engine: Pure Clarion / C (fast)* drop-list that simply declares the global object
+as `CompressClass` or `CompressClassC`. So the choice lives in the template (no library edits), and a
+pure-Clarion app pulls in **no `mc.c` and no subclass at all** — verified against the real Clarion compiler:
+the C engine is 3.8× faster, both engines interoperate (compress with one, decompress with the other) and
+pass `SelfTest()`, and a pure-Clarion build links clean with the C files entirely absent. The reusable
+lesson — a **C fast-path as a `VIRTUAL`-override subclass** that the template selects — is captured for the
+next template that wants one.
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:

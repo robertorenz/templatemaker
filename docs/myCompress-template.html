@@ -284,21 +284,22 @@ designer/CompressCore/        the .NET golden-vector oracle (validation)</div>
         compress with one, decompress with the other). C also has no Clarion 64&nbsp;KB-array limit, so the
         matcher uses the full 32&nbsp;KB DEFLATE window, giving a slightly <i>better</i> ratio as well.</p>
       <h3>Turning it on</h3>
+      <p>Pick it in the extension — no code edits:</p>
       <ol>
-        <li>Copy <code>mc.c</code> to the Clarion redirection path, alongside <code>CompressClass.inc</code>
-          / <code>.clw</code>.</li>
-        <li>Edit one line near the top of <code>CompressClass.inc</code>:
-          <pre>CmpUseC            <span class="k">EQUATE</span>(<span class="s">1</span>)        <span class="c">! 0 = pure Clarion (default), 1 = C fast-path</span></pre>
-        </li>
-        <li>Rebuild. <code>CompressClass</code> now routes <code>Compress</code> / <code>Decompress</code>
-          (and the file methods) through the C engine via <code>PRAGMA('compile(mc.c)')</code>. Your code is
-          unchanged — same class, same API.</li>
+        <li>Copy the C engine files to the Clarion redirection path, alongside the base
+          <code>CompressClass.inc</code>/<code>.clw</code>: <code>CompressClassC.inc</code>,
+          <code>CompressClassC.clw</code>, and <code>mc.c</code>.</li>
+        <li>In the <b>myCompress - Global Compressor</b> extension, set <b>Compression engine</b> to
+          <b>C fast-path</b>.</li>
+        <li>Generate and build. Your code is unchanged — same object name, same API.</li>
       </ol>
-      <div class="callout note"><b>How the switch works</b>
-        <code>CmpUseC</code> is a compile-time equate. When it is <code>0</code> (the default) the C
-        prototypes, the <code>PRAGMA</code>, and the C dispatch are all <code>OMIT</code>ted — so a
-        pure-Clarion build needs <b>no <code>mc.c</code> at all</b> and is completely unaffected. When it is
-        <code>1</code>, Clarion compiles <code>mc.c</code> in and the methods call it.</div>
+      <div class="callout note"><b>How the switch works — it's a subclass</b>
+        <code>CompressClassC</code> is a thin subclass of <code>CompressClass</code> that
+        <code>PRAGMA('compile(mc.c)')</code>s the C engine and overrides the virtual <code>Wrap</code> /
+        <code>Unwrap</code> entry points to call it; the public API is inherited unchanged. The engine prompt
+        just declares the global object as <code>CompressClass</code> (pure Clarion) <b>or</b>
+        <code>CompressClassC</code> (C fast-path) — so the choice lives in the <b>template</b>, and a
+        pure-Clarion app pulls in <b>no <code>mc.c</code> and no subclass at all</b>.</div>
       <div class="callout warn"><b>Single-threaded</b>
         The C engine uses file-scope work tables, so it is single-threaded. If you compress from multiple
         threads concurrently, leave the C fast-path off and use the per-instance pure-Clarion engine.</div>
