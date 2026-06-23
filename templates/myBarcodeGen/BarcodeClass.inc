@@ -21,6 +21,7 @@ BC:ITF             EQUATE(3)
 BC:EAN13           EQUATE(4)
 BC:UPCA            EQUATE(5)
 BC:QR              EQUATE(6)                                  ! drawn by QRCodeClass, not this class
+BC:DataMatrix      EQUATE(7)                                  ! drawn by DataMatrixClass, not this class
 
 BarcodeClass CLASS,TYPE,MODULE('BarcodeClass.CLW'),LINK('BarcodeClass.CLW')
 Ready              BYTE                                       ! 1 once the lookup tables are built
