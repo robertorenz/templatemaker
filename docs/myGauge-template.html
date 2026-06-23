@@ -72,7 +72,8 @@
     <a href="#over">Overview</a>
     <div class="grp">Using it</div>
     <a href="#install" class="h2">Install &amp; register</a>
-    <a href="#quick" class="h2">Quick start</a>
+    <a href="#control" class="h2">Drag-on control template</a>
+    <a href="#quick" class="h2">Quick start (extension)</a>
     <a href="#shapes" class="h2">Gauge shapes</a>
     <a href="#prompts" class="h2">Prompt reference</a>
     <a href="#runtime" class="h2">Changing it at run time</a>
@@ -116,9 +117,13 @@
         <tr><td>Arc spans</td><td>45°, 90°, 180°, 270°, 360°, or any custom start + sweep</td></tr>
         <tr><td>Surfaces</td><td>Windows (live, animatable) and reports (per record)</td></tr>
       </table>
-      <div class="callout note"><b>Three extensions, one class</b>
-        Add <b>myGaugeGlobal</b> once (it <code>INCLUDE</code>s the class). Drop <b>myGauge</b> on a
-        window for each dial, or <b>myGaugeReport</b> on a report to draw a gauge per record.</div>
+      <div class="callout note"><b>Two ways to add a gauge</b>
+        <b>The easy way</b> &mdash; drop the <b>myGauge - Analog Gauge</b> <i>control template</i> straight
+        onto a window from the control toolbox; it creates the IMAGE <i>and</i> wires up the gauge in one
+        drag, and is self-contained (no global extension needed). <b>The manual way</b> &mdash; add the
+        <b>myGaugeGlobal</b> extension once, then the <b>myGauge</b> procedure extension on a window with
+        your own IMAGE control, or <b>myGaugeReport</b> on a report. Four registrations in all: a control
+        template plus three extensions, all over one <code>GaugeClass</code>.</div>
     </section>
 
     <section id="install">
@@ -129,8 +134,8 @@
           <code>\clarion12\libsrc\win</code>). They <b>must be stored in ANSI</b>, not UTF-8.</li>
         <li>Copy <code>templates/myGauge/myGauge.tpl</code> into your template folder.</li>
         <li>In the IDE: <b>Setup ▸ Template Registry ▸ Register</b>, pick <code>myGauge.tpl</code>.</li>
-        <li>The chain <b>myGauge</b> registers three extensions: the global include, the window drawer,
-          and the report drawer.</li>
+        <li>The chain <b>myGauge</b> registers one <b>control template</b> (the drag-on gauge) and three
+          extensions: the global include, the window drawer, and the report drawer.</li>
       </ol>
       <div class="callout tip"><b>Already on the redirection path</b>
         If you installed the template set into <code>\clarion12</code>, the class files are already in
@@ -138,8 +143,33 @@
         just register the chain.</div>
     </section>
 
+    <section id="control">
+      <h2>Drag-on control template <a href="#control" class="top">#</a></h2>
+      <p class="lead">The fastest way to add a gauge: open the window in the Window Designer, find
+        <b>myGauge - Analog Gauge</b> in the <b>control template</b> list, and drop it on the window.</p>
+      <ol>
+        <li>In the Window Designer, open the <b>control template</b> toolbox (the same place Browse boxes
+          and Calendar buttons live) and pick <b>myGauge - Analog Gauge (drag onto a window)</b>.</li>
+        <li>Click where you want it. An <code>IMAGE</code> control appears, already attached to a gauge
+          object &mdash; resize it like any control; the dial fills it.</li>
+        <li>Open the control's <b>Actions</b> (template properties) and set the <b>Range</b>, <b>style</b>,
+          value, colors, ticks, zones, and animation &mdash; the same options the extension offers.</li>
+        <li>Compile and run. Nothing else to wire.</li>
+      </ol>
+      <div class="callout tip"><b>Self-contained &mdash; no global extension needed</b>
+        The control template pulls in <code>GaugeClass</code> itself (an <code>INCLUDE</code> with
+        <code>ONCE</code>), declares its own object, and draws on open/resize. Drop several on one window;
+        each gets its own object and its own auto-named IMAGE. You can still add the
+        <b>myGaugeGlobal</b> extension too &mdash; the <code>ONCE</code> guard means the class is never
+        included twice.</div>
+      <p>Everything in the rest of this manual &mdash; shapes, zones, animation, the run-time API &mdash;
+        applies identically; the control template just creates the IMAGE for you instead of you placing one
+        and pointing the extension at it.</p>
+    </section>
+
     <section id="quick">
-      <h2>Quick start <a href="#quick" class="top">#</a></h2>
+      <h2>Quick start (extension) <a href="#quick" class="top">#</a></h2>
+      <p>Prefer to use your own IMAGE control, or wiring an existing window? Use the extension path:</p>
       <ol>
         <li>On the <b>global Extensions</b> for the application, add <b>myGauge - Global</b> (once).</li>
         <li>Put an <code>IMAGE</code> control on your window where the dial should appear (give it a

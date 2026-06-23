@@ -9,6 +9,9 @@
 #!                instance gets its own object). Optional smooth needle animation.
 #!  myGaugeReport (PROCEDURE)   - draws a gauge per record into an IMAGE control in
 #!                a REPORT band.
+#!  myGaugeControl(CONTROL)     - the EASY path: drag this onto a window and it drops
+#!                a ready-made IMAGE with the gauge already wired up. Fully self-
+#!                contained (it INCLUDEs the class itself) - no global extension needed.
 #!
 #!  REQUIRED FILES: copy GaugeClass.inc AND GaugeClass.clw (shipped beside this
 #!  .tpl) to a folder on the Clarion redirection path (the app folder or
@@ -244,6 +247,177 @@ Refresh:%myGaugeObject ROUTINE
   SETTARGET(%Report)                                         ! the report band is the draw target
   %myGaugeRptObject.Paint(%myGaugeRptImage)
   SETTARGET()
+#ENDAT
+#!#############################################################################
+#!  CONTROL TEMPLATE - myGaugeControl  -  drag a ready-made gauge onto a window
+#!#############################################################################
+#!  Drops an IMAGE control AND wires the gauge to it in one drag. Self-contained:
+#!  it emits INCLUDE('GaugeClass.INC'),ONCE at %CustomGlobalDeclarations - the
+#!  per-MODULE compile-global embed (corpus: ABDROPS.TPW:65 - a control template
+#!  writing a global declaration). The myGaugeGlobal extension uses the GLOBAL
+#!  %AfterGlobalIncludes instead; the two scopes differ but ,ONCE keys on the
+#!  filename across the whole compile, so the class is pulled in exactly once even
+#!  with both present. So the user does NOT need the myGaugeGlobal extension here.
+#!  WINDOW + MULTI = many per window.
+#!  The control's own field equate is captured in %myGaugeCtlImage via the proven
+#!  #FOR(%Control),WHERE(%ControlInstance=%ActiveTemplateInstance) idiom
+#!  (corpus: CONTROL.TPW:107, CloseButton) - so it tracks AppGen's auto-uniqued feq.
+#!#############################################################################
+#CONTROL(myGaugeControl,'myGauge - Analog Gauge (drag onto a window)'),WINDOW,MULTI,DESCRIPTION('Analog gauge ' & %myGaugeCtlObject),HLP('~myGauge.htm')
+#! the gauge canvas - one IMAGE; its feq auto-uniques on multi-drop and is captured below
+  CONTROLS
+    IMAGE,AT(,,120,120),USE(?Gauge)
+  END
+#SHEET
+  #TAB('&General')
+    #BOXED('Object')
+      #PROMPT('&Disable this gauge',CHECK),%myGaugeCtlDisable,DEFAULT(0),AT(10)
+      #PROMPT('&Object name:',@s64),%myGaugeCtlObject,REQ,DEFAULT('Gauge' & %ActiveTemplateInstance)
+    #ENDBOXED
+    #BOXED('Shape')
+      #PROMPT('Gauge &style:',DROP('180 - Semicircle[1]|270 - Speedometer[2]|360 - Full dial[3]|90 - Quarter[4]|45 - Narrow arc[5]|Custom angles[0]')),%myGaugeCtlStyle,DEFAULT('2')
+      #ENABLE(%myGaugeCtlStyle='0')
+        #PROMPT('Custom start angle (deg, 0=3 o''clock, CCW+):',@n7.1),%myGaugeCtlStart,DEFAULT(225)
+        #PROMPT('Custom sweep angle (deg, negative=clockwise):',@n7.1),%myGaugeCtlSweep,DEFAULT(-270)
+      #ENDENABLE
+    #ENDBOXED
+    #BOXED('Range &&  value')
+      #PROMPT('&Minimum:',@n13.2),%myGaugeCtlMin,DEFAULT(0)
+      #PROMPT('Ma&ximum:',@n13.2),%myGaugeCtlMax,DEFAULT(100),REQ
+      #PROMPT('Value is a &variable / field (not a literal)',CHECK),%myGaugeCtlValueIsVar,DEFAULT(0),AT(10)
+      #ENABLE(%myGaugeCtlValueIsVar=0)
+        #PROMPT('Initial &value:',@n13.2),%myGaugeCtlInitial,DEFAULT(0)
+      #ENDENABLE
+      #ENABLE(%myGaugeCtlValueIsVar=1)
+        #PROMPT('Value &field / expression:',@s255),%myGaugeCtlValueField,DEFAULT('')
+      #ENDENABLE
+    #ENDBOXED
+  #ENDTAB
+  #TAB('&Ticks &&  text')
+    #BOXED('Ticks')
+      #PROMPT('&Major ticks (divisions):',SPIN(@n3,0,50,1)),%myGaugeCtlMajor,DEFAULT(10)
+      #PROMPT('M&inor ticks (between majors):',SPIN(@n3,0,20,1)),%myGaugeCtlMinor,DEFAULT(0)
+      #PROMPT('Show tick &labels',CHECK),%myGaugeCtlShowLabels,DEFAULT(1),AT(10)
+      #PROMPT('Label &decimals:',SPIN(@n2,0,4,1)),%myGaugeCtlLabelDP,DEFAULT(0)
+    #ENDBOXED
+    #BOXED('Readout')
+      #PROMPT('&Title text:',@s64),%myGaugeCtlTitle,DEFAULT('')
+      #PROMPT('&Units text:',@s32),%myGaugeCtlUnits,DEFAULT('')
+      #PROMPT('Show numeric &value',CHECK),%myGaugeCtlShowValue,DEFAULT(1),AT(10)
+      #PROMPT('Value de&cimals:',SPIN(@n2,0,4,1)),%myGaugeCtlValueDP,DEFAULT(0)
+    #ENDBOXED
+  #ENDTAB
+  #TAB('&Look')
+    #BOXED('Needle')
+      #PROMPT('Needle &style:',DROP('Triangle[1]|Line[0]')),%myGaugeCtlNeedleStyle,DEFAULT('1')
+      #PROMPT('Needle &width:',SPIN(@n2,1,20,1)),%myGaugeCtlNeedleWidth,DEFAULT(5)
+      #PROMPT('Needle &color:',COLOR),%myGaugeCtlNeedleColor,DEFAULT(002B2B2BH)
+    #ENDBOXED
+    #BOXED('Face &&  colors')
+      #PROMPT('Show &face circle',CHECK),%myGaugeCtlShowFace,DEFAULT(0),AT(10)
+      #PROMPT('Show &rim',CHECK),%myGaugeCtlShowRim,DEFAULT(0),AT(10)
+      #PROMPT('&Face color:',COLOR),%myGaugeCtlFaceColor,DEFAULT(00FFFFFFH)
+      #PROMPT('&Track (empty) color:',COLOR),%myGaugeCtlTrackColor,DEFAULT(00DCDCDCH)
+      #PROMPT('T&ick color:',COLOR),%myGaugeCtlTickColor,DEFAULT(00808080H)
+      #PROMPT('Te&xt color:',COLOR),%myGaugeCtlTextColor,DEFAULT(002B2B2BH)
+    #ENDBOXED
+    #BOXED('Animation')
+      #PROMPT('&Animate the needle (uses the window timer)',CHECK),%myGaugeCtlAnimate,DEFAULT(0),AT(10)
+      #PROMPT('Timer &interval (1/100 sec):',SPIN(@n4,1,500,1)),%myGaugeCtlAnimSpeed,DEFAULT(4)
+      #PROMPT('&Step per tick (%% of range):',@n5.1),%myGaugeCtlStepPct,DEFAULT(6)
+    #ENDBOXED
+  #ENDTAB
+  #TAB('&Zones')
+    #DISPLAY('Colored bands over value ranges (e.g. green 0-60, amber 60-85, red 85-100).')
+    #BUTTON('Color Zones'),MULTI(%myGaugeCtlZone,%myGaugeCtlZoneFrom & ' - ' & %myGaugeCtlZoneTo),INLINE
+      #PROMPT('&From value:',@n13.2),%myGaugeCtlZoneFrom,DEFAULT(0)
+      #PROMPT('&To value:',@n13.2),%myGaugeCtlZoneTo,DEFAULT(0)
+      #PROMPT('&Color:',COLOR),%myGaugeCtlZoneColor,DEFAULT(00008000H)
+    #ENDBUTTON
+  #ENDTAB
+#ENDSHEET
+#!-----------------------------------------------------------------------------
+#! Capture THIS instance's IMAGE field equate (auto-uniqued by AppGen on drop)
+#ATSTART
+  #DECLARE(%myGaugeCtlImage)
+  #FOR(%Control),WHERE(%ControlInstance=%ActiveTemplateInstance)
+    #SET(%myGaugeCtlImage,%Control)
+  #ENDFOR
+#ENDAT
+#!
+#! Self-contained: pull in the class globally (ONCE = safe if the global extension
+#! or another gauge control is also present).
+#AT(%CustomGlobalDeclarations),WHERE(%myGaugeCtlDisable=0)
+INCLUDE('GaugeClass.INC'),ONCE
+#ENDAT
+#!
+#AT(%DataSection),WHERE(%myGaugeCtlDisable=0)
+%myGaugeCtlObject       GaugeClass                              ! one gauge object for this control
+#ENDAT
+#!
+#AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%myGaugeCtlDisable=0)
+  CASE EVENT()
+  OF EVENT:OpenWindow
+    %myGaugeCtlObject.SetRange(%myGaugeCtlMin, %myGaugeCtlMax)
+#IF(%myGaugeCtlStyle = '0')
+    %myGaugeCtlObject.SetSpan(%myGaugeCtlStart, %myGaugeCtlSweep)
+#ELSE
+    %myGaugeCtlObject.Preset(%myGaugeCtlStyle)
+#ENDIF
+    %myGaugeCtlObject.MajorTicks = %myGaugeCtlMajor
+    %myGaugeCtlObject.MinorTicks = %myGaugeCtlMinor
+    %myGaugeCtlObject.ShowLabels = %myGaugeCtlShowLabels
+    %myGaugeCtlObject.LabelDP = %myGaugeCtlLabelDP
+    %myGaugeCtlObject.ShowValue = %myGaugeCtlShowValue
+    %myGaugeCtlObject.ValueDP = %myGaugeCtlValueDP
+    %myGaugeCtlObject.ShowFace = %myGaugeCtlShowFace
+    %myGaugeCtlObject.ShowRim = %myGaugeCtlShowRim
+    %myGaugeCtlObject.NeedleStyle = %myGaugeCtlNeedleStyle
+    %myGaugeCtlObject.NeedleWidth = %myGaugeCtlNeedleWidth
+    %myGaugeCtlObject.NeedleColor = %myGaugeCtlNeedleColor
+    %myGaugeCtlObject.FaceColor = %myGaugeCtlFaceColor
+    %myGaugeCtlObject.TrackColor = %myGaugeCtlTrackColor
+    %myGaugeCtlObject.TickColor = %myGaugeCtlTickColor
+    %myGaugeCtlObject.TextColor = %myGaugeCtlTextColor
+    %myGaugeCtlObject.AnimStepPct = %myGaugeCtlStepPct
+    %myGaugeCtlObject.Title = '%myGaugeCtlTitle'
+    %myGaugeCtlObject.Units = '%myGaugeCtlUnits'
+#FOR(%myGaugeCtlZone)
+    %myGaugeCtlObject.AddZone(%myGaugeCtlZoneFrom, %myGaugeCtlZoneTo, %myGaugeCtlZoneColor)
+#ENDFOR
+#IF(%myGaugeCtlValueIsVar)
+    %myGaugeCtlObject.SetValue(%myGaugeCtlValueField)
+#ELSE
+    %myGaugeCtlObject.SetValue(%myGaugeCtlInitial)
+#ENDIF
+    %myGaugeCtlObject.Draw(%myGaugeCtlImage)
+#IF(%myGaugeCtlAnimate)
+    0{PROP:Timer} = %myGaugeCtlAnimSpeed
+#ENDIF
+  OF EVENT:Sized
+    %myGaugeCtlObject.Draw(%myGaugeCtlImage)
+#IF(%myGaugeCtlAnimate)
+  OF EVENT:Timer
+#IF(%myGaugeCtlValueIsVar)
+    %myGaugeCtlObject.AnimateTo(%myGaugeCtlValueField)
+#ENDIF
+    %myGaugeCtlObject.AnimStep()
+#ENDIF
+  END
+#ENDAT
+#!
+#! Per-control refresh ROUTINE: re-read the value field (if any) and redraw.
+#! Call it (e.g. DO Refresh:Gauge1) after the value changes when NOT animating.
+#AT(%ProcedureRoutines),WHERE(%myGaugeCtlDisable=0)
+Refresh:%myGaugeCtlObject ROUTINE
+#IF(%myGaugeCtlValueIsVar)
+#IF(%myGaugeCtlAnimate)
+  %myGaugeCtlObject.AnimateTo(%myGaugeCtlValueField)           ! eased; the timer finishes the sweep
+#ELSE
+  %myGaugeCtlObject.SetValue(%myGaugeCtlValueField)            ! instant
+#ENDIF
+#ENDIF
+  %myGaugeCtlObject.Draw(%myGaugeCtlImage)
 #ENDAT
 #!-----------------------------------------------------------------------------
 #! End of myGauge template set

@@ -241,12 +241,16 @@ A configurable **analog gauge** drawn entirely with native Clarion graphics (`AR
 `POLYGON`, `SHOW`) into an `IMAGE` control — the same offline, no-dependency approach as myPie and myQRDraw.
 A single self-contained ANSI class, **`GaugeClass`**, holds the configuration (range, span, colors, ticks,
 zones) and renders itself; each gauge on a window is its **own local object**, so multiple dials per window
-or report just work. Pick an **arc style** — 45°, 90°, 180°, 270° (speedometer), 360°, or a **custom** start
-+ signed sweep — set the **min/max range**, then drive the needle from a **literal** or any **variable/field**.
+or report just work. **Easiest path: a control template** — drag **myGauge - Analog Gauge** straight onto a
+window and it drops the IMAGE *and* wires the gauge in one go, fully self-contained (it `INCLUDE`s the class
+itself, so no global extension is needed). Pick an **arc style** — 45°, 90°, 180°, 270° (speedometer), 360°,
+or a **custom** start + signed sweep — set the **min/max range**, then drive the needle from a **literal** or
+any **variable/field**.
 Configurable everything: major/minor **ticks** with numeric labels, a digital **value readout**, **title/units**
 text, a **triangle or line needle**, face/rim/track/tick/text colors, up to 16 colored **zones** (e.g. green
 0–60 / amber 60–85 / red 85–100), and **smooth needle animation** via the window timer (`AnimateTo` +
-`AnimStep`). Three extensions: **myGaugeGlobal** (include the class once), **myGauge** for **windows** (redraw
+`AnimStep`). Four registrations: the **myGaugeControl** control template (drag-on, self-contained) plus three
+extensions — **myGaugeGlobal** (include the class once), **myGauge** for **windows** (redraw
 on open/resize, optional animation, a generated `Refresh:<Object>` routine), and **myGaugeReport** for
 **reports** (a gauge per record, drawn at `%BeforePrint` under `SETTARGET(Report)`). Copy `GaugeClass.inc` +
 `GaugeClass.clw` (ANSI) to the redirection path. Full programmer's documentation — shapes, prompts, the class
@@ -366,6 +370,16 @@ field use: the internal `Band` helper was renamed **`ArcBand`** (`BAND` is the C
 word), and the window event handler moved to **`PRIORITY(2000)`** so its self-contained `CASE EVENT()` sits
 above ABC's own `TakeWindowEvent` scaffolding (2500) instead of duplicating it — a lesson now baked into the
 `clarion-template` skill. Full programmer's manual in [`docs/myGauge-template.html`](docs/myGauge-template.html).
+
+**myGauge gains a drag-on control template.** Beyond the three extensions, myGauge now ships a **control
+template** — **myGauge - Analog Gauge** — so you can drag a ready-made gauge straight onto a window from the
+Window Designer's control toolbox: it drops the `IMAGE` *and* wires the gauge in one go. It's **fully
+self-contained** — it emits `INCLUDE('GaugeClass.INC'),ONCE` at `%CustomGlobalDeclarations` (the per-module
+compile-global embed, corpus `ABDROPS.TPW:65`), declares its own object, and draws on open/resize — so no
+separate global extension is required, and `ONCE` keeps the class single-included even if you add one anyway.
+The control's own field equate is captured with the proven `#FOR(%Control),WHERE(%ControlInstance=%ActiveTemplateInstance)`
+idiom (corpus `CONTROL.TPW` *CloseButton*), so it tracks AppGen's auto-uniqued feq when several are dropped on
+one window.
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
