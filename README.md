@@ -306,6 +306,33 @@ three fixtures**, including a deliberately tampered case that correctly reports 
 `PdfSignClass.inc` + `PdfSignClass.clw` (**ANSI, CRLF**) to the redirection path. Full programmer's
 documentation is in [`docs/myPdfSign-template.html`](docs/myPdfSign-template.html).
 
+Simplest possible use — declare the object, read a PDF, show the result (the `myPdfSign` global extension
+declares `PdfSig` for you; in a hand-coded program just `INCLUDE('PdfSignClass.INC'),ONCE` and declare it):
+
+```clarion
+PdfSig  PdfSignClass                    ! one object is all you declare
+
+  CODE
+  IF PdfSig.ReadFile('contract.pdf')    ! open + parse the PDF
+    IF PdfSig.Signed                    ! did it carry a signature?
+      MESSAGE('Signed by : ' & CLIP(PdfSig.SubjectCN)    & |
+              '|e-mail    : ' & CLIP(PdfSig.SubjectEmail) & |
+              '|Issued by : ' & CLIP(PdfSig.IssuerCN)     & |
+              '|Signed at : ' & CLIP(PdfSig.SignTime)     & |
+              '|Intact?   : ' & CHOOSE(PdfSig.CoversWholeFile=1,'YES','NO — bytes added after signing'),|
+              'Signature')
+    ELSE
+      MESSAGE('That PDF is not digitally signed.','Signature')
+    END
+  ELSE
+    MESSAGE('Could not read the file: ' & CLIP(PdfSig.ErrText),'Error')
+  END
+```
+
+In an AppGen app, add the **myPdfSign - Global signed-PDF reader** extension once, then drop the
+`IF PdfSig.ReadFile(...) ... END` body into any embed (e.g. a button's **Accepted** embed). Parsing a PDF
+already in memory? Use `PdfSig.Read(buffer, length)` instead of `ReadFile`.
+
 ## Install
 
 Copy the two folders into your Claude Code config (`~/.claude` on macOS/Linux,
