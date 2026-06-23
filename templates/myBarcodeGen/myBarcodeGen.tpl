@@ -47,6 +47,7 @@
 INCLUDE('BarcodeClass.INC'),ONCE
 INCLUDE('QRCodeClass.INC'),ONCE
 INCLUDE('DataMatrixClass.INC'),ONCE
+INCLUDE('Pdf417Class.INC'),ONCE
 #ENDAT
 #!
 #AT(%GlobalData),WHERE(%myBCDisable=0)
@@ -54,10 +55,12 @@ INCLUDE('DataMatrixClass.INC'),ONCE
 BarcodeObj    BarcodeClass
 QRCodeObj     QRCodeClass
 DataMatrixObj DataMatrixClass
+Pdf417Obj     Pdf417Class
   #ELSE
 BarcodeObj    BarcodeClass,EXTERNAL,DLL(dll_mode)
 QRCodeObj     QRCodeClass,EXTERNAL,DLL(dll_mode)
 DataMatrixObj DataMatrixClass,EXTERNAL,DLL(dll_mode)
+Pdf417Obj     Pdf417Class,EXTERNAL,DLL(dll_mode)
   #ENDIF
 #ENDAT
 #!
@@ -66,6 +69,7 @@ DataMatrixObj DataMatrixClass,EXTERNAL,DLL(dll_mode)
 $BarcodeObj    @?
 $QRCodeObj     @?
 $DataMatrixObj @?
+$Pdf417Obj     @?
   #ENDIF
 #ENDAT
 #!#############################################################################
@@ -77,7 +81,7 @@ $DataMatrixObj @?
     #BOXED('Options')
       #PROMPT('&Disable this template',CHECK),%myBCDisableThis,DEFAULT(0),AT(10)
       #PROMPT('&Image control to draw into:',CONTROL),%myBCImage,REQ
-      #PROMPT('&Barcode type:',DROP('Code 39[1]|Code 128[2]|Interleaved 2 of 5[3]|EAN-13[4]|UPC-A[5]|QR Code[6]|Data Matrix[7]')),%myBCType,DEFAULT('2')
+      #PROMPT('&Barcode type:',DROP('Code 39[1]|Code 128[2]|Interleaved 2 of 5[3]|EAN-13[4]|UPC-A[5]|QR Code[6]|Data Matrix[7]|PDF417[8]')),%myBCType,DEFAULT('2')
       #PROMPT('&Value:',@s255),%myBCValue,DEFAULT('1234567890')
       #PROMPT('Value is a &variable / expression (not literal text)',CHECK),%myBCValueIsVar,DEFAULT(0),AT(10)
       #PROMPT('Show &human-readable text (1D only):',CHECK),%myBCShowText,DEFAULT(1),AT(10)
@@ -135,6 +139,8 @@ myBarcodeGenRepaint ROUTINE
     myBC:Value = 'HELLO WORLD'
   #OF('7')
     myBC:Value = 'DataMatrix'
+  #OF('8')
+    myBC:Value = 'PDF417 sample'
   #ELSE
     myBC:Value = 'Code128-OK'
   #ENDCASE
@@ -149,6 +155,8 @@ myBarcodeGenRepaint ROUTINE
     QRCodeObj.Draw(%myBCImage, myBC:Value, %myBCEcc, %myBCDark, %myBCLight, %myBCQuiet)
 #ELSIF(%myBCType = '7')
     DataMatrixObj.Draw(%myBCImage, myBC:Value, %myBCDark, %myBCLight, %myBCQuiet)
+#ELSIF(%myBCType = '8')
+    Pdf417Obj.Draw(%myBCImage, myBC:Value, %myBCDark, %myBCLight, %myBCQuiet)
 #ELSE
     BarcodeObj.Draw(%myBCImage, %myBCType, myBC:Value, %myBCDark, %myBCLight, %myBCQuiet, %myBCShowText)
 #ENDIF
@@ -164,7 +172,7 @@ myBarcodeGenRepaint ROUTINE
       #PROMPT('&Disable this template',CHECK),%myBCRptDisable,DEFAULT(0),AT(10)
       #! CONTROL lists window controls; a report needs FROM(%ReportControl,...) (corpus: blobsrv.tpw:20)
       #PROMPT('&Image control (in a report band):',FROM(%ReportControl,%ReportControlType = 'IMAGE')),%myBCRptImage,REQ,DEFAULT('')
-      #PROMPT('&Barcode type:',DROP('Code 39[1]|Code 128[2]|Interleaved 2 of 5[3]|EAN-13[4]|UPC-A[5]|QR Code[6]|Data Matrix[7]')),%myBCRptType,DEFAULT('2')
+      #PROMPT('&Barcode type:',DROP('Code 39[1]|Code 128[2]|Interleaved 2 of 5[3]|EAN-13[4]|UPC-A[5]|QR Code[6]|Data Matrix[7]|PDF417[8]')),%myBCRptType,DEFAULT('2')
       #PROMPT('&Value:',@s255),%myBCRptValue,DEFAULT('1234567890')
       #PROMPT('Value is a &variable / expression (not literal text)',CHECK),%myBCRptValueIsVar,DEFAULT(0),AT(10)
       #PROMPT('Show &human-readable text (1D only):',CHECK),%myBCRptShowText,DEFAULT(1),AT(10)
@@ -194,6 +202,10 @@ myBCRpt:Value        CSTRING(512)                            ! the value to enco
 #ELSIF(%myBCRptType = '7')
   IF DataMatrixObj.Build(myBCRpt:Value)
     DataMatrixObj.Paint(%myBCRptImage, %myBCRptDark, %myBCRptLight, %myBCRptQuiet)
+  END
+#ELSIF(%myBCRptType = '8')
+  IF Pdf417Obj.Build(myBCRpt:Value)
+    Pdf417Obj.Paint(%myBCRptImage, %myBCRptDark, %myBCRptLight, %myBCRptQuiet)
   END
 #ELSE
   IF BarcodeObj.Build(%myBCRptType, myBCRpt:Value)
