@@ -74,12 +74,12 @@
     <div class="grp">Internals</div>
     <a href="#how" class="h2">How the image is made</a>
     <a href="#embeds" class="h2">Embed points &amp; code</a>
-    <a href="#helpers" class="h2">Helper API</a>
     <a href="#facts" class="h2">Runtime facts</a>
     <div class="grp">Reference</div>
     <a href="#privacy" class="h2">Privacy &amp; internet</a>
     <a href="#customise" class="h2">Customising / offline</a>
     <a href="#multidll" class="h2">Multi-DLL</a>
+    <a href="#helpers" class="h2">Helper reference</a>
     <a href="#trouble" class="h2">Troubleshooting</a>
     <a href="#verify" class="h2">Verify checklist</a>
   </nav>
@@ -238,26 +238,6 @@
        <code>OF EVENT:OpenWindow / DO myQRRefresh</code> arm.</p>
   </section>
 
-  <section id="helpers">
-    <h2>Helper API <a class="top" href="#over">↑ top</a></h2>
-    <p>Both helpers are generated into the program module.</p>
-
-    <h3>myQRLoad</h3>
-    <pre>myQRLoad(<span class="k">SIGNED</span> pImageFeq, <span class="k">STRING</span> pData, <span class="k">SIGNED</span> pSize, <span class="k">STRING</span> pEccLetter, <span class="k">SIGNED</span> pMargin),<span class="k">BYTE</span></pre>
-    <p>Builds the URL, downloads the PNG with curl (hidden, synchronous), and on success loads it into the
-       image. Returns <code>1</code> if the temp PNG exists and is non-empty afterwards, else <code>0</code>
-       (curl missing / offline / service down). Call it directly if you want to drive a QR yourself.</p>
-
-    <h3>myQRUrlEncode</h3>
-    <pre>myQRUrlEncode(<span class="k">STRING</span> pText),<span class="k">STRING</span></pre>
-    <p>Percent-encodes the value for the URL query (RFC 3986 unreserved chars pass through; space →
-       <code>%20</code>; everything else → <code>%XX</code>).</p>
-
-    <h3>myQRRefresh (routine)</h3>
-    <p>A local <code>ROUTINE</code> in each procedure: reads the current value, calls <code>myQRLoad</code>,
-       and records what was rendered (for change detection). <code>DO myQRRefresh</code> to force a redraw.</p>
-  </section>
-
   <section id="facts">
     <h2>Runtime facts it relies on <a class="top" href="#over">↑ top</a></h2>
     <table>
@@ -305,6 +285,98 @@
        <em>myPie</em>/<em>myFontChanger</em>. This targets <b>single-EXE</b> apps. For a multi-DLL app, host
        the extension in the program (EXE) app, or move the helper prototypes/bodies to the shared/root DLL and
        export them so every DLL that uses myQR can call them.</p>
+  </section>
+
+  <section id="helpers">
+    <h2>Helper reference <a class="top" href="#over">↑ top</a></h2>
+    <p class="lead">myQR is <b>class-free</b>: there is no external <code>.inc</code>/<code>.clw</code> to register.
+       Instead the template drops a small set of helper <b>procedures</b> straight into the program module,
+       prototyped in the global <code>MAP</code> and bodied in <code>%ProgramProcedures</code>. This chapter is
+       the full anatomy &mdash; where each helper lives, its real prototype, every parameter, the return value,
+       and what it does.</p>
+
+    <h3>Where they live</h3>
+    <p>The two function-style helpers are prototyped short-form in the global map and defined in the program
+       (EXE) module; a third helper is a per-procedure <code>ROUTINE</code>:</p>
+    <pre><span class="c">! global MAP, emitted at %GlobalMap</span>
+myQRUrlEncode(<span class="k">STRING</span> pText),<span class="k">STRING</span>
+myQRLoad(<span class="k">SIGNED</span> pImageFeq, <span class="k">STRING</span> pData, <span class="k">SIGNED</span> pSize, <span class="k">STRING</span> pEccLetter, <span class="k">SIGNED</span> pMargin),<span class="k">BYTE</span>
+  <span class="k">MODULE</span>(<span class="s">'kernel32'</span>)                          <span class="c">! Win32 launch APIs, GLOBAL map only</span>
+myQR_CreateProcess(...),<span class="k">LONG</span>,<span class="k">PASCAL</span>,<span class="k">PROC</span>,<span class="k">NAME</span>(<span class="s">'CreateProcessA'</span>)
+myQR_WaitObject(<span class="k">LONG</span>,<span class="k">ULONG</span>),<span class="k">LONG</span>,<span class="k">PASCAL</span>,<span class="k">NAME</span>(<span class="s">'WaitForSingleObject'</span>)
+myQR_CloseHandle(<span class="k">LONG</span>),<span class="k">LONG</span>,<span class="k">PASCAL</span>,<span class="k">PROC</span>,<span class="k">NAME</span>(<span class="s">'CloseHandle'</span>)
+  <span class="k">END</span></pre>
+    <ul>
+      <li>The bodies of <code>myQRUrlEncode</code> and <code>myQRLoad</code> are written long-form at column 1
+        into <code>%ProgramProcedures</code> (the program/EXE module's <code>DATA</code> region), an EXE-only
+        embed &mdash; so they compile into the program, not a class object.</li>
+      <li>The <code>kernel32</code> APIs are declared with <b>unique Clarion labels</b> bound to the real exports
+        by <code>NAME()</code> (<code>myQR_CreateProcess</code> &rarr; <code>CreateProcessA</code>, etc.), so they
+        never clash with any <code>CloseHandle</code>/<code>WaitForSingleObject</code> the ABC runtime already
+        declares. They <b>must</b> live in the global map &mdash; a local <code>MAP</code> rejects the
+        <code>MODULE('dll')</code> external declaration.</li>
+      <li>Every emission is guarded by <code>WHERE(%myQRDisable=0 AND %myQRImage)</code>, so a disabled template
+        contributes nothing.</li>
+    </ul>
+
+    <h3>Helper procedures</h3>
+    <p>These are the procedures you can call from your own embed code. <code>pImageFeq</code> is a control
+       field-equate (<code>SIGNED</code>); the QR value and the 1-letter ECC are <code>STRING</code>s; size and
+       margin are <code>SIGNED</code> pixel/module counts.</p>
+    <table>
+      <tr><th>Prototype</th><th>Parameters</th><th>Returns / effect</th></tr>
+      <tr>
+        <td><code>myQRUrlEncode(STRING pText), STRING</code></td>
+        <td><code>pText</code> &mdash; the raw value to put in the URL query.</td>
+        <td>Returns <code>pText</code> <b>percent-encoded</b> for a URL query: RFC 3986 unreserved characters
+          (<code>A&ndash;Z a&ndash;z 0&ndash;9 - _ . ~</code>) pass through, a space becomes <code>%20</code>,
+          and every other byte becomes <code>%XX</code>. Called for you by <code>myQRLoad</code>; exposed so you
+          can reuse the same encoding.</td>
+      </tr>
+      <tr>
+        <td><code>myQRLoad(SIGNED pImageFeq, STRING pData, SIGNED pSize, STRING pEccLetter, SIGNED pMargin), BYTE</code></td>
+        <td><code>pImageFeq</code> &mdash; the IMAGE control to load into. <code>pData</code> &mdash; the value to
+          encode. <code>pSize</code> &mdash; the QR edge length in pixels (request is <code>SxS</code>).
+          <code>pEccLetter</code> &mdash; the error-correction level, one letter (<code>L</code>/<code>M</code>/<code>Q</code>/<code>H</code>).
+          <code>pMargin</code> &mdash; the quiet-zone width in modules.</td>
+        <td><b>The download + load entry point.</b> Builds the <code>api.qrserver.com</code> request URL
+          (URL-encoding <code>pData</code> via <code>myQRUrlEncode</code>), clears the image's hold on its
+          per-FEQ temp PNG (<code>pImageFeq{PROP:Text}=''</code>), then downloads the PNG with
+          <code>curl</code> launched <b>hidden and synchronously</b> (<code>myQR_CreateProcess</code> with
+          <code>CREATE_NO_WINDOW</code> + <code>SW_HIDE</code>, then <code>myQR_WaitObject</code> blocks until it
+          exits). It trusts the <i>file</i>, not the exit code: after <code>DIRECTORY()</code>/<code>EXISTS()</code>
+          confirm the temp PNG is present and <code>&gt; 0</code> bytes, it loads it with
+          <code>pImageFeq{PROP:Text}=loc:File</code> and returns <b>1</b>. Returns <b>0</b> when the PNG is
+          missing or empty (curl absent, offline, or the service is down).</td>
+      </tr>
+    </table>
+
+    <h3>The refresh routine</h3>
+    <p><code>myQRRefresh</code> is <b>not</b> a procedure &mdash; it is a local <code>ROUTINE</code> generated
+       into each host procedure (at <code>%ProcedureRoutines</code>), so you invoke it with <code>DO</code>,
+       not as a call:</p>
+    <table>
+      <tr><th>Invocation</th><th>What it does</th></tr>
+      <tr>
+        <td><code>DO myQRRefresh</code></td>
+        <td>Sets <code>myQR:Ecc</code> to the ECC letter resolved from the prompt at generation time, reads the
+          <b>current value</b> into <code>myQR:Cur</code> (a literal is auto-quoted; a variable/expression is
+          emitted verbatim and read live), calls <code>myQRLoad(&hellip;)</code> to download and load, then
+          records the value in <code>myQR:Last</code> for change detection. It runs automatically on window open
+          and on a detected value change; <code>DO myQRRefresh</code> forces a redraw any time from your own
+          embed.</td>
+      </tr>
+    </table>
+    <div class="callout note"><b>Procedure vs routine</b>
+      Call <code>myQRUrlEncode</code> and <code>myQRLoad</code> like functions &mdash; they take parameters and
+      return a value. <code>myQRRefresh</code> changes the procedure's own state (<code>myQR:Cur</code>/<code>myQR:Last</code>)
+      and lives in that procedure's data scope, so it is invoked with <code>DO myQRRefresh</code> and takes no
+      arguments &mdash; it always renders whatever the configured value currently is.</div>
+    <div class="callout warn"><b>It reaches the internet</b>
+      <code>myQRLoad</code> shells out to <code>curl</code> and sends the QR value over <b>HTTPS to the
+      third-party service <code>api.qrserver.com</code></b>. The value leaves the machine on every render. Do not
+      pass secrets; for a private or offline deployment, repoint the URL in <code>myQRLoad</code> at your own QR
+      endpoint or a local QR library (see <a href="#customise">Customising / offline</a>).</div>
   </section>
 
   <section id="trouble">

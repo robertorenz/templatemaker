@@ -83,6 +83,7 @@
     <a href="#capacity" class="h2">Capacity &amp; input rules</a>
     <div class="grp">How it works</div>
     <a href="#arch" class="h2">Architecture</a>
+    <a href="#classref" class="h2">Class reference</a>
     <a href="#classes" class="h2">The classes &amp; API</a>
     <a href="#drawing" class="h2">Drawing model</a>
     <a href="#multidll" class="h2">Multi-DLL</a>
@@ -321,6 +322,223 @@ AztecObj.<span class="k">Draw</span>(?Image, loc:Ticket, COLOR:Black, COLOR:Whit
       <p>The global extension wires everything at <code>%AfterGlobalIncludes</code> (the INCLUDEs) and
         <code>%GlobalData</code> (the instances). Each class builds a module pattern (1D = a bar array;
         2D = a module matrix) then paints it with <code>BOX</code>es.</p>
+    </section>
+
+    <section id="classref">
+      <h2>Class reference <a href="#classref" class="top">#</a></h2>
+      <p class="lead">myBarcodeGen ships <b>five</b> self-contained encoder classes &mdash; one per symbology
+        family. They share a single design: each is a <code>TYPE</code> class in its own module, owns all its
+        working state as members, and exposes the same three public methods (<code>Draw</code> for windows,
+        <code>Build</code>+<code>Paint</code> for reports). This chapter is the full anatomy: how they're
+        declared, the equates they ship, when they set up, and every method with its parameters and result.</p>
+
+      <h3>Declaration</h3>
+      <p>All five are prototyped in their <code>.inc</code> and implemented in their matching <code>.clw</code>,
+        with the identical self-contained pattern (shown here for <code>BarcodeClass</code>):</p>
+      <pre>BarcodeClass <span class="k">CLASS</span>,<span class="k">TYPE</span>,<span class="k">MODULE</span>(<span class="s">'BarcodeClass.CLW'</span>),<span class="k">LINK</span>(<span class="s">'BarcodeClass.CLW'</span>)</pre>
+      <ul>
+        <li><code>TYPE</code> &mdash; each is a <i>type</i>, so the template declares one named global instance per
+          class (<code>BarcodeObj&nbsp;&nbsp;BarcodeClass</code>, <code>QRCodeObj&nbsp;&nbsp;QRCodeClass</code>, &hellip;)
+          at <code>%GlobalData</code>, and <code>INCLUDE(&hellip;),ONCE</code> per class at <code>%AfterGlobalIncludes</code>.</li>
+        <li><code>MODULE</code>/<code>LINK</code> &mdash; the implementation compiles into its own object and is
+          linked in automatically; nothing lands in the program's global procedure area.</li>
+        <li>Each <code>.clw</code> opens with a bare <code>MEMBER</code> and a module-level <code>MAP</code> so the
+          graphics built-ins (<code>BOX</code>, <code>SETTARGET</code>, <code>BLANK</code>, <code>GETPOSITION</code>&hellip;)
+          resolve. The classes carry <b>no external state</b> &mdash; no globals, no files &mdash; so they are safe
+          in multi-DLL apps and on background threads.</li>
+        <li>Every class self-builds its lookup tables on first use (a <code>Ready</code> flag gates
+          <code>Init</code>), and exposes the same trio: a one-call <code>Draw</code>, plus a
+          <code>Build</code>/<code>Paint</code> split for reports.</li>
+      </ul>
+      <div class="callout note"><b>QRCodeClass is shared with myQRDraw.</b> myBarcodeGen reuses the
+        <code>QRCodeClass.inc</code>/<code>.clw</code> from the myQRDraw template &mdash; copy both files alongside
+        the others (the global extension <code>INCLUDE</code>s <code>QRCodeClass.INC</code> and declares
+        <code>QRCodeObj&nbsp;&nbsp;QRCodeClass</code>). Its method shapes match the other 2D classes, with an extra
+        ECC-level parameter.</div>
+
+      <h3>Shared signature shape</h3>
+      <p>Across all classes the parameters mean the same thing: <code>pImageFeq</code> is the IMAGE control's
+        field-equate (<code>SIGNED</code>); <code>pValue</code> is the data to encode (<code>*CSTRING</code>,
+        passed by reference); <code>pDark</code>/<code>pLight</code> are the module colors (a <code>COLOR:</code>
+        equate or a <code>0BBGGRR</code><code>h</code> <code>LONG</code>); <code>pQuiet</code> is the quiet-zone
+        width in modules. <code>Draw</code> returns nothing &mdash; on an un-encodable value it leaves the control
+        untouched; <code>Build</code> returns a <code>BYTE</code> (<b>1</b> = encoded, <b>0</b> = invalid/too large)
+        so report code can decide whether to paint.</p>
+
+      <h3>BarcodeClass &mdash; 1D symbologies</h3>
+      <p>Encodes the linear codes: <b>Code 39</b>, <b>Code 128</b> (auto Code&nbsp;B / Code&nbsp;C),
+        <b>Interleaved 2 of 5</b>, <b>EAN-13</b> and <b>UPC-A</b>. It builds a bar pattern in
+        <code>Bars[]</code> (1 = dark module at narrowest-element resolution) and renders it as full-height
+        <code>BOX</code> bars with an optional human-readable line. The symbology is chosen by a
+        <code>BC:</code> equate passed to <code>Draw</code>/<code>Build</code>.</p>
+      <table>
+        <tr><th>Equate</th><th>Value</th><th>Symbology</th></tr>
+        <tr><td><code>BC:Code39</code></td><td>1</td><td>Code 39 (alphanumeric, with check chars).</td></tr>
+        <tr><td><code>BC:Code128</code></td><td>2</td><td>Code 128, automatic Code B / Code C switching.</td></tr>
+        <tr><td><code>BC:ITF</code></td><td>3</td><td>Interleaved 2 of 5 (even digit count).</td></tr>
+        <tr><td><code>BC:EAN13</code></td><td>4</td><td>EAN-13 (12 digits + computed check).</td></tr>
+        <tr><td><code>BC:UPCA</code></td><td>5</td><td>UPC-A (11 digits + computed check).</td></tr>
+      </table>
+      <p><code>BC:QR</code>&nbsp;(6), <code>BC:DataMatrix</code>&nbsp;(7), <code>BC:PDF417</code>&nbsp;(8)
+        and <code>BC:Aztec</code>&nbsp;(9) are also declared here for the template's selector, but those symbols are
+        drawn by their own 2D classes, not by <code>BarcodeClass</code>.</p>
+      <table>
+        <tr><th>Prototype</th><th>Parameters</th><th>Returns / effect</th></tr>
+        <tr>
+          <td><code>Draw(SIGNED pImageFeq, LONG pType, *CSTRING pValue, LONG pDark, LONG pLight, LONG pQuiet, LONG pShowText)</code></td>
+          <td><code>pType</code> &mdash; a <code>BC:</code> equate. <code>pShowText</code> &mdash; 1 prints the
+            human-readable value (incl. check digit) under the bars; 0 omits it. Others per the shared shape.</td>
+          <td><b>Window entry point.</b> Calls <code>Build</code>; on success targets the IMAGE with
+            <code>SETTARGET(,pImageFeq)</code>, <code>BLANK</code>s it, then <code>PaintBars</code>. On an invalid
+            value it returns leaving the control unchanged.</td>
+        </tr>
+        <tr>
+          <td><code>Build(LONG pType, *CSTRING pValue), BYTE</code></td>
+          <td><code>pType</code>, <code>pValue</code> as above.</td>
+          <td>Encodes into <code>Bars[]</code>/<code>NBars</code> and sets <code>HumanText</code>; dispatches to the
+            per-symbology encoder. Returns <b>1</b> if encoded, <b>0</b> on invalid input or unknown type.</td>
+        </tr>
+        <tr>
+          <td><code>PaintBars(SIGNED pImageFeq, LONG pDark, LONG pLight, LONG pQuiet, LONG pShowText)</code></td>
+          <td>Per the shared shape, plus <code>pShowText</code>.</td>
+          <td><b>The renderer.</b> Fills the light field + quiet zone, centres the bars, scales the module width to
+            the control, draws each dark run as a <code>BOX</code>, and (if asked) the readable text. Draws into
+            whatever target is current &mdash; call it yourself after <code>SETTARGET(Report)</code> on a band.</td>
+        </tr>
+      </table>
+
+      <h3>QRCodeClass</h3>
+      <p>Encodes <b>QR Code</b> in byte mode, versions 1&ndash;10, ECC levels L/M/Q/H, with automatic version and
+        mask selection (a line-for-line port of the ZXing-validated reference). Builds a module matrix in
+        <code>Cells[]</code> and paints it as a <code>BOX</code> grid. The ECC level is passed as <code>pEcc</code>
+        (<b>1</b>=L, <b>2</b>=M, <b>3</b>=Q, <b>4</b>=H).</p>
+      <table>
+        <tr><th>Prototype</th><th>Parameters</th><th>Returns / effect</th></tr>
+        <tr>
+          <td><code>Draw(SIGNED pImageFeq, *CSTRING pValue, LONG pEcc, LONG pDark, LONG pLight, LONG pQuiet)</code></td>
+          <td><code>pEcc</code> &mdash; ECC level 1&ndash;4. Others per the shared shape.</td>
+          <td><b>Window entry point.</b> <code>BuildMatrix</code> then target/<code>BLANK</code>/<code>Paint</code>;
+            on an over-capacity value it returns leaving the control unchanged.</td>
+        </tr>
+        <tr>
+          <td><code>BuildMatrix(*CSTRING pValue, LONG pEcc), BYTE</code></td>
+          <td><code>pValue</code>, <code>pEcc</code>.</td>
+          <td>Picks the smallest fitting version, encodes, Reed&ndash;Solomons, places + masks, writes
+            <code>Cells[]</code>. Returns <b>1</b> on success, <b>0</b> if the data won't fit v10.</td>
+        </tr>
+        <tr>
+          <td><code>Paint(SIGNED pImageFeq, LONG pDark, LONG pLight, LONG pQuiet)</code></td>
+          <td>Per the shared shape.</td>
+          <td><b>The renderer.</b> Draws <code>Cells[]</code> as a square <code>BOX</code> grid into the current
+            target &mdash; the method to use on a report band after <code>SETTARGET(Report)</code>.</td>
+        </tr>
+      </table>
+
+      <h3>DataMatrixClass (ECC200)</h3>
+      <p>Encodes <b>Data Matrix ECC200</b> using ASCII encodation, square symbols 10×10&hellip;26×26 (single data
+        region). Reed&ndash;Solomon is over GF(256) with primitive polynomial <code>0x12D</code> and generator base 1
+        &mdash; the Data Matrix field, <i>not</i> the QR field. Builds <code>Cells[]</code> and paints a
+        <code>BOX</code> grid.</p>
+      <table>
+        <tr><th>Prototype</th><th>Parameters</th><th>Returns / effect</th></tr>
+        <tr>
+          <td><code>Draw(SIGNED pImageFeq, *CSTRING pValue, LONG pDark, LONG pLight, LONG pQuiet)</code></td>
+          <td>Per the shared shape.</td>
+          <td><b>Window entry point.</b> <code>Build</code> then target/<code>BLANK</code>/<code>Paint</code>; leaves
+            the control unchanged if the value won't fit the largest supported symbol.</td>
+        </tr>
+        <tr>
+          <td><code>Build(*CSTRING pValue), BYTE</code></td>
+          <td><code>pValue</code>.</td>
+          <td>ASCII-encodes, picks the size from the capacity table, runs Reed&ndash;Solomon, and places the modules.
+            Returns <b>1</b> on success, <b>0</b> if too large.</td>
+        </tr>
+        <tr>
+          <td><code>Paint(SIGNED pImageFeq, LONG pDark, LONG pLight, LONG pQuiet)</code></td>
+          <td>Per the shared shape.</td>
+          <td><b>The renderer.</b> Paints <code>Cells[]</code> into the current target &mdash; for report bands.</td>
+        </tr>
+      </table>
+
+      <h3>Pdf417Class</h3>
+      <p>Encodes <b>PDF417</b> via byte compaction, with Reed&ndash;Solomon over the prime field GF(929) (generator
+        computed at run time), automatic columns/rows and EC level, and the 17-module codeword patterns (packed,
+        unpacked at startup). Renders a stacked matrix <code>Cells[row,col]</code> as <code>BOX</code> modules with
+        rows drawn taller. Two start/stop patterns are declared as equates:</p>
+      <table>
+        <tr><th>Equate</th><th>Value</th><th>Meaning</th></tr>
+        <tr><td><code>PDF:Start</code></td><td>130728</td><td>17-module row start pattern.</td></tr>
+        <tr><td><code>PDF:Stop</code></td><td>260649</td><td>18-module row stop pattern.</td></tr>
+      </table>
+      <table>
+        <tr><th>Prototype</th><th>Parameters</th><th>Returns / effect</th></tr>
+        <tr>
+          <td><code>Draw(SIGNED pImageFeq, *CSTRING pValue, LONG pDark, LONG pLight, LONG pQuiet)</code></td>
+          <td>Per the shared shape.</td>
+          <td><b>Window entry point.</b> <code>Build</code> then target/<code>BLANK</code>/<code>Paint</code>; leaves
+            the control unchanged on failure.</td>
+        </tr>
+        <tr>
+          <td><code>Build(*CSTRING pValue), BYTE</code></td>
+          <td><code>pValue</code>.</td>
+          <td>Byte-compacts the input, sizes columns/rows + EC level, appends Reed&ndash;Solomon over GF(929), and
+            lays out the stacked rows. Returns <b>1</b> on success, <b>0</b> if too large.</td>
+        </tr>
+        <tr>
+          <td><code>Paint(SIGNED pImageFeq, LONG pDark, LONG pLight, LONG pQuiet)</code></td>
+          <td>Per the shared shape.</td>
+          <td><b>The renderer.</b> Paints the stacked <code>Cells[]</code> (taller rows) into the current target.</td>
+        </tr>
+      </table>
+
+      <h3>AztecClass</h3>
+      <p>Encodes <b>Aztec Code</b> with binary high-level encoding, both compact and full symbols, the central
+        bullseye + mode message, and spiral data placement (plus the full-symbol reference grid). Reed&ndash;Solomon
+        runs over the variable Galois field GF(2<sup>wordSize</sup>) &mdash; 6/8/10/12 bits chosen by layer count.
+        Renders <code>Cells[]</code> as a square <code>BOX</code> grid. A single equate caps the bit array:</p>
+      <table>
+        <tr><th>Equate</th><th>Value</th><th>Meaning</th></tr>
+        <tr><td><code>Aztec:Cap</code></td><td>8000</td><td>Bit-array capacity (covers all practical sizes).</td></tr>
+      </table>
+      <table>
+        <tr><th>Prototype</th><th>Parameters</th><th>Returns / effect</th></tr>
+        <tr>
+          <td><code>Draw(SIGNED pImageFeq, *CSTRING pValue, LONG pDark, LONG pLight, LONG pQuiet)</code></td>
+          <td>Per the shared shape.</td>
+          <td><b>Window entry point.</b> <code>Build</code> then target/<code>BLANK</code>/<code>Paint</code>; leaves
+            the control unchanged on failure.</td>
+        </tr>
+        <tr>
+          <td><code>Build(*CSTRING pValue), BYTE</code></td>
+          <td><code>pValue</code>.</td>
+          <td>High-level binary encode, bit-stuff, pick layer count + word size, rebuild the GF for that word size,
+            add EC words, draw the bullseye/mode message and spiral the data. Returns <b>1</b> on success,
+            <b>0</b> if too large.</td>
+        </tr>
+        <tr>
+          <td><code>Paint(SIGNED pImageFeq, LONG pDark, LONG pLight, LONG pQuiet)</code></td>
+          <td>Per the shared shape.</td>
+          <td><b>The renderer.</b> Paints <code>Cells[]</code> into the current target &mdash; for report bands.</td>
+        </tr>
+      </table>
+
+      <h3>Internal helpers</h3>
+      <p>You won't call these, but each class is built from them &mdash; useful when reading or extending the
+        <code>.clw</code> files. The Reed&ndash;Solomon / Galois-field machinery differs per symbology because the
+        fields differ (see <a href="#rs">Reed&ndash;Solomon fields</a>).</p>
+      <table>
+        <tr><th>Class</th><th>Helpers (in <code>.clw</code>)</th></tr>
+        <tr><td><code>BarcodeClass</code></td><td><code>Init</code>, <code>Modulo</code>, <code>AddRun</code>, <code>AddBitStr</code>, <code>AddSym39</code>; the per-symbology encoders <code>Code39</code>/<code>Itf</code>/<code>Code128</code>/<code>Ean13</code>/<code>UpcA</code>; check-digit helpers <code>EanCheckDigit</code>/<code>UpcCheckDigit</code>.</td></tr>
+        <tr><td><code>QRCodeClass</code></td><td><code>Init</code>, <code>Tbl</code>, <code>GfMul</code>, <code>Modulo</code>, <code>MaskBit</code>, <code>ApplyMask</code>, <code>Finder</code>, <code>Alignment</code>, <code>SetCell</code>/<code>GetM</code>/<code>GetF</code>, <code>AppendBits</code>, <code>ReedSolomon</code>, <code>FormatInfo</code>, <code>Penalty</code>, <code>LineRuns</code>, <code>MatchFinder</code>.</td></tr>
+        <tr><td><code>DataMatrixClass</code></td><td><code>Init</code>, <code>Modulo</code>, <code>GfMul</code>, <code>ReedSolomon</code> (GF(256)/0x12D); placement <code>PModule</code>, <code>PUtah</code>, <code>PCorner</code>, <code>Placement</code>.</td></tr>
+        <tr><td><code>Pdf417Class</code></td><td><code>Init</code>, <code>Modulo</code>, <code>Pat</code> (cluster/codeword pattern lookup), <code>EmitPat</code> (emit a 17-bit pattern into a row).</td></tr>
+        <tr><td><code>AztecClass</code></td><td><code>Init</code>, <code>Modulo</code>, <code>GfBuild</code> (rebuild GF for a word size), <code>GfMul</code>, <code>RsEcc</code> (current field), <code>SetCell</code>.</td></tr>
+      </table>
+      <div class="callout note"><b>Lifecycle.</b> Every class has a <code>Construct</code> that runs the moment the
+        instance comes into scope (it sets up state and lets <code>Init</code> build the lookup tables lazily via the
+        <code>Ready</code> flag) and a matching <code>Destruct</code>. The classes own no allocated memory or OS
+        handles, so the destructors are trivial &mdash; the template's one global instance per class lives for the
+        program's lifetime.</div>
     </section>
 
     <section id="classes">

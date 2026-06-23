@@ -79,6 +79,7 @@
     <a href="#drawing" class="h2">Drawing</a>
     <a href="#verify" class="h2">Verification &amp; tests</a>
     <div class="grp">Reference</div>
+    <a href="#classref" class="h2">Class reference</a>
     <a href="#api" class="h2">QRDraw() API</a>
     <a href="#limits" class="h2">Capacity &amp; limits</a>
     <a href="#trouble" class="h2">Troubleshooting</a>
@@ -302,6 +303,125 @@
           <code>HELLO WORLD</code> proves the Clarion port reproduces the tested encoder module-for-module.</li>
       </ul>
       <p>Run them with <code>dotnet test designer/QrCodeCore.Tests</code>.</p>
+    </section>
+
+    <section id="classref">
+      <h2>Class reference <a href="#classref" class="top">#</a></h2>
+      <p class="lead">The whole encoder is one class, <code>QRCodeClass</code> &mdash; a line-for-line port
+        of the ZXing-validated C# reference (<code>QrCodeCore</code>), reorganised so it compiles in its own
+        module instead of bloating the program's global procedure area. This chapter is its full anatomy:
+        how it's declared, its ECC equates, the working state it carries, when it builds its tables, and
+        every method with its parameters and effect.</p>
+
+      <h3>Declaration</h3>
+      <p>The class is prototyped in <code>QRCodeClass.inc</code> and implemented in
+        <code>QRCodeClass.clw</code>:</p>
+      <pre>QRCodeClass <span class="k">CLASS</span>,<span class="k">TYPE</span>,<span class="k">MODULE</span>(<span class="s">'QRCodeClass.CLW'</span>),<span class="k">LINK</span>(<span class="s">'QRCodeClass.CLW'</span>)</pre>
+      <ul>
+        <li><code>TYPE</code> &mdash; the class is a <i>type</i>, so you declare your own named instance
+          (<code>QRCodeObj&nbsp;&nbsp;QRCodeClass</code>). The myQRDraw template declares one global instance
+          for you. All working state lives in class members, so each instance is independent.</li>
+        <li><code>MODULE</code>/<code>LINK</code> &mdash; the implementation compiles into its own object
+          and is linked in automatically (the <code>LINK</code> attribute pulls <code>QRCodeClass.CLW</code>
+          into the build), instead of being pasted into the program's global procedure area.</li>
+        <li>The <code>.clw</code> opens with a bare <code>MEMBER</code> and a module-level <code>MAP</code> so
+          the Clarion graphics built-ins in <code>BUILTINS.CLW</code> (<code>BOX</code>, <code>SETTARGET</code>,
+          <code>GETPOSITION</code>, <code>SETPENCOLOR</code>, <code>BLANK</code>&hellip;) resolve. Without the
+          MAP every such call is reported "Unknown function/procedure label".</li>
+      </ul>
+      <div class="callout note"><b>Store as ANSI</b>
+        Both class files <b>must be stored in ANSI</b>, not UTF-8, or the template registration and compile
+        will choke on the high-byte characters.</div>
+
+      <h3>Equates</h3>
+      <p>The class works in error-correction levels L/M/Q/H. There are no named equates in the header; the
+        <code>pEcc</code> parameter is a plain <code>LONG</code> with these meanings throughout
+        (<code>BuildMatrix</code>, <code>Draw</code>, and the capacity table indexing):</p>
+      <table>
+        <tr><th>Value</th><th>Level</th><th>Meaning</th></tr>
+        <tr><td><code>1</code></td><td>L</td><td>Low &mdash; recovers ~7% of the symbol; largest data capacity.</td></tr>
+        <tr><td><code>2</code></td><td>M</td><td>Medium &mdash; ~15% recovery. The usual default.</td></tr>
+        <tr><td><code>3</code></td><td>Q</td><td>Quartile &mdash; ~25% recovery.</td></tr>
+        <tr><td><code>4</code></td><td>H</td><td>High &mdash; ~30% recovery; smallest data capacity, toughest scan.</td></tr>
+      </table>
+
+      <h3>Properties (working state)</h3>
+      <p>Every member is internal scratch space for the encode; you never set them yourself &mdash; they are
+        sized for the largest supported symbol (version 10 = 57&times;57). The notable ones:</p>
+      <table>
+        <tr><th>Member</th><th>Type</th><th>Holds</th></tr>
+        <tr><td><code>Ready</code></td><td>BYTE</td><td>1 once the GF tables + capacity table are built (guards <code>Init</code>).</td></tr>
+        <tr><td><code>GFExp</code> / <code>GFLog</code></td><td>LONG arrays</td><td>GF(256) antilog / log tables for Reed&ndash;Solomon.</td></tr>
+        <tr><td><code>TEc</code>, <code>TG1B</code>, <code>TG1D</code>, <code>TG2B</code>, <code>TG2D</code></td><td>LONG,DIM(10,4)</td><td>The capacity table per [version, ECC]: EC codewords/block, group-1 blocks &amp; data, group-2 blocks &amp; data.</td></tr>
+        <tr><td><code>Cells</code></td><td>BYTE,DIM(57,57)</td><td>The module matrix (1 = dark), indexed [row+1, col+1].</td></tr>
+        <tr><td><code>Func</code></td><td>BYTE,DIM(57,57)</td><td>Function-module map (1 = reserved &mdash; finders, timing, format/version info).</td></tr>
+        <tr><td><code>N</code> / <code>Ver</code> / <code>Ecc</code></td><td>LONG</td><td>Current dimension (17 + 4&times;version), chosen version 1&ndash;10, and ECC level 1&ndash;4.</td></tr>
+        <tr><td><code>Bits</code> / <code>NBits</code></td><td>BYTE array / LONG</td><td>The bit buffer (one byte per appended bit, MSB-first) and the count appended so far.</td></tr>
+        <tr><td><code>DataCW</code>, <code>CW</code>, <code>DataBlk</code>, <code>EccBlk</code></td><td>BYTE arrays</td><td>Packed data codewords, the interleaved data+EC stream, and the per-block data/EC matrices.</td></tr>
+        <tr><td><code>BestMask</code></td><td>LONG</td><td>The mask 0&ndash;7 chosen by lowest penalty.</td></tr>
+        <tr><td><code>Align</code> / <code>NAlign</code></td><td>LONG</td><td>Alignment-pattern centre coordinates and their count.</td></tr>
+      </table>
+
+      <h3>Lifecycle</h3>
+      <p><code>Construct</code> runs automatically the moment the object comes into scope and calls
+        <code>Init</code> once, building the GF(256) log/antilog tables, the two finder-penalty patterns,
+        and the version&times;ECC capacity table &mdash; so the encoder is ready before your first call.
+        <code>Init</code> is idempotent: it returns immediately if <code>Ready</code> is already 1, and
+        <code>BuildMatrix</code> also calls it defensively. <code>Destruct</code> exists but does nothing &mdash;
+        all state is simple arrays and scalars, so there is nothing to dispose.</p>
+
+      <h3>Public methods</h3>
+      <p>These are the methods you call from template code or your own embeds. Field-equates are
+        <code>SIGNED</code>; the value is a <code>*CSTRING</code> (passed by reference); ECC, colors and the
+        quiet-zone width are <code>LONG</code>. Colors are a Clarion <code>COLOR:</code> equate or a
+        <code>0BBGGRR</code><code>h</code> <code>LONG</code>.</p>
+      <table>
+        <tr><th>Prototype</th><th>Parameters</th><th>Returns / effect</th></tr>
+        <tr>
+          <td><code>Draw(SIGNED pImageFeq, *CSTRING pValue, LONG pEcc, LONG pDark, LONG pLight, LONG pQuiet)</code></td>
+          <td><code>pImageFeq</code> &mdash; the IMAGE control to draw into. <code>pValue</code> &mdash; the text/bytes to encode. <code>pEcc</code> &mdash; ECC level 1&ndash;4 (L/M/Q/H). <code>pDark</code>/<code>pLight</code> &mdash; module and background colors. <code>pQuiet</code> &mdash; quiet-zone width in modules.</td>
+          <td><b>The window entry point.</b> Calls <code>BuildMatrix</code>; if the value is too large it returns and leaves the control unchanged. Otherwise it targets the IMAGE with <code>SETTARGET(,pImageFeq)</code>, wipes prior graphics with <code>BLANK</code> (no resize artifacts), paints, then restores the previous target. Encodes <i>and</i> draws in one call; safe to call repeatedly.</td>
+        </tr>
+        <tr>
+          <td><code>BuildMatrix(*CSTRING pValue, LONG pEcc), BYTE</code></td>
+          <td><code>pValue</code> &mdash; the text/bytes to encode (trailing spaces are <code>CLIP</code>ped so a space-padded fixed-length field doesn't inflate the symbol). <code>pEcc</code> &mdash; ECC level 1&ndash;4.</td>
+          <td><b>The encoder.</b> Chooses the smallest version 1&ndash;10 that fits, builds the data + EC codewords, lays in all function patterns, places the data bits zig-zag, tries all 8 masks and keeps the lowest-penalty one, and writes the format/version info &mdash; leaving the finished grid in <code>Cells</code>/<code>N</code>. Returns <b>1</b> on success, <b>0</b> if the data is too large for v1&ndash;10 at this ECC. Call this directly when you want to draw on a report (see <a href="#reports">On a report</a>).</td>
+        </tr>
+        <tr>
+          <td><code>Paint(SIGNED pImageFeq, LONG pDark, LONG pLight, LONG pQuiet)</code></td>
+          <td><code>pImageFeq</code> &mdash; the IMAGE (for its position and size). <code>pDark</code>/<code>pLight</code> &mdash; module / background colors. <code>pQuiet</code> &mdash; quiet-zone width in modules.</td>
+          <td><b>The renderer.</b> Draws the matrix already built by <code>BuildMatrix</code> into <i>whatever target is current</i>. Reads the control's position and size with <code>GETPOSITION</code>, computes the largest integer module size that fits (at least 1 unit), centres the symbol, fills the light field, then boxes each dark module. <code>Draw</code> calls it for you; on a report you call it yourself after <code>SETTARGET(Report)</code>.</td>
+        </tr>
+      </table>
+      <div class="callout note"><b>Draw vs BuildMatrix + Paint</b>
+        <code>Draw</code> is the one-call path for a window. For a report, encode once with
+        <code>BuildMatrix</code>, then wrap <code>Paint</code> in <code>SETTARGET(Report)</code> &hellip;
+        <code>SETTARGET()</code> so the symbol prints into the band instead of the screen.</div>
+
+      <h3>Internal helpers</h3>
+      <p>You won't call these, but they are the machinery <code>BuildMatrix</code> is built from &mdash;
+        useful when reading or extending <code>QRCodeClass.clw</code>:</p>
+      <table>
+        <tr><th>Prototype</th><th>What it does</th></tr>
+        <tr><td><code>Init()</code></td><td>Builds the GF(256) log/antilog tables, the finder-penalty patterns, and the capacity table &mdash; once (guarded by <code>Ready</code>). Run by <code>Construct</code>.</td></tr>
+        <tr><td><code>Tbl(v, e, ec, g1b, g1d, g2b, g2d)</code></td><td>Stores one capacity-table row: for [version <code>v</code>, ECC <code>e</code>], the EC-per-block and the two groups' block/data counts.</td></tr>
+        <tr><td><code>GfMul(LONG a, LONG b), LONG</code></td><td>Multiplies two values in GF(256) via the log/antilog tables (0 if either is 0).</td></tr>
+        <tr><td><code>Modulo(LONG a, LONG b), LONG</code></td><td>Integer remainder <code>a &minus; INT(a/b)&times;b</code> &mdash; so no literal <code>%</code> is emitted into the source.</td></tr>
+        <tr><td><code>MaskBit(LONG mask, LONG r, LONG c), BYTE</code></td><td>Returns whether mask pattern <code>mask</code> (0&ndash;7) flips the module at (r, c).</td></tr>
+        <tr><td><code>ApplyMask(LONG mask)</code></td><td>XORs the chosen mask over every non-function module (calling it twice reverts).</td></tr>
+        <tr><td><code>Finder(LONG r, LONG c)</code></td><td>Paints a 7&times;7 finder pattern (plus separator) with its top-left at (r, c).</td></tr>
+        <tr><td><code>Alignment(LONG r, LONG c)</code></td><td>Paints a 5&times;5 alignment pattern (ring + centre dot) centred at (r, c).</td></tr>
+        <tr><td><code>SetCell(LONG r, LONG c, LONG v)</code></td><td>Sets module (r, c) to <code>v</code> and marks it a reserved function module.</td></tr>
+        <tr><td><code>GetM(LONG r, LONG c), BYTE</code></td><td>Reads module (r, c) from <code>Cells</code> (0-based maths, +1 for the array).</td></tr>
+        <tr><td><code>GetF(LONG r, LONG c), BYTE</code></td><td>Reads the function-module flag for (r, c) from <code>Func</code>.</td></tr>
+        <tr><td><code>AppendBits(LONG val, LONG n)</code></td><td>Appends the low <code>n</code> bits of <code>val</code> (MSB-first) to the bit buffer.</td></tr>
+        <tr><td><code>ReedSolomon(LONG dataLen, LONG ecLen)</code></td><td>Computes the <code>ecLen</code> EC codewords for the current block (<code>BlkData</code> &rarr; <code>BlkEcc</code>) by polynomial division.</td></tr>
+        <tr><td><code>FormatInfo(LONG mask)</code></td><td>Computes and writes the 15-bit format-info string (ECC + <code>mask</code>, with BCH) into the reserved cells.</td></tr>
+        <tr><td><code>Penalty(), LONG</code></td><td>Scores the current matrix by the four ISO penalty rules &mdash; runs, 2&times;2 blocks, finder-like patterns, dark proportion &mdash; for mask selection.</td></tr>
+        <tr><td><code>LineRuns(LONG idx, LONG isRow), LONG</code></td><td>Penalty rule 1: scores runs of 5+ same-color modules along row/column <code>idx</code>.</td></tr>
+        <tr><td><code>MatchFinder(LONG a, LONG b, LONG isRow), BYTE</code></td><td>Penalty rule 3: tests whether the 11 modules from (a, b) match either finder-like pattern.</td></tr>
+      </table>
+
     </section>
 
     <section id="api">

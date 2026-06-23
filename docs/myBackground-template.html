@@ -74,7 +74,7 @@
     <a href="#ini" class="h2">INI storage</a>
     <div class="grp">Internals</div>
     <a href="#embeds" class="h2">Embed points</a>
-    <a href="#helpers" class="h2">Helper API</a>
+    <a href="#helpers" class="h2">Helper reference</a>
     <a href="#facts" class="h2">Runtime facts</a>
     <div class="grp">Reference</div>
     <a href="#customise" class="h2">Customising</a>
@@ -261,33 +261,6 @@ Window Background<br>
        well-formed with just the <code>OpenWindow</code> arm.</div>
   </section>
 
-  <section id="helpers">
-    <h2>Helper API <a class="top" href="#over">↑ top</a></h2>
-    <p>Both helpers are generated into the program module and act on the <b>current window (handle 0)</b>.
-       You can call them yourself from embed code if you want to drive the background programmatically.</p>
-
-    <h3>myBackApply</h3>
-    <pre>myBackApply(<span class="k">STRING</span> pKey, <span class="k">STRING</span> pIni, <span class="k">LONG</span> pDefColor, <span class="k">STRING</span> pDefImage)</pre>
-    <table>
-      <tr><th>Param</th><th>Meaning</th></tr>
-      <tr><td><code>pKey</code></td><td>INI section name (the window's procedure name).</td></tr>
-      <tr><td><code>pIni</code></td><td>INI file path.</td></tr>
-      <tr><td><code>pDefColor</code></td><td>Global default colour, or <code>COLOR:None</code> (-1) for none.</td></tr>
-      <tr><td><code>pDefImage</code></td><td>Global default image path, or blank for none.</td></tr>
-    </table>
-    <p>Reads the section, resolves the precedence, and applies the result to window 0. Safe to call any time
-       the target window is the current window (e.g. <code>EVENT:OpenWindow</code>).</p>
-
-    <h3>myBackChoose</h3>
-    <pre>myBackChoose(<span class="k">STRING</span> pKey, <span class="k">STRING</span> pIni, <span class="k">LONG</span> pDefColor, <span class="k">STRING</span> pDefImage)</pre>
-    <p>Same parameters. Opens the chooser, writes the user's choice to the INI, then re-applies it to the
-       caller window via <code>myBackApply</code>. Call it from a button or menu if you want a "Change
-       background…" command somewhere other than the hotkey.</p>
-
-    <div class="callout tip"><b>Reapply after a programmatic change</b> If your own code edits the INI directly,
-       call <code>myBackApply(...)</code> on the live window to repaint it without reopening.</div>
-  </section>
-
   <section id="facts">
     <h2>Runtime facts it relies on <a class="top" href="#over">↑ top</a></h2>
     <p>Every property, dialog and equate used was verified against the shipped Clarion 12 corpus
@@ -334,6 +307,84 @@ Window Background<br>
        multi-DLL app where windowed procedures live in DLLs, move the helper bodies to a shared module and add
        the prototypes (and exports) to the DLLs that call them — the same retrofit any self-contained helper
        template needs.</p>
+  </section>
+
+  <section id="helpers">
+    <h2>Helper reference <a class="top" href="#over">↑ top</a></h2>
+    <p class="lead">myBackground ships <b>no Clarion class</b>. Instead it drops two helper
+       <code>PROCEDURE</code>s straight into the program module &mdash; short-form prototypes into
+       <code>%GlobalMap</code>, long-form bodies into <code>%ProgramProcedures</code> &mdash; and injects calls
+       to them into each window's <code>WindowManager.TakeWindowEvent</code>. This chapter is the full anatomy
+       of those two procedures: their exact prototypes, every parameter, and what each one does to the live
+       window.</p>
+
+    <h3>How they are wired</h3>
+    <p>Both helpers act on the <b>current window, handle <code>0</code></b>, and take the same four parameters.
+       <code>myBackApply</code> is called from inside the host procedure's <code>TakeWindowEvent</code> on
+       <code>EVENT:OpenWindow</code> &mdash; at that point <code>0</code> is that window.
+       <code>myBackChoose</code> is called on <code>EVENT:AlertKey</code> (Ctrl+Shift+B); it opens its
+       <i>own</i> small dialog, <code>CLOSE</code>s it, and only then re-applies &mdash; after the
+       <code>CLOSE</code> the caller window is the current (top) window again, so <code>0</code> still targets it
+       correctly. The template substitutes <code>%Procedure</code> (the unique procedure name) as the key and
+       the prompt values for the INI path and defaults, so a generated call reads
+       <code>myBackApply('BrowseClients', '.\myBackground.INI', -1, '')</code>.</p>
+
+    <h3>Procedures</h3>
+    <p><code>pDefColor</code> is a Clarion <code>COLOR:</code> equate or a <code>0BBGGRR</code><code>h</code>
+       <code>LONG</code> (<code>-1</code> = <code>COLOR:None</code> = no default color); <code>pDefImage</code>
+       is an image path or blank. Both are <code>PROCEDURE</code>s &mdash; neither returns a value.</p>
+    <table>
+      <tr><th>Prototype</th><th>Parameters</th><th>Returns / effect</th></tr>
+      <tr>
+        <td><code>myBackApply(STRING pKey, STRING pIni, LONG pDefColor, STRING pDefImage)</code></td>
+        <td><code>pKey</code> &mdash; INI section name (the window's procedure name).
+            <code>pIni</code> &mdash; INI file path.
+            <code>pDefColor</code> &mdash; global default color, or <code>-1</code> for none.
+            <code>pDefImage</code> &mdash; global default image path, or blank.</td>
+        <td><b>Applies a background to window <code>0</code>.</b> Reads <code>Mode</code> from the section with
+            <code>GETINI</code> and branches: <code>'C'</code> &rarr; a personal solid color
+            (<code>0{PROP:WallPaper}=''</code> then <code>0{PROP:Color}=</code> the stored color);
+            <code>'I'</code> &rarr; a personal image (<code>PROP:Centered=0</code>, <code>PROP:Tiled=0</code> so
+            it <i>stretches</i> to fill, then <code>0{PROP:WallPaper}=</code> the stored path); blank &rarr; the
+            global default, where a non-empty <code>pDefImage</code> wins over <code>pDefColor</code>, and if
+            neither is set the standard look is restored (<code>WallPaper=''</code>, <code>Color=COLOR:None</code>).
+            No return value.</td>
+      </tr>
+      <tr>
+        <td><code>myBackChoose(STRING pKey, STRING pIni, LONG pDefColor, STRING pDefImage)</code></td>
+        <td>Same four parameters as <code>myBackApply</code>.</td>
+        <td><b>Pops the per-window chooser.</b> Opens a small <code>WINDOW</code> with
+            <i>Background Color&hellip;</i>, <i>Background Image&hellip;</i>, <i>Use Default</i> and
+            <i>Close</i> buttons. Color calls <code>COLORDIALOG</code> and on OK writes
+            <code>Mode='C'</code> + <code>Color</code>; Image calls <code>FILEDIALOG</code> (BMP/JPG/GIF/PNG/ICO/WMF)
+            and on OK writes <code>Mode='I'</code> + <code>Image</code>; <i>Use Default</i> deletes this window's
+            whole INI section (<code>PUTINI(pKey,,,pIni)</code>). After <code>CLOSE</code>, if the user acted it
+            calls <code>myBackApply</code> to repaint the caller window at once. No return value.</td>
+      </tr>
+    </table>
+
+    <h3>Runtime PROPs and INI keys</h3>
+    <p>The helpers carry no state of their own &mdash; they read and write the live window through these
+       properties and persist per-window choices through these INI entries:</p>
+    <table>
+      <tr><th>Used for</th><th>What</th></tr>
+      <tr><td>Solid color</td><td><code>0{PROP:Color}</code> = the RGB <code>LONG</code>.</td></tr>
+      <tr><td>Image, stretched</td><td><code>0{PROP:WallPaper}</code> = path, with
+          <code>0{PROP:Centered}=0</code> and <code>0{PROP:Tiled}=0</code> so it fills the window.</td></tr>
+      <tr><td>Clear an image</td><td><code>0{PROP:WallPaper} = ''</code>.</td></tr>
+      <tr><td>Read a setting</td><td><code>GETINI(pKey, key, default, pIni)</code>.</td></tr>
+      <tr><td>Save a setting</td><td><code>PUTINI(pKey, key, value, pIni)</code>; an empty key/value deletes the section.</td></tr>
+    </table>
+    <p>Each window stores under the section <code>[<i>Procedure</i>]</code> (e.g. <code>[BrowseClients]</code>),
+       with keys <code>Mode</code> (<code>C</code>&nbsp;=&nbsp;color, <code>I</code>&nbsp;=&nbsp;image, blank&nbsp;=&nbsp;none),
+       <code>Color</code> (the RGB <code>LONG</code>) and <code>Image</code> (the file path).</p>
+
+    <div class="callout note"><b>Calling the helpers from your own code</b>
+       Because both procedures act on handle <code>0</code>, an embed simply calls
+       <code>myBackApply('<i>MyProc</i>', '.\myBackground.INI', -1, '')</code> while the target window is current
+       (e.g. on <code>EVENT:OpenWindow</code>), or <code>myBackChoose(&hellip;)</code> to pop the picker from a
+       button or menu. <code>myBackChoose</code> already re-applies via <code>myBackApply</code>, so you never
+       need to call both.</div>
   </section>
 
   <section id="trouble">
