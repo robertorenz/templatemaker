@@ -350,7 +350,7 @@ chosen from one drop-list. Five self-contained ANSI Clarion classes (`BarcodeCla
 into the class. Full developer's manual in
 [`docs/myBarcodeGen-template.html`](docs/myBarcodeGen-template.html).
 
-**myGauge — analog gauges on windows and reports.** A new [`templates/myGauge/`](templates/myGauge/) draws a
+**myGauge — analog gauges on windows and reports (v2.15).** A new [`templates/myGauge/`](templates/myGauge/) draws a
 configurable **speedometer-style dial** entirely with native Clarion graphics (`ARC`/`ELLIPSE`/`LINE`/
 `POLYGON`/`SHOW`) into an `IMAGE` control — same offline, no-dependency approach as myPie/myQRDraw, but pure
 drawing (no encoder, so no C# oracle needed). One self-contained ANSI class, **`GaugeClass`** (`.inc`/`.clw`),
@@ -361,8 +361,11 @@ line **needle**, full **color** control, up to 16 colored **zones**, and **smoot
 timer (`AnimateTo` + `AnimStep`). Three extensions — **myGaugeGlobal** (include once), **myGauge** for windows
 (redraw on open/resize, optional animation, a generated `Refresh:<Object>` routine) and **myGaugeReport** for
 reports (per record at `%BeforePrint` under `SETTARGET(Report)`). The geometry keeps angles un-normalized to
-avoid the 0/360 wrap and maps screen-Y downward (`cy − r·sin θ`). Full programmer's manual in
-[`docs/myGauge-template.html`](docs/myGauge-template.html).
+avoid the 0/360 wrap and maps screen-Y downward (`cy − r·sin θ`). Two compile fixes shipped after first
+field use: the internal `Band` helper was renamed **`ArcBand`** (`BAND` is the Clarion report-band reserved
+word), and the window event handler moved to **`PRIORITY(2000)`** so its self-contained `CASE EVENT()` sits
+above ABC's own `TakeWindowEvent` scaffolding (2500) instead of duplicating it — a lesson now baked into the
+`clarion-template` skill. Full programmer's manual in [`docs/myGauge-template.html`](docs/myGauge-template.html).
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:

@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <Version>2.14.0</Version>
+    <Version>2.15.0</Version>
     <AssemblyName>ClarionTplDesigner</AssemblyName>
     <Product>Clarion Template Designer</Product>
     <Company>Reddin Assessments</Company>
