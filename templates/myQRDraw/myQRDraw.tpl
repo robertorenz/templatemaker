@@ -18,10 +18,13 @@
 #!               .tpl) to a folder on the Clarion redirection path - the app
 #!               folder or \clarion12\libsrc\win. Store them in ANSI (not UTF-8).
 #!
-#!  SCOPE: tuned for a single-EXE app - the class LINKs its own .clw and the
-#!               QRCodeObj instance is a plain global. For multi-DLL, move the
-#!               instance to the root DLL (EXTERNAL,DLL elsewhere + export it) and
-#!               give the CLASS the guarded LINK(,mode),DLL(mode) form.
+#!  SINGLE-EXE *and* MULTI-DLL: the global extension declares the QRCodeObj
+#!               instance correctly for the current target using ABC's standard
+#!               %DefaultExternal / %ProgramExtension / %DefaultExport symbols -
+#!               defined in a single-EXE or the root DLL, EXTERNAL (imported) in
+#!               other DLLs/EXEs, and exported from the root DLL. The class is
+#!               non-VIRTUAL with an unconditional LINK, so each target links its
+#!               own copy of the methods and only the instance is shared/exported.
 #!
 #!  myQRDraw     (PROCEDURE extension) - dropped on a WINDOW. Encodes a value
 #!               (literal or code-driven) and draws it into a chosen IMAGE
@@ -83,8 +86,26 @@
 INCLUDE('QRCodeClass.INC'),ONCE
 #ENDAT
 #!
+#! The encoder instance is GLOBAL DATA, so it must be multi-DLL aware (ABC's
+#! %DefaultExternal / %DefaultExport / %ProgramExtension symbols - no extra
+#! prompts): DEFINED in a single-EXE or the root DLL, declared EXTERNAL (imported)
+#! in every other DLL/EXE that uses it, and EXPORTED from the root DLL so those
+#! imports resolve. The class methods are non-VIRTUAL and the CLASS carries an
+#! unconditional LINK, so each target links its own copy of QRCodeClass.CLW - the
+#! methods never need exporting, only the shared instance does. (Pattern: the
+#! shipped cleansdw.tpw / ABOOP.tpw multi-DLL global-data handling.)
 #AT(%GlobalData),WHERE(%myQRDrawDisable=0)
-QRCodeObj  QRCodeClass                                       ! one global encoder instance (data + code live in the class)
+  #IF(%DefaultExternal = 'None External')
+QRCodeObj  QRCodeClass                                       ! defined here (single-EXE or the root DLL)
+  #ELSE
+QRCodeObj  QRCodeClass,EXTERNAL,DLL(dll_mode)                ! imported from the root DLL
+  #ENDIF
+#ENDAT
+#!
+#AT(%DLLExportList),WHERE(%myQRDrawDisable=0)
+  #IF(%DefaultExternal = 'None External' AND %ProgramExtension='DLL' AND %DefaultExport)
+$QRCodeObj  @?                                               ! export the shared instance from the root DLL
+  #ENDIF
 #ENDAT
 #!#############################################################################
 #!  PROCEDURE EXTENSION - myQRDraw

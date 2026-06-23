@@ -241,11 +241,14 @@
         Copy <code>QRCodeClass.inc</code> and <code>QRCodeClass.clw</code> to a folder on the Clarion
         <b>redirection path</b> (your app folder, or <code>\clarion12\libsrc\win</code>), and keep them in
         <b>ANSI</b> (not UTF-8) — the Clarion compiler expects ANSI source.</div>
-      <div class="callout note"><b>Multi-DLL note</b>
-        Tuned for a single-EXE app (the class <code>LINK</code>s its own <code>.clw</code> and the instance
-        is a plain global). For multi-DLL, move <code>QRCodeObj</code> to the root DLL (declare it
-        <code>EXTERNAL,DLL(…)</code> elsewhere and export it) and switch the class to the guarded
-        <code>LINK(,mode),DLL(mode)</code> form.</div>
+      <div class="callout note"><b>Single-EXE and multi-DLL — handled automatically</b>
+        The global extension declares <code>QRCodeObj</code> correctly for the build using ABC's standard
+        <code>%DefaultExternal</code> / <code>%ProgramExtension</code> / <code>%DefaultExport</code> symbols:
+        <b>defined</b> in a single-EXE or the root DLL, <code>EXTERNAL,DLL(dll_mode)</code> (imported) in any
+        other DLL/EXE, and <b>exported</b> from the root DLL. Because the methods are non-<code>VIRTUAL</code>
+        and the class carries an unconditional <code>LINK</code>, each target links its own copy of the method
+        code — only the shared instance is exported, so no method export-list maintenance is needed. (Same
+        approach as the shipped <code>cleansdw.tpw</code>.)</div>
     </section>
 
     <section id="encoder">
