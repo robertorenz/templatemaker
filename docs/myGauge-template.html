@@ -68,7 +68,7 @@
 <body>
 <div class="wrap">
   <nav>
-    <div class="brand"><h1>myGauge</h1><span>Programmer's Documentation · v1.0</span></div>
+    <div class="brand"><h1>myGauge</h1><span>Programmer's Documentation · v2.16</span></div>
     <a href="#over">Overview</a>
     <div class="grp">Using it</div>
     <a href="#install" class="h2">Install &amp; register</a>
@@ -84,6 +84,7 @@
     <a href="#arch" class="h2">Architecture</a>
     <a href="#geometry" class="h2">Geometry &amp; drawing</a>
     <div class="grp">Reference</div>
+    <a href="#classref" class="h2">Class reference</a>
     <a href="#api" class="h2">GaugeClass API</a>
     <a href="#props" class="h2">Properties</a>
     <a href="#trouble" class="h2">Troubleshooting</a>
@@ -241,7 +242,7 @@
         embed (a button, a <code>TakeAction</code>, after a browse refresh):</p>
       <pre><span class="c">! instant update — set the value and repaint now</span>
 Gauge1.SetValue(<span class="t">PRE:Score</span>)
-Gauge1.Draw(<span class="t">?GaugeImage</span>)
+Gauge1.Draw(Window, <span class="t">?GaugeImage</span>)   <span class="c">! Window = what %Window resolves to</span>
 
 <span class="c">! or, if the value sits in a field, just call the generated refresh routine</span>
 <span class="k">DO</span> Refresh:Gauge1
@@ -249,7 +250,7 @@ Gauge1.Draw(<span class="t">?GaugeImage</span>)
 <span class="c">! retune it live</span>
 Gauge1.SetRange(<span class="s">0</span>, <span class="s">250</span>)
 Gauge1.TrackColor = <span class="t">COLOR:Silver</span>
-Gauge1.Draw(<span class="t">?GaugeImage</span>)</pre>
+Gauge1.Draw(Window, <span class="t">?GaugeImage</span>)</pre>
       <div class="callout note"><b>Refresh:&lt;Object&gt; routine</b>
         For every window gauge the template generates a <code>Refresh:</code><i>ObjectName</i> ROUTINE.
         It re-reads the value field (if any) and redraws &mdash; the simplest way to update a
@@ -264,7 +265,8 @@ Gauge1.Draw(<span class="t">?GaugeImage</span>)</pre>
         <li>On open, the template sets <code>0{PROP:Timer}</code> to your interval.</li>
         <li>Each <code>EVENT:Timer</code> the gauge calls <code>AnimateTo()</code> (if the value is a
           field) then <code>AnimStep()</code>, which moves the needle one step toward the target and
-          repaints. <code>AnimStep()</code> returns 1 while still moving, 0 when settled.</li>
+          returns 1 if it moved &mdash; whereupon the handler repaints with <code>Draw()</code>.
+          <code>AnimStep()</code> returns 0 when the needle has settled, so the repaint stops.</li>
         <li><b>Step per tick</b> is a percent of the full range, so the sweep speed is independent of
           the range size.</li>
       </ul>
@@ -275,7 +277,7 @@ Gauge1.Draw(<span class="t">?GaugeImage</span>)</pre>
       <pre><span class="c">! drive animation from your own timer</span>
 <span class="k">OF</span> EVENT:Timer
   Gauge1.AnimateTo(<span class="t">PRE:Live</span>)
-  Gauge1.AnimStep()</pre>
+  <span class="k">IF</span> Gauge1.AnimStep() <span class="k">THEN</span> Gauge1.Draw(Window, <span class="t">?GaugeImage</span>).</pre>
     </section>
 
     <section id="zones">
@@ -286,7 +288,7 @@ Gauge1.Draw(<span class="t">?GaugeImage</span>)</pre>
 Gauge1.AddZone(<span class="s">0</span>,  <span class="s">60</span>,  <span class="t">COLOR:Green</span>)
 Gauge1.AddZone(<span class="s">60</span>, <span class="s">85</span>,  <span class="t">0012A8E8H</span>)   <span class="c">! amber</span>
 Gauge1.AddZone(<span class="s">85</span>, <span class="s">100</span>, <span class="t">COLOR:Red</span>)
-Gauge1.Draw(<span class="t">?GaugeImage</span>)</pre>
+Gauge1.Draw(Window, <span class="t">?GaugeImage</span>)</pre>
       <p>Up to 16 zones are stored per gauge. Each zone is just an <code>ArcBand</code> &mdash; a thick
         <code>ARC</code> &mdash; so they cost almost nothing to draw.</p>
     </section>
@@ -303,9 +305,9 @@ Gauge1.Draw(<span class="t">?GaugeImage</span>)</pre>
   Gauge.Paint(<span class="t">?RptGaugeImage</span>)
   <span class="k">SETTARGET</span>()</pre>
       <div class="callout note"><b>Paint vs Draw</b>
-        <code>Draw()</code> retargets the named IMAGE control and clears it &mdash; right for windows.
-        <code>Paint()</code> draws into whatever target is current &mdash; right for reports, where the
-        template has already called <code>SETTARGET(Report)</code>.</div>
+        <code>Draw(window, ?image)</code> retargets the named IMAGE control and clears it &mdash; right for
+        windows. <code>Paint(?image)</code> draws into whatever target is current &mdash; right for reports,
+        where the template has already called <code>SETTARGET(Report)</code>.</div>
     </section>
 
     <section id="arch">
@@ -339,8 +341,131 @@ Gauge1.Draw(<span class="t">?GaugeImage</span>)</pre>
       </ul>
     </section>
 
+    <section id="classref">
+      <h2>Class reference <a href="#classref" class="top">#</a></h2>
+      <p class="lead">Everything a gauge is and does lives in one class, <code>GaugeClass</code>.
+        This chapter is the full anatomy: how it's declared, the equates it ships, when it sets its
+        defaults, and every method with its parameters and return value.</p>
+
+      <h3>Declaration</h3>
+      <p>The class is prototyped in <code>GaugeClass.inc</code> and implemented in
+        <code>GaugeClass.clw</code>:</p>
+      <pre>GaugeClass <span class="k">CLASS</span>,<span class="k">TYPE</span>,<span class="k">MODULE</span>(<span class="s">'GaugeClass.CLW'</span>),<span class="k">LINK</span>(<span class="s">'GaugeClass.CLW'</span>)</pre>
+      <ul>
+        <li><code>TYPE</code> &mdash; the class is a <i>type</i>, so you declare your own named instances
+          (<code>Speedo&nbsp;&nbsp;GaugeClass</code>). The template does this for you, one instance per gauge,
+          which is why several dials can share a window or report without colliding.</li>
+        <li><code>MODULE</code>/<code>LINK</code> &mdash; the implementation compiles into its own object
+          and is linked in, instead of being pasted into the program's global procedure area.</li>
+        <li>The <code>.clw</code> opens with a bare <code>MEMBER</code> and a module-level <code>MAP</code>
+          so the graphics built-ins in <code>BUILTINS.CLW</code> (<code>ARC</code>, <code>BLANK</code>,
+          <code>SETTARGET</code>, <code>SHOW</code>&hellip;) resolve. It carries <b>no external state</b> &mdash;
+          no globals, no files &mdash; so it is safe in multi-DLL apps and on background threads.</li>
+      </ul>
+
+      <h3>Equates</h3>
+      <p>Declared alongside the class in <code>GaugeClass.inc</code>; pass them to <code>Preset()</code> and
+        <code>NeedleStyle</code>:</p>
+      <table>
+        <tr><th>Equate</th><th>Value</th><th>Meaning</th></tr>
+        <tr><td><code>Gauge:Arc180</code></td><td>1</td><td>Semicircle, opens downward.</td></tr>
+        <tr><td><code>Gauge:Arc270</code></td><td>2</td><td>Classic speedometer (the default preset).</td></tr>
+        <tr><td><code>Gauge:Arc360</code></td><td>3</td><td>Full dial &mdash; clocks, compasses.</td></tr>
+        <tr><td><code>Gauge:Arc90</code></td><td>4</td><td>Quarter / corner gauge.</td></tr>
+        <tr><td><code>Gauge:Arc45</code></td><td>5</td><td>Narrow shallow arc.</td></tr>
+        <tr><td><code>Gauge:NeedleLine</code></td><td>0</td><td>Thin straight-line needle (set <code>NeedleStyle</code>).</td></tr>
+        <tr><td><code>Gauge:NeedleTri</code></td><td>1</td><td>Filled triangle needle.</td></tr>
+      </table>
+
+      <h3>Lifecycle</h3>
+      <p><code>Construct</code> runs automatically the moment the object comes into scope and seeds usable
+        defaults &mdash; the 270° speedometer preset, a 0&ndash;100 range, standard colors, ticks, and a
+        triangle needle &mdash; so a gauge draws sensibly even before you set a single property. There is no
+        <code>Destruct</code>: the class owns no allocated memory or handles, so nothing needs cleanup.</p>
+
+      <h3>Public methods</h3>
+      <p>These are the methods you call from template code or your own embeds. Real values are
+        <code>REAL</code>; control field-equates are <code>SIGNED</code>; colors are a Clarion
+        <code>COLOR:</code> equate or a <code>0BBGGRR</code><code>h</code> <code>LONG</code>.</p>
+      <table>
+        <tr><th>Prototype</th><th>Parameters</th><th>Returns / effect</th></tr>
+        <tr>
+          <td><code>SetRange(REAL pMin, REAL pMax)</code></td>
+          <td><code>pMin</code>, <code>pMax</code> &mdash; the low and high ends of the scale.</td>
+          <td>Stores the range across which the sweep is mapped, and re-clamps the current value into it.</td>
+        </tr>
+        <tr>
+          <td><code>SetValue(REAL pValue)</code></td>
+          <td><code>pValue</code> &mdash; the reading to show.</td>
+          <td>Sets <code>Value</code> <i>and</i> <code>Target</code> instantly to the clamped value &mdash; no easing. Use for a non-animated gauge.</td>
+        </tr>
+        <tr>
+          <td><code>AnimateTo(REAL pTarget)</code></td>
+          <td><code>pTarget</code> &mdash; where the needle should end up.</td>
+          <td>Sets only <code>Target</code> (clamped). The needle eases toward it on each <code>AnimStep</code>; <code>Value</code> is unchanged until then.</td>
+        </tr>
+        <tr>
+          <td><code>SetSpan(REAL pStart, REAL pSweep)</code></td>
+          <td><code>pStart</code> &mdash; angle at the minimum (deg, 0°=3 o'clock, CCW+). <code>pSweep</code> &mdash; signed degrees to the maximum (negative = clockwise).</td>
+          <td>Sets custom geometry directly (what the <b>Custom</b> style uses) instead of a preset.</td>
+        </tr>
+        <tr>
+          <td><code>Preset(LONG pStyle)</code></td>
+          <td><code>pStyle</code> &mdash; one of the <code>Gauge:Arc*</code> equates.</td>
+          <td>Applies a ready arc: sets <code>StartAngle</code>, <code>SweepAngle</code> and the pivot percentages so the dial is well framed.</td>
+        </tr>
+        <tr>
+          <td><code>AddZone(REAL pFrom, REAL pTo, LONG pColor)</code></td>
+          <td><code>pFrom</code>/<code>pTo</code> &mdash; the value span of the band. <code>pColor</code> &mdash; its fill color.</td>
+          <td>Appends one colored band over the track (<b>up to 16</b>; extras are ignored).</td>
+        </tr>
+        <tr>
+          <td><code>ClearZones()</code></td>
+          <td>&mdash;</td>
+          <td>Drops all zones (resets the count to 0).</td>
+        </tr>
+        <tr>
+          <td><code>Draw(WINDOW pWin, SIGNED pImageFeq)</code></td>
+          <td><code>pWin</code> &mdash; the host <code>WINDOW</code> (what <code>%Window</code> resolves to, usually <code>Window</code>). <code>pImageFeq</code> &mdash; the IMAGE control to paint into.</td>
+          <td><b>The window entry point.</b> Targets the IMAGE itself with the 2-arg <code>SETTARGET(pWin, pImageFeq)</code>, clears just that image with <code>BLANK</code>, then paints &mdash; so the drawing belongs to the control and survives a <code>WM_PAINT</code>/resize, and gauges never erase one another. Remembers the feq in <code>SELF.Feq</code>.</td>
+        </tr>
+        <tr>
+          <td><code>Paint(SIGNED pImageFeq, BYTE pWindowMode=0)</code></td>
+          <td><code>pImageFeq</code> &mdash; the IMAGE (for its position/size). <code>pWindowMode</code> &mdash; 1 clears this gauge's rectangle first (windows), 0 leaves it (reports).</td>
+          <td><b>The renderer.</b> Draws into <i>whatever target is current</i>. <code>Draw</code> calls it with mode 1; on a report you call it yourself with the default 0 after <code>SETTARGET(Report)</code>.</td>
+        </tr>
+        <tr>
+          <td><code>AnimStep(), BYTE</code></td>
+          <td>&mdash;</td>
+          <td>Eases <code>Value</code> one step toward <code>Target</code> (a step is <code>AnimStepPct</code>% of the range). Returns <b>1</b> if it moved, <b>0</b> when settled. It <b>does not draw</b> &mdash; the caller (which holds the window handle) repaints when it returns 1.</td>
+        </tr>
+      </table>
+
+      <h3>Internal helpers</h3>
+      <p>You won't call these, but the class is built from them &mdash; useful when reading or extending
+        <code>GaugeClass.clw</code>:</p>
+      <table>
+        <tr><th>Prototype</th><th>What it does</th></tr>
+        <tr><td><code>Clamp(REAL v), REAL</code></td><td>Constrains <code>v</code> to <code>[MinVal, MaxVal]</code>.</td></tr>
+        <tr><td><code>AngleFor(REAL v), REAL</code></td><td>Maps a value to its needle angle: <code>StartAngle + ((v−Min)/(Max−Min)) × Sweep</code>. Kept un-normalized so it never trips the 0/360 wrap.</td></tr>
+        <tr><td><code>Rad(REAL deg), REAL</code></td><td>Degrees → radians for the native <code>SIN</code>/<code>COS</code>.</td></tr>
+        <tr><td><code>PX(LONG cx, REAL r, REAL angDeg), SIGNED</code></td><td>X of a polar point: <code>cx + r·cos θ</code>.</td></tr>
+        <tr><td><code>PY(LONG cy, REAL r, REAL angDeg), SIGNED</code></td><td>Y of a polar point: <code>cy − r·sin θ</code> (screen-Y grows downward).</td></tr>
+        <tr><td><code>ArcBand(cx, cy, r, a1, a2, thick, color)</code></td><td>Draws one thick-pen <code>ARC</code> &mdash; the empty track and every zone. Named <code>ArcBand</code> because <code>BAND</code> is a Clarion reserved word.</td></tr>
+        <tr><td><code>FmtNum(REAL v, LONG dp), STRING</code></td><td>Formats a number to <code>dp</code> decimal places for tick labels and the value readout.</td></tr>
+      </table>
+      <div class="callout note"><b>Calling <code>Draw</code> from your own code</b>
+        Because <code>Draw</code> now takes the window first, an embed reads
+        <code>Gauge1.Draw(Window, ?GaugeImage)</code> &mdash; pass the WINDOW structure's label
+        (<code>%Window</code>, normally <code>Window</code>). The simplest path is still
+        <code>DO Refresh:</code><i>Object</i>, which the template generates and which fills in the window
+        for you.</div>
+    </section>
+
     <section id="api">
       <h2>GaugeClass API <a href="#api" class="top">#</a></h2>
+      <p>A quick lookup of the public methods &mdash; see <a href="#classref">Class reference</a> for full
+        parameter detail.</p>
       <table>
         <tr><th>Method</th><th>Does</th></tr>
         <tr><td><code>SetRange(min, max)</code></td><td>Sets the value range mapped across the sweep.</td></tr>
@@ -350,9 +475,9 @@ Gauge1.Draw(<span class="t">?GaugeImage</span>)</pre>
         <tr><td><code>Preset(style)</code></td><td>Applies an arc preset: <code>Gauge:Arc180/270/360/90/45</code>.</td></tr>
         <tr><td><code>AddZone(from, to, color)</code></td><td>Adds a colored band over a value range (max 16).</td></tr>
         <tr><td><code>ClearZones()</code></td><td>Removes all zones.</td></tr>
-        <tr><td><code>Draw(imageFeq)</code></td><td>Targets the IMAGE control, clears it, and paints &mdash; for windows.</td></tr>
-        <tr><td><code>Paint(imageFeq)</code></td><td>Paints into the current target &mdash; for reports (after <code>SETTARGET</code>).</td></tr>
-        <tr><td><code>AnimStep()</code></td><td>Eases <code>Value</code> toward <code>Target</code>, repaints; returns 1 while moving.</td></tr>
+        <tr><td><code>Draw(window, imageFeq)</code></td><td>Targets the IMAGE control, clears it, and paints &mdash; for windows.</td></tr>
+        <tr><td><code>Paint(imageFeq [,windowMode])</code></td><td>Paints into the current target &mdash; for reports (after <code>SETTARGET</code>).</td></tr>
+        <tr><td><code>AnimStep()</code></td><td>Eases <code>Value</code> one step toward <code>Target</code>; returns 1 if it moved (caller repaints), 0 when settled.</td></tr>
       </table>
     </section>
 
