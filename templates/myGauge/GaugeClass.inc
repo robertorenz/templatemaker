@@ -99,6 +99,6 @@ AngleFor           PROCEDURE(REAL v),REAL
 Rad                PROCEDURE(REAL deg),REAL
 PX                 PROCEDURE(LONG cx,REAL r,REAL angDeg),SIGNED
 PY                 PROCEDURE(LONG cy,REAL r,REAL angDeg),SIGNED
-Band               PROCEDURE(LONG cx,LONG cy,REAL r,REAL a1,REAL a2,LONG thick,LONG color)
+ArcBand            PROCEDURE(LONG cx,LONG cy,REAL r,REAL a1,REAL a2,LONG thick,LONG color)
 FmtNum             PROCEDURE(REAL v,LONG dp),STRING
                    END

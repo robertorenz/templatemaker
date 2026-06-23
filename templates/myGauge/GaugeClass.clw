@@ -98,7 +98,7 @@ GaugeClass.PY PROCEDURE(LONG cy,REAL r,REAL angDeg)
   CODE
   RETURN cy - INT(r * SIN(SELF.Rad(angDeg)))               ! screen Y grows downward
 
-GaugeClass.Band PROCEDURE(LONG cx,LONG cy,REAL r,REAL a1,REAL a2,LONG thick,LONG color)
+GaugeClass.ArcBand PROCEDURE(LONG cx,LONG cy,REAL r,REAL a1,REAL a2,LONG thick,LONG color)
 rr  LONG
 lo  REAL
 hi  REAL
@@ -173,10 +173,10 @@ txt   STRING(48)
   END
   ! ---- track + zones ----
   IF SELF.ShowTrack = 1
-    SELF.Band(cx, cy, trackR, SELF.AngleFor(SELF.MinVal), SELF.AngleFor(SELF.MaxVal), thick, SELF.TrackColor)
+    SELF.ArcBand(cx, cy, trackR, SELF.AngleFor(SELF.MinVal), SELF.AngleFor(SELF.MaxVal), thick, SELF.TrackColor)
   END
   LOOP i = 1 TO SELF.NZones
-    SELF.Band(cx, cy, trackR, SELF.AngleFor(SELF.ZFrom[i]), SELF.AngleFor(SELF.ZTo[i]), thick, SELF.ZColor[i])
+    SELF.ArcBand(cx, cy, trackR, SELF.AngleFor(SELF.ZFrom[i]), SELF.AngleFor(SELF.ZTo[i]), thick, SELF.ZColor[i])
   END
   ! ---- ticks + labels ----
   IF SELF.MajorTicks > 0
