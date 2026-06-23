@@ -13,6 +13,12 @@
 ! ============================================================================
   MEMBER
 
+  INCLUDE('CompressClass.INC'),ONCE         ! the class + the CmpUseC engine switch (must precede the guards)
+
+  COMPILE('***UseCEngine', CmpUseC)         ! C fast-path on -> Clarion compiles our own C engine (mc.c)
+  PRAGMA('compile(mc.c)')
+  ***UseCEngine
+
   MAP                                       ! module-level MAP is REQUIRED (folds BUILTINS.CLW
     MODULE('kernel32')                      ! prototypes in) - and hosts the Win32 file calls.
 kCreateFile        PROCEDURE(*CSTRING,ULONG,ULONG,LONG,ULONG,ULONG,LONG),LONG,RAW,PASCAL,NAME('CreateFileA')
@@ -21,9 +27,13 @@ kWriteFile         PROCEDURE(LONG,LONG,ULONG,*ULONG,LONG),LONG,RAW,PASCAL,PROC,N
 kGetFileSize       PROCEDURE(LONG,LONG),ULONG,PASCAL,NAME('GetFileSize')
 kCloseHandle       PROCEDURE(LONG),LONG,PASCAL,PROC,NAME('CloseHandle')
     END
+    COMPILE('***UseCEngine', CmpUseC)       ! our own C engine, compiled by Clarion's C compiler
+    MODULE('mc.c')
+mc_compress        PROCEDURE(*STRING,LONG,*STRING,LONG,LONG,LONG),LONG,RAW,NAME('_mc_compress')
+mc_decompress      PROCEDURE(*STRING,LONG,*STRING,LONG),LONG,RAW,NAME('_mc_decompress')
+    END
+    ***UseCEngine
   END
-
-  INCLUDE('CompressClass.INC'),ONCE
 
 !=== construct / destruct ====================================================
 CompressClass.Construct PROCEDURE()
@@ -557,6 +567,12 @@ ad  ULONG
   IF NOT SELF.Ready THEN SELF.Init().
   SELF.ErrCode = 0; SELF.ErrText = ''
   SELF.ResetOut()
+  COMPILE('***UseCEngine', CmpUseC)                       ! --- C fast-path ---
+  SELF.EnsureOut(SELF.MaxCompressed(pInLen))              ! pre-size: the C engine writes OutBuf directly
+  SELF.OutLen = mc_compress(SELF.OutBuf, SELF.OutCap, pIn, pInLen, SELF.Level, SELF.Format)
+  IF SELF.OutLen < 0 THEN SELF.ErrCode = -30; SELF.ErrText = 'C engine: compress overflow'; RETURN -1.
+  RETURN SELF.OutLen
+  ***UseCEngine                                           ! --- else pure Clarion ---
   CASE SELF.Format
   OF Cmp:Gzip
     SELF.PutByte(01Fh); SELF.PutByte(08Bh); SELF.PutByte(8); SELF.PutByte(0)
@@ -585,9 +601,29 @@ CompressClass.Unwrap PROCEDURE(*STRING pIn,LONG pInLen)
 flg LONG
 xl  LONG
 hdr LONG
+cap LONG
+n   LONG
   CODE
   IF NOT SELF.Ready THEN SELF.Init().
   SELF.ErrCode = 0; SELF.ErrText = ''
+  COMPILE('***UseCEngine', CmpUseC)                       ! --- C fast-path ---
+  SELF.ResetOut()
+  IF pInLen >= 18 AND VAL(pIn[1]) = 01Fh AND VAL(pIn[2]) = 08Bh    ! gzip ISIZE = exact original size
+    cap = VAL(pIn[pInLen-3]) + BSHIFT(VAL(pIn[pInLen-2]),8) + BSHIFT(VAL(pIn[pInLen-1]),16) + BSHIFT(VAL(pIn[pInLen]),24)
+    IF cap < 1 THEN cap = pInLen * 8 + 65536.
+  ELSE
+    cap = pInLen * 8 + 65536                                ! zlib/raw: estimate, grow if needed
+  END
+  LOOP
+    SELF.EnsureOut(cap)
+    n = mc_decompress(SELF.OutBuf, SELF.OutCap, pIn, pInLen)
+    IF n >= 0 THEN BREAK.
+    IF cap > 200000000 THEN SELF.ErrCode = -31; SELF.ErrText = 'C engine: decompress failed'; RETURN -1.
+    cap = cap * 2
+  END
+  SELF.OutLen = n
+  RETURN SELF.OutLen
+  ***UseCEngine                                           ! --- else pure Clarion ---
   SELF.InBuf &= pIn
   SELF.InLen = pInLen
   SELF.InPos = 1

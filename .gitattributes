@@ -5,3 +5,6 @@
 *.tpw text eol=crlf
 *.inc text eol=crlf
 *.clw text eol=crlf
+# bundled C compiled by Clarion's own compiler (Clacpp) — keep CRLF too
+*.c text eol=crlf
+*.h text eol=crlf

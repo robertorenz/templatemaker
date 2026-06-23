@@ -278,9 +278,18 @@ or per-report wiring** (compression is all code-driven). It works on **memory bu
 (`Cmp:Raw`/`Cmp:Zlib`/`Cmp:Gzip`) and level (0–9) at run time; decompression **auto-detects** the
 container. The codec is validated by a .NET golden-vector oracle, [`designer/CompressCore/`](designer/CompressCore/),
 that round-trips a corpus both ways (Clarion ↔ `GZipStream`/`ZLibStream`/`DeflateStream`). Copy
-`CompressClass.inc` + `CompressClass.clw` (**ANSI, CRLF**) to the redirection path. Full programmer's
-documentation — the API, formats, run-time control, error codes, and troubleshooting — is in
-[`docs/myCompress-template.html`](docs/myCompress-template.html).
+`CompressClass.inc` + `CompressClass.clw` (**ANSI, CRLF**) to the redirection path.
+
+**Optional C fast-path (~4× faster).** For big files or high throughput, the class can route through an
+optional **C engine** — `mc.c`, our own clean-room DEFLATE port (not miniz/zlib/StringTheory) compiled by
+**Clarion's own C compiler** via `PRAGMA('compile(mc.c)')`. Flip one equate (`CmpUseC EQUATE(1)`) and copy
+`mc.c` alongside the class: compression of a 4 MB buffer drops from ~844 ms to ~200 ms (and gets a slightly
+better ratio, since C has no 64 KB-array limit so it uses the full 32 KB window). It's the same algorithm,
+so the two engines produce byte-compatible output and interoperate freely; when `CmpUseC=0` (the default)
+the C code is fully `OMIT`ted and **no `mc.c` is needed** — pure Clarion is unaffected.
+
+Full programmer's documentation — the API, formats, run-time control, the C fast-path, error codes, and
+troubleshooting — is in [`docs/myCompress-template.html`](docs/myCompress-template.html).
 
 ### `templates/myPdfSign/` — read a signed PDF and see who signed it
 A self-contained **signed-PDF identity reader** written entirely in **pure Clarion** — no DLL, no external
@@ -495,6 +504,19 @@ or trust-chain validation. Verified against the real Clarion compiler and a .NET
 expected identity; the Clarion `Report()` matches **byte-for-byte across all three fixtures**, including a
 tampered one that correctly reports `CoversWholeFile=0`. Programmer's manual in
 [`docs/myPdfSign-template.html`](docs/myPdfSign-template.html).
+
+**myCompress gains an optional C fast-path (~4× faster) (v2.19).** The compression template now ships an
+optional **C engine**, [`templates/myCompress/mc.c`](templates/myCompress/mc.c) — our own clean-room DEFLATE
+port (**not** miniz/zlib/StringTheory) compiled by **Clarion's own C compiler** (`Clacpp`) via
+`PRAGMA('compile(mc.c)')`. Set `CmpUseC EQUATE(1)` and copy `mc.c`, and `CompressClass` routes through it:
+a 4 MB buffer compresses in **~200 ms instead of ~844 ms** (and a touch smaller, since C has no Clarion
+64 KB-array limit so it uses the full 32 KB window). It's the same algorithm, so both engines produce
+byte-compatible output and interoperate freely. When `CmpUseC=0` (the default) every line of the C path is
+`OMIT`ted — **no `mc.c` needed**, pure Clarion unaffected. Verified end-to-end against the real Clarion
+compiler: the wired class round-trips, `SelfTest()` passes in both modes, and C inflate decodes .NET's
+dynamic-Huffman gzip. Established a reusable lesson — **Clarion compiles bundled C** (`extern "C"` +
+`PRAGMA('compile(x.c)')` + a `MODULE('x.c')` prototype block) — so future templates can drop to C for
+hot paths without any external dependency.
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:

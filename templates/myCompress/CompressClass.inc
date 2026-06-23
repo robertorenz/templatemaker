@@ -46,6 +46,12 @@ Cmp:HashBits       EQUATE(13)
 Cmp:HashSize       EQUATE(8192)                               ! 2^HashBits
 Cmp:HashMask       EQUATE(8191)
 
+! ---- engine selection (compile-time) --------------------------------------
+! 0 = pure Clarion (default, zero extra files). Set to 1 to enable the C
+! fast-path (~4.5x faster compress, via mc.c compiled by Clarion's own C
+! compiler) - then ALSO copy mc.c to the redirection path. Just edit this line.
+CmpUseC            EQUATE(0)
+
 CompressClass CLASS,TYPE,MODULE('CompressClass.CLW'),LINK('CompressClass.CLW')
 ! ---- public configuration -------------------------------------------------
 Level              BYTE                                       ! 0 = stored, 1..9 = compress (effort). Default 6.

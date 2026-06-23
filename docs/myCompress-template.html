@@ -73,6 +73,7 @@
     <a href="#config" class="h2">Run-time control</a>
     <div class="grp">How it works</div>
     <a href="#arch" class="h2">Architecture</a>
+    <a href="#cengine" class="h2">C fast-path (4× faster)</a>
     <a href="#oracle" class="h2">The .NET oracle</a>
     <div class="grp">Reference</div>
     <a href="#classref" class="h2">Class reference</a>
@@ -265,6 +266,42 @@ designer/CompressCore/        the .NET golden-vector oracle (validation)</div>
         decodes canonically bit-by-bit. Output grows a class-owned buffer; for back-reference copies the
         engine reserves space up front so the buffer never moves mid-copy (which also makes overlapping
         runs — the heart of run-length compression — fall out for free).</p>
+    </section>
+
+    <section id="cengine">
+      <h2>C fast-path (4× faster) <a href="#cengine" class="top">#</a></h2>
+      <p class="lead">The pure-Clarion codec is fast enough for most work, but for big files or high
+        throughput there is an optional <b>C engine</b> — <code>mc.c</code>, our own DEFLATE port — that
+        compiles with <b>Clarion's own C compiler</b> and makes compression about <b>4× faster</b>, with no
+        external DLL and no third-party library.</p>
+      <table>
+        <tr><th>Engine</th><th>Compress (4 MB, level 6)</th><th>Decompress</th><th>Ratio</th></tr>
+        <tr><td>Pure Clarion (default)</td><td>~844 ms</td><td>~15 ms</td><td>491 KB</td></tr>
+        <tr><td><b>C fast-path</b></td><td><b>~200 ms</b></td><td>~15 ms</td><td>485 KB (full 32 KB window)</td></tr>
+      </table>
+      <p>It is the <b>same algorithm</b> in C — a clean-room port of our Clarion <code>Deflate</code>, not
+        miniz/zlib/StringTheory — so it produces byte-compatible output (the engines interoperate freely:
+        compress with one, decompress with the other). C also has no Clarion 64&nbsp;KB-array limit, so the
+        matcher uses the full 32&nbsp;KB DEFLATE window, giving a slightly <i>better</i> ratio as well.</p>
+      <h3>Turning it on</h3>
+      <ol>
+        <li>Copy <code>mc.c</code> to the Clarion redirection path, alongside <code>CompressClass.inc</code>
+          / <code>.clw</code>.</li>
+        <li>Edit one line near the top of <code>CompressClass.inc</code>:
+          <pre>CmpUseC            <span class="k">EQUATE</span>(<span class="s">1</span>)        <span class="c">! 0 = pure Clarion (default), 1 = C fast-path</span></pre>
+        </li>
+        <li>Rebuild. <code>CompressClass</code> now routes <code>Compress</code> / <code>Decompress</code>
+          (and the file methods) through the C engine via <code>PRAGMA('compile(mc.c)')</code>. Your code is
+          unchanged — same class, same API.</li>
+      </ol>
+      <div class="callout note"><b>How the switch works</b>
+        <code>CmpUseC</code> is a compile-time equate. When it is <code>0</code> (the default) the C
+        prototypes, the <code>PRAGMA</code>, and the C dispatch are all <code>OMIT</code>ted — so a
+        pure-Clarion build needs <b>no <code>mc.c</code> at all</b> and is completely unaffected. When it is
+        <code>1</code>, Clarion compiles <code>mc.c</code> in and the methods call it.</div>
+      <div class="callout warn"><b>Single-threaded</b>
+        The C engine uses file-scope work tables, so it is single-threaded. If you compress from multiple
+        threads concurrently, leave the C fast-path off and use the per-instance pure-Clarion engine.</div>
     </section>
 
     <section id="oracle">
