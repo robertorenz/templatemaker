@@ -146,6 +146,9 @@ per-procedure, project files, export lists, custom embeds).
 - **`#AT` blocks need `WHERE()` guards** so disabled templates emit nothing. Always honor your own
   `%...Disable` prompt on every `#AT`.
 - **`PRIORITY(n)` orders multiple `#AT`s at the same embed** (lower runs earlier; ABC uses ~2000–8000).
+- **A self-contained `CASE EVENT()` at `TakeWindowEvent` MUST use `PRIORITY(2000)`, not 2500** — the ABC
+  framework's own `LOOP`/`CASE EVENT()` scaffolding is registered at 2500 (`ABWINDOW.TPW:563`), so 2500
+  interleaves and produces a duplicate `CASE EVENT()` that won't compile. See patterns.md (drawing section).
 - **`ONCE` on `INCLUDE()`** prevents duplicate-symbol errors when an extension is used many times.
 - **`#FOR(%File)`/`#FOR(%Control)` etc. iterate AppGen context** — filter with `WHERE()`, exit with `#BREAK`.
 - **Match block terminators**: `#ENDIF`/`#END`, `#ENDFOR`/`#END`, `#ENDAT`, `#ENDTAB`, `#ENDSHEET`,

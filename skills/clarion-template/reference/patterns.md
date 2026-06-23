@@ -215,6 +215,26 @@ depth=0, wholeValue=0, startAngle=0)` draws a whole pie from arrays of relative 
   of every redraw). A filled `BOX` is NOT a real clear — it only paints over, so when the control shrinks
   the older/larger drawing survives underneath/around it and you get resize artifacts. Use `BLANK` first,
   then (optionally) a `BOX` to set a specific background color, then draw.
+- **Register a self-contained `CASE EVENT()` at `TakeWindowEvent` with `PRIORITY(2000)`, NEVER 2500.**
+  ABC's framework registers its OWN `LOOP`/`CASE EVENT()` scaffolding for `TakeWindowEvent` at
+  **`PRIORITY(2500)`** (`ABWINDOW.TPW:563` — same embed, same `'(),BYTE'` signature). A template block that
+  also sits at 2500 interleaves *inside* the framework's `CASE EVENT()` and the generated method comes out
+  with a **duplicate `CASE EVENT() / CASE EVENT()`** (and a doubled `END`) — a hard compile error. Use 2000,
+  which lands your self-contained handler **above** the framework's loop — the proven spot myQRDraw, myPixel
+  and showLine use:
+  ```
+  #AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%MyDisable=0)
+    CASE EVENT()
+    OF EVENT:OpenWindow
+      …first draw…
+    OF EVENT:Sized
+      …redraw…
+    END
+  #ENDAT
+  ```
+  (The idiomatic per-event alternative is `#AT(%WindowEventHandling,'OpenWindow')`, but it only emits if that
+  event is already in `%WindowEvent`, so the self-contained-CASE-at-2000 form is more reliable for
+  "always draw on open/resize".)
 - **Redraw after a resize via a POSTED event, not directly in `EVENT:Sized`.** At the top of
   `TakeWindowEvent` (PRIORITY 2000) the ABC resizer has NOT yet repositioned/resized the child controls,
   so the control's `PROP:Width/Height` is still the old size. Instead `POST` a private event
