@@ -125,7 +125,7 @@ pic  CSTRING(16)
   RETURN CLIP(LEFT(FORMAT(v, pic)))
 
 !=== drawing ================================================================
-GaugeClass.Paint PROCEDURE(SIGNED pImageFeq,BYTE pCtrlRelative=0)
+GaugeClass.Paint PROCEDURE(SIGNED pImageFeq,BYTE pWindowMode=0)
 ImgX  LONG
 ImgY  LONG
 w     LONG
@@ -152,10 +152,10 @@ poly  SIGNED,DIM(6)
 txt   STRING(48)
   CODE
   GETPOSITION(pImageFeq, ImgX, ImgY, w, h)
-  IF pCtrlRelative                                            ! window: SETTARGET(,feq) gives a control-relative
-    ImgX = 0; ImgY = 0                                        ! surface (origin 0,0), so drop the window offset -
-  END                                                         ! else an image far from x=0 draws off its own edge
-  cx = ImgX + INT(w * SELF.PivotXPct / 100)
+  IF pWindowMode                                              ! window: clear ONLY this gauge's rectangle. A bare
+    BLANK(ImgX, ImgY, w, h)                                   ! BLANK wipes the whole window graphics layer, so a
+  END                                                         ! second gauge's clear would erase the first.
+  cx = ImgX + INT(w * SELF.PivotXPct / 100)                   ! window-relative origin (SETTARGET(,feq), myPie #5)
   cy = ImgY + INT(h * SELF.PivotYPct / 100)
   IF w < h THEN r = w / 2 ELSE r = h / 2.
   r = r * SELF.RadiusPct / 100
@@ -246,8 +246,7 @@ GaugeClass.Draw PROCEDURE(SIGNED pImageFeq)
   CODE
   SELF.Feq = pImageFeq
   SETTARGET(,pImageFeq)
-  BLANK
-  SELF.Paint(pImageFeq)
+  SELF.Paint(pImageFeq, 1)                                    ! 1 = window mode: clears only this gauge's rect
   SETTARGET()
 
 GaugeClass.AnimStep PROCEDURE()
