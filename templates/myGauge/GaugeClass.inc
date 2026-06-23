@@ -81,11 +81,6 @@ ZColor             LONG,DIM(16)
 NZones             LONG
 ! ---- animation ----
 AnimStepPct        REAL                                      ! % of range moved per AnimStep
-! ---- redraw bookkeeping (window mode) ----
-LastX              LONG                                      ! last drawn rect, so a resize clears the OLD area too
-LastY              LONG
-LastW              LONG
-LastH              LONG
 ! ---- methods --------------------------------------------------------------
 Construct          PROCEDURE
 SetRange           PROCEDURE(REAL pMin,REAL pMax)
@@ -95,9 +90,9 @@ SetSpan            PROCEDURE(REAL pStart,REAL pSweep)
 Preset             PROCEDURE(LONG pStyle)
 AddZone            PROCEDURE(REAL pFrom,REAL pTo,LONG pColor)
 ClearZones         PROCEDURE
-Draw               PROCEDURE(SIGNED pImageFeq)               ! window: set target, clear, paint
+Draw               PROCEDURE(WINDOW pWin,SIGNED pImageFeq)   ! window: target the IMAGE (2-arg SETTARGET), clear, paint
 Paint              PROCEDURE(SIGNED pImageFeq,BYTE pWindowMode=0) ! paint into the current target; pWindowMode=1 clears only this gauge's rectangle first (windows), 0 = no clear (reports - each band prints fresh)
-AnimStep           PROCEDURE(),BYTE                          ! ease Value->Target + redraw; 1 = still moving
+AnimStep           PROCEDURE(),BYTE                          ! ease Value->Target one step; 1 = moved (caller repaints)
 ! ---- internal ----
 Clamp              PROCEDURE(REAL v),REAL
 AngleFor           PROCEDURE(REAL v),REAL

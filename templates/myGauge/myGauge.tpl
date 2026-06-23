@@ -167,13 +167,15 @@ Redraw:%myGaugeObject EQUATE(EVENT:User + 200 + %ActiveTemplateInstance) ! priva
   OF EVENT:Sized
     POST(Redraw:%myGaugeObject)                              ! redraw AFTER the resizer settles (fresh size)
   OF Redraw:%myGaugeObject
-    %myGaugeObject.Draw(%myGaugeImage)
+    %myGaugeObject.Draw(%Window, %myGaugeImage)
 #IF(%myGaugeAnimate)
   OF EVENT:Timer
 #IF(%myGaugeValueIsVar)
     %myGaugeObject.AnimateTo(%myGaugeValueField)
 #ENDIF
-    %myGaugeObject.AnimStep()
+    IF %myGaugeObject.AnimStep()                             ! eased a step? repaint at the new needle position
+      %myGaugeObject.Draw(%Window, %myGaugeImage)
+    END
 #ENDIF
   END
 #ENDAT
@@ -189,7 +191,7 @@ Refresh:%myGaugeObject ROUTINE
   %myGaugeObject.SetValue(%myGaugeValueField)                 ! instant
 #ENDIF
 #ENDIF
-  %myGaugeObject.Draw(%myGaugeImage)
+  %myGaugeObject.Draw(%Window, %myGaugeImage)
 #ENDAT
 #!#############################################################################
 #!  PROCEDURE EXTENSION - myGaugeReport (REPORT)  -  per record
@@ -401,13 +403,15 @@ Redraw:%myGaugeCtlObject EQUATE(EVENT:User + 200 + %ActiveTemplateInstance) ! pr
   OF EVENT:Sized
     POST(Redraw:%myGaugeCtlObject)                           ! redraw AFTER the resizer settles (fresh size)
   OF Redraw:%myGaugeCtlObject
-    %myGaugeCtlObject.Draw(%myGaugeCtlImage)
+    %myGaugeCtlObject.Draw(%Window, %myGaugeCtlImage)
 #IF(%myGaugeCtlAnimate)
   OF EVENT:Timer
 #IF(%myGaugeCtlValueIsVar)
     %myGaugeCtlObject.AnimateTo(%myGaugeCtlValueField)
 #ENDIF
-    %myGaugeCtlObject.AnimStep()
+    IF %myGaugeCtlObject.AnimStep()                          ! eased a step? repaint at the new needle position
+      %myGaugeCtlObject.Draw(%Window, %myGaugeCtlImage)
+    END
 #ENDIF
   END
 #ENDAT
@@ -423,7 +427,7 @@ Refresh:%myGaugeCtlObject ROUTINE
   %myGaugeCtlObject.SetValue(%myGaugeCtlValueField)            ! instant
 #ENDIF
 #ENDIF
-  %myGaugeCtlObject.Draw(%myGaugeCtlImage)
+  %myGaugeCtlObject.Draw(%Window, %myGaugeCtlImage)
 #ENDAT
 #!-----------------------------------------------------------------------------
 #! End of myGauge template set

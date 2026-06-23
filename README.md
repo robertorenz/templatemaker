@@ -371,7 +371,7 @@ word), and the window event handler moved to **`PRIORITY(2000)`** so its self-co
 above ABC's own `TakeWindowEvent` scaffolding (2500) instead of duplicating it — a lesson now baked into the
 `clarion-template` skill. Full programmer's manual in [`docs/myGauge-template.html`](docs/myGauge-template.html).
 
-**myGauge gains a drag-on control template.** Beyond the three extensions, myGauge now ships a **control
+**myGauge gains a drag-on control template (v2.16).** Beyond the three extensions, myGauge now ships a **control
 template** — **myGauge - Analog Gauge** — so you can drag a ready-made gauge straight onto a window from the
 Window Designer's control toolbox: it drops the `IMAGE` *and* wires the gauge in one go. It's **fully
 self-contained** — it emits `INCLUDE('GaugeClass.INC'),ONCE` at `%CustomGlobalDeclarations` (the per-module
@@ -380,6 +380,18 @@ separate global extension is required, and `ONCE` keeps the class single-include
 The control's own field equate is captured with the proven `#FOR(%Control),WHERE(%ControlInstance=%ActiveTemplateInstance)`
 idiom (corpus `CONTROL.TPW` *CloseButton*), so it tracks AppGen's auto-uniqued feq when several are dropped on
 one window.
+
+**myGauge rock-solid resize & multi-gauge redraw (v2.16).** The gauge now draws **into the IMAGE
+control itself** rather than onto the window layer: `Draw(window, ?image)` uses the **two-argument
+`SETTARGET(window, ?image)`**, so the graphics *belong to the image* and survive a `WM_PAINT`/resize
+(a bare window-layer draw was getting wiped). With the image as the target, the origin is `0,0` and a
+scoped **`BLANK`** clears **only that gauge's image** — so multiple dials on one window no longer erase
+each other, and a gauge whose IMAGE sits away from the window's left edge is no longer clipped. Redraw is
+driven by a **private per-instance `Redraw:<Object>` event** posted on `EVENT:OpenWindow` and after
+`EVENT:Sized` (the resizer has settled, so the fresh size is read), and **`AnimStep` no longer self-draws**
+— it just eases the needle one step and returns *moved*, leaving the caller (which holds the window handle)
+to repaint. The `GaugeClass` `Draw` prototype is now `Draw(WINDOW pWin, SIGNED pImageFeq)`; **regenerate
+any app** built against the older one-argument `Draw`.
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:

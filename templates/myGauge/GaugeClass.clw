@@ -152,14 +152,11 @@ poly  SIGNED,DIM(6)
 txt   STRING(48)
   CODE
   GETPOSITION(pImageFeq, ImgX, ImgY, w, h)
-  IF pWindowMode                                              ! window: clear ONLY this gauge's rectangle - a bare
-    IF SELF.LastW > 0                                         ! BLANK wipes the whole window layer, erasing other
-      BLANK(SELF.LastX, SELF.LastY, SELF.LastW, SELF.LastH)   ! gauges. Clear where we drew LAST (so a resize that
-    END                                                       ! moves/shrinks the image leaves no trail) ...
-    BLANK(ImgX, ImgY, w, h)                                   ! ... and the current rect.
-    SELF.LastX = ImgX; SELF.LastY = ImgY; SELF.LastW = w; SELF.LastH = h
-  END
-  cx = ImgX + INT(w * SELF.PivotXPct / 100)                   ! window-relative origin (SETTARGET(,feq), myPie #5)
+  IF pWindowMode                                              ! window: the IMAGE is the target (2-arg SETTARGET),
+    BLANK                                                     ! so origin is 0,0 and BLANK clears just this image -
+    ImgX = 0; ImgY = 0                                        ! isolated per gauge, survives resize.
+  END                                                         ! report: keep the band offset (ImgX,ImgY), no clear
+  cx = ImgX + INT(w * SELF.PivotXPct / 100)
   cy = ImgY + INT(h * SELF.PivotYPct / 100)
   IF w < h THEN r = w / 2 ELSE r = h / 2.
   r = r * SELF.RadiusPct / 100
@@ -246,12 +243,12 @@ txt   STRING(48)
   SETPENCOLOR(SELF.HubColor)
   ELLIPSE(cx-hr, cy-hr, 2*hr, 2*hr, SELF.HubColor)
 
-GaugeClass.Draw PROCEDURE(SIGNED pImageFeq)
+GaugeClass.Draw PROCEDURE(WINDOW pWin,SIGNED pImageFeq)
   CODE
   SELF.Feq = pImageFeq
-  SETTARGET(,pImageFeq)
-  SELF.Paint(pImageFeq, 1)                                    ! 1 = window mode: clears only this gauge's rect
-  SETTARGET()
+  SETTARGET(pWin, pImageFeq)                                  ! the IMAGE is the target: 0,0 = its top-left, and the
+  SELF.Paint(pImageFeq, 1)                                    ! graphics belong to the image so they survive a repaint
+  SETTARGET()                                                 ! / resize (a window-layer draw gets wiped by WM_PAINT)
 
 GaugeClass.AnimStep PROCEDURE()
 step  REAL
@@ -268,5 +265,4 @@ diff  REAL
   ELSE
     SELF.Value -= step
   END
-  IF SELF.Feq THEN SELF.Draw(SELF.Feq).
-  RETURN CHOOSE(SELF.Value = SELF.Target, 0, 1)
+  RETURN 1                                                    ! moved this tick - the caller repaints (it has pWin)
