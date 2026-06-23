@@ -1,2 +1,7 @@
 # Keep Markdown files LF in the repo regardless of platform
 *.md text eol=lf
+# Clarion source must be CRLF — the compiler mis-parses LF-only includes
+*.tpl text eol=crlf
+*.tpw text eol=crlf
+*.inc text eol=crlf
+*.clw text eol=crlf

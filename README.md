@@ -57,6 +57,10 @@ templates/                      # ready-to-register Clarion templates
     GaugeClass.inc              #     the gauge class (config + method prototypes)
     GaugeClass.clw              #     the implementation (geometry + native drawing)
     myGauge.tpl                 #     global include + window + report extensions
+  myCompress/                   #   pure-Clarion compression: DEFLATE/zlib/gzip (see below)
+    CompressClass.inc           #     the codec class (config + method prototypes)
+    CompressClass.clw           #     the implementation (inflate/deflate/containers)
+    myCompress.tpl              #     one global extension (the shared object)
 designer/ClarionTplDesigner/    # WPF visual designer for the prompt UI (see below)
 installer/                      # builds the installer + a portable single-file exe
 README.md
@@ -256,6 +260,24 @@ on open/resize, optional animation, a generated `Refresh:<Object>` routine), and
 `GaugeClass.clw` (ANSI) to the redirection path. Full programmer's documentation — shapes, prompts, the class
 API, run-time control, and troubleshooting — is in [`docs/myGauge-template.html`](docs/myGauge-template.html).
 
+### `templates/myCompress/` — pure-Clarion compression (memory + files)
+A self-contained **compression library** written entirely in **pure Clarion** — no DLL, no external
+library. One self-contained ANSI class, **`CompressClass`**, implements **DEFLATE (RFC 1951)** with the
+**zlib (RFC 1950)** and **gzip (RFC 1952)** wrappers, so a `.gz` it writes opens in gzip / 7-Zip /
+browsers / .NET `GZipStream`, and it reads any DEFLATE-family stream those tools produce. Decompression
+(INFLATE) is complete — stored + fixed + dynamic Huffman; compression is **LZ77** (a hash-chain match
+finder) + fixed Huffman, with Level 0 emitting stored blocks. Add **one global extension** —
+**myCompress - Global Compressor** — and reach the shared object from any embed; there is **no per-window
+or per-report wiring** (compression is all code-driven). It works on **memory buffers** (length-explicit
+`Compress`/`Decompress(*STRING,LONG,*STRING)`) **and files** (`CompressFile`/`DecompressFile`), carries
+**CRC32** (gzip) and **Adler32** (zlib) checksums, and ships a `SelfTest()` smoke test. Pick the format
+(`Cmp:Raw`/`Cmp:Zlib`/`Cmp:Gzip`) and level (0–9) at run time; decompression **auto-detects** the
+container. The codec is validated by a .NET golden-vector oracle, [`designer/CompressCore/`](designer/CompressCore/),
+that round-trips a corpus both ways (Clarion ↔ `GZipStream`/`ZLibStream`/`DeflateStream`). Copy
+`CompressClass.inc` + `CompressClass.clw` (**ANSI, CRLF**) to the redirection path. Full programmer's
+documentation — the API, formats, run-time control, error codes, and troubleshooting — is in
+[`docs/myCompress-template.html`](docs/myCompress-template.html).
+
 ## Install
 
 Copy the two folders into your Claude Code config (`~/.claude` on macOS/Linux,
@@ -392,6 +414,18 @@ driven by a **private per-instance `Redraw:<Object>` event** posted on `EVENT:Op
 — it just eases the needle one step and returns *moved*, leaving the caller (which holds the window handle)
 to repaint. The `GaugeClass` `Draw` prototype is now `Draw(WINDOW pWin, SIGNED pImageFeq)`; **regenerate
 any app** built against the older one-argument `Draw`.
+
+**myCompress — a pure-Clarion compression library (v2.17).** A new [`templates/myCompress/`](templates/myCompress/)
+adds DEFLATE / zlib / gzip **compression** to Clarion in pure Clarion — no DLL. One global object
+(`CompressClass`) compresses and decompresses **memory buffers and files** in formats that interoperate
+with gzip / 7-Zip / .NET; INFLATE is complete (stored + fixed + dynamic Huffman) and DEFLATE is LZ77 +
+fixed Huffman, with CRC32/Adler32 checksums and a `SelfTest()`. Verified end-to-end against the real
+Clarion compiler and a .NET golden-vector oracle ([`designer/CompressCore/`](designer/CompressCore/)) —
+a string round-trips and the self-test passes. Three hard-won Clarion lessons came out of it and are now
+baked into the `clarion-template` skill/notes: **a single array can't exceed 64 KB**, **class source must
+be stored CRLF** (LF-only includes mis-compile as "Illegal data type"), and a **global object must not be
+named after a file field** (e.g. `Zip`) or it collides. A `.gitattributes` rule now keeps all Clarion
+source (`.tpl`/`.tpw`/`.inc`/`.clw`) CRLF.
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
