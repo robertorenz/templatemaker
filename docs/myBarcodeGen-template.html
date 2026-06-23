@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>myBarcodeGen — Developer's Manual</title>
+<style>
+  :root{
+    --blue:#0A66C2; --blue-d:#084d93; --navy:#0E1A2B; --navy-2:#16263c;
+    --ink:#22303f; --muted:#6b7785; --line:#e3e8ef; --bg:#f5f7fa;
+    --card:#ffffff; --green:#1e7c5a; --amber:#9a6a12; --amber-bg:#fff7e8;
+    --green-bg:#eef8f3; --blue-bg:#eef4fc; --red-bg:#fcecec; --red:#b23a2e;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:15px/1.65 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg)}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:flex;min-height:100vh}
+  nav{width:290px;flex:0 0 290px;background:linear-gradient(180deg,var(--navy),var(--navy-2));
+    color:#cdd8e6;position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 0}
+  nav .brand{padding:0 22px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+  nav .brand h1{font-size:16px;margin:0;color:#fff} nav .brand span{font-size:12px;color:#8aa0bb}
+  nav a{display:block;color:#b9c7d8;padding:6px 22px;font-size:13.5px;border-left:3px solid transparent}
+  nav a:hover{background:rgba(255,255,255,.05);color:#fff;text-decoration:none}
+  nav a.h2{padding-left:34px;font-size:13px;color:#9fb2c8}
+  nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#6e85a1;
+    padding:14px 22px 4px;font-weight:700}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(120deg,#0c2a4d,var(--blue));color:#fff;padding:46px 52px 38px}
+  header.hero h1{margin:0 0 6px;font-size:30px;letter-spacing:-.3px}
+  header.hero p{margin:0;font-size:15.5px;color:#dbe8f8;max-width:820px}
+  header.hero .pill{display:inline-block;margin-top:16px;background:rgba(255,255,255,.16);
+    padding:4px 12px;border-radius:20px;font-size:12.5px}
+  .body{padding:14px 52px 80px;max-width:980px}
+  section{padding:22px 0;border-bottom:1px solid var(--line)} section:last-child{border-bottom:none}
+  h2{font-size:21px;margin:14px 0 10px;color:var(--navy);scroll-margin-top:14px}
+  h3{font-size:16px;margin:20px 0 6px;color:var(--blue-d)}
+  p{margin:9px 0} ul,ol{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  code,kbd,pre{font-family:"Cascadia Code",Consolas,monospace}
+  code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:13px;color:#1d3b5e}
+  kbd{background:#1d2a3a;color:#e7eef7;padding:2px 7px;border-radius:5px;font-size:12px;
+    border:1px solid #324558;box-shadow:0 1px 0 #0b1420}
+  pre{background:#0f1d2e;color:#dbe6f2;padding:16px 18px;border-radius:10px;overflow:auto;
+    font-size:13px;line-height:1.55;margin:12px 0}
+  pre .c{color:#7fa6c9} pre .k{color:#79c0ff} pre .s{color:#7ee0b8} pre .t{color:#ffd591}
+  .callout{border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;border:1px solid}
+  .tip{background:var(--green-bg);border-color:#bfe3d3;color:#155}
+  .note{background:var(--blue-bg);border-color:#c5dcf6;color:#13456f}
+  .warn{background:var(--amber-bg);border-color:#ecd9a6;color:#6f5210}
+  .danger{background:var(--red-bg);border-color:#e6b8b2;color:#7c241b}
+  .callout b{display:block;margin-bottom:2px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f0f4f9;color:var(--navy);font-weight:600}
+  tr:hover td{background:#fafcff}
+  .lead{font-size:16px;color:#3a4756}
+  footer{padding:24px 52px;color:var(--muted);font-size:13px}
+  .top{font-size:12px;color:var(--muted);float:right}
+  .filetree{font-family:"Cascadia Code",Consolas,monospace;font-size:13px;background:#fff;
+    border:1px solid var(--line);border-radius:10px;padding:14px 18px;line-height:1.7;color:#37485a}
+  .api{font-family:"Cascadia Code",Consolas,monospace;font-size:12.5px;background:#f7f9fc;
+    border-left:3px solid var(--blue);padding:8px 12px;margin:8px 0;color:#1d3b5e;overflow:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><h1>myBarcodeGen</h1><span>Developer's Manual · v1.0 · 9 symbologies</span></div>
+    <a href="#over">Overview</a>
+    <div class="grp">Get started</div>
+    <a href="#install" class="h2">Install &amp; the class files</a>
+    <a href="#quick" class="h2">Quick start</a>
+    <a href="#types" class="h2">Barcode types</a>
+    <div class="grp">Using it</div>
+    <a href="#window" class="h2">Window extension</a>
+    <a href="#report" class="h2">Report extension</a>
+    <a href="#prompts" class="h2">Prompt reference</a>
+    <a href="#runtime" class="h2">Run-time / direct calls</a>
+    <div class="grp">Symbology notes</div>
+    <a href="#sym1d" class="h2">1D linear codes</a>
+    <a href="#sym2d" class="h2">2D codes</a>
+    <a href="#capacity" class="h2">Capacity &amp; input rules</a>
+    <div class="grp">How it works</div>
+    <a href="#arch" class="h2">Architecture</a>
+    <a href="#classes" class="h2">The classes &amp; API</a>
+    <a href="#drawing" class="h2">Drawing model</a>
+    <a href="#multidll" class="h2">Multi-DLL</a>
+    <a href="#rs" class="h2">Reed–Solomon fields</a>
+    <div class="grp">Reference</div>
+    <a href="#verify" class="h2">Testing &amp; verification</a>
+    <a href="#trouble" class="h2">Troubleshooting</a>
+  </nav>
+  <main>
+    <header class="hero">
+      <h1>myBarcodeGen — Developer's Manual</h1>
+      <p>A Clarion template set that encodes and draws <b>nine barcode symbologies</b> directly into an
+         IMAGE control with <code>BOX</code> primitives — <b>offline</b>, no internet, no <code>curl</code>,
+         no temp files. Five self-contained encoder classes, ported from a ZXing-validated C# reference.</p>
+      <span class="pill">Code 39 · Code 128 · ITF · EAN-13 · UPC-A · QR · Data Matrix · PDF417 · Aztec</span>
+    </header>
+    <div class="body">
+
+    <section id="over">
+      <h2>Overview <a href="#over" class="top">#</a></h2>
+      <p class="lead">myBarcodeGen turns any value — a part number, a URL, a GTIN, a shipping payload — into a
+        scannable barcode painted onto a window or a report, entirely on the local machine.</p>
+      <p>It generalises the <b>myQRDraw</b> approach (encode at run time, draw with <code>BOX</code>es) to a
+        whole family of symbologies. Each encoder is a faithful Clarion port of a C# reference
+        (<code>designer/BarcodeCore</code>) that is validated by decoding its output with ZXing — 42 automated
+        round-trip tests across all nine codes.</p>
+      <table>
+        <tr><th>Type code</th><th>Symbology</th><th>Kind</th><th>Class</th><th>Typical use</th></tr>
+        <tr><td><code>1</code></td><td>Code 39</td><td>1D</td><td>BarcodeClass</td><td>Asset tags, simple IDs (A–Z 0–9 - . space $ / + %)</td></tr>
+        <tr><td><code>2</code></td><td>Code 128</td><td>1D</td><td>BarcodeClass</td><td>General text/numeric (auto Code B / Code C)</td></tr>
+        <tr><td><code>3</code></td><td>Interleaved 2 of 5</td><td>1D</td><td>BarcodeClass</td><td>Numeric, dense (cartons, ITF-14)</td></tr>
+        <tr><td><code>4</code></td><td>EAN-13</td><td>1D</td><td>BarcodeClass</td><td>Retail product codes</td></tr>
+        <tr><td><code>5</code></td><td>UPC-A</td><td>1D</td><td>BarcodeClass</td><td>Retail (North America)</td></tr>
+        <tr><td><code>6</code></td><td>QR Code</td><td>2D</td><td>QRCodeClass</td><td>URLs, vCards, payments</td></tr>
+        <tr><td><code>7</code></td><td>Data Matrix</td><td>2D</td><td>DataMatrixClass</td><td>Small-part marking, logistics</td></tr>
+        <tr><td><code>8</code></td><td>PDF417</td><td>2D</td><td>Pdf417Class</td><td>IDs, boarding passes, shipping</td></tr>
+        <tr><td><code>9</code></td><td>Aztec</td><td>2D</td><td>AztecClass</td><td>Transit/event tickets</td></tr>
+      </table>
+      <div class="callout note"><b>The shape of the template</b>
+        One <b>global</b> extension carries the encoders (add once per app); a <b>window</b> extension and a
+        <b>report</b> extension each draw a barcode of the type you pick. The QR type reuses the same
+        <code>QRCodeClass</code> as the myQRDraw template.</div>
+    </section>
+
+    <section id="install">
+      <h2>Install &amp; the class files <a href="#install" class="top">#</a></h2>
+      <ol>
+        <li>Copy <code>templates/myBarcodeGen/myBarcodeGen.tpl</code> into your template folder and register it:
+          <b>Setup ▸ Template Registry ▸ Register</b>.</li>
+        <li>Copy the <b>five encoder classes — ten <code>.inc</code>/<code>.clw</code> files</b> — to a folder on
+          the Clarion <b>redirection path</b> (your app folder, or <code>\clarion12\libsrc\win</code>).</li>
+      </ol>
+      <div class="filetree">
+templates\myBarcodeGen\<br>
+&nbsp;&nbsp;myBarcodeGen.tpl&nbsp;&nbsp;&nbsp;&nbsp;&larr; register this<br>
+&nbsp;&nbsp;BarcodeClass.inc / .clw&nbsp;&nbsp;&nbsp;&larr; 1D codes (Code 39/128, ITF, EAN-13, UPC-A)<br>
+&nbsp;&nbsp;DataMatrixClass.inc / .clw&nbsp;&larr; Data Matrix<br>
+&nbsp;&nbsp;Pdf417Class.inc / .clw&nbsp;&nbsp;&nbsp;&larr; PDF417<br>
+&nbsp;&nbsp;AztecClass.inc / .clw&nbsp;&nbsp;&nbsp;&nbsp;&larr; Aztec<br>
+templates\myQRDraw\<br>
+&nbsp;&nbsp;QRCodeClass.inc / .clw&nbsp;&nbsp;&nbsp;&larr; QR (shared with myQRDraw)
+      </div>
+      <div class="callout danger"><b>Two hard requirements for the class files</b>
+        <ul style="margin:4px 0">
+          <li>Store every <code>.inc</code>/<code>.clw</code> in <b>ANSI</b> (not UTF-8). A BOM or any
+            multi-byte character will break the Clarion compiler.</li>
+          <li>They must be on the redirection path so <code>INCLUDE</code> and the class <code>LINK</code>
+            attribute can find them — the <code>.clw</code> modules compile automatically (no project edit).</li>
+        </ul>
+      </div>
+      <div class="callout note"><b>Only need some types?</b>
+        The global extension includes all five classes. If you only ever use, say, the 1D codes, you can omit
+        the classes you don't reference — but you must also remove their <code>INCLUDE</code>/instance lines
+        from the generated global module. The simplest path is to ship all ten files.</div>
+    </section>
+
+    <section id="quick">
+      <h2>Quick start <a href="#quick" class="top">#</a></h2>
+      <ol>
+        <li>On the <b>global Extensions</b> of your app, add <b>“myBarcodeGen - Global Encoders”</b> (once).</li>
+        <li>On a window procedure, add an <b>IMAGE</b> control (not a Region). Make it <b>wide</b> for 1D
+          barcodes, or square-ish for the 2D codes.</li>
+        <li>Add the procedure extension <b>“myBarcodeGen - Draw a barcode on this window”</b>.</li>
+        <li>Pick the IMAGE control and the <b>Barcode type</b>, type a <b>Value</b>, choose colors and the
+          quiet zone.</li>
+        <li>Generate, compile, run — then scan with a phone or scanner.</li>
+      </ol>
+      <div class="callout tip"><b>Self-test</b>
+        Tick <b>“Draw self-test sample for the chosen type”</b> to draw a fixed, known-good value for whatever
+        symbology you selected (e.g. <code>HELLO WORLD</code> for QR, <code>5901234123457</code> for EAN-13).
+        Scanning it confirms the encoder works on your machine.</div>
+    </section>
+
+    <section id="types">
+      <h2>Barcode types <a href="#types" class="top">#</a></h2>
+      <p>The <b>Barcode type</b> prompt is a drop-list; its stored value (1–9) is the type code used at
+        generation time to wire up the right class. The codes are also available as equates from
+        <code>BarcodeClass.inc</code>, handy if you call the classes directly:</p>
+      <div class="api">BC:Code39=1&nbsp; BC:Code128=2&nbsp; BC:ITF=3&nbsp; BC:EAN13=4&nbsp; BC:UPCA=5&nbsp;
+        BC:QR=6&nbsp; BC:DataMatrix=7&nbsp; BC:PDF417=8&nbsp; BC:Aztec=9</div>
+      <p>The template <b>dispatches at generation time</b> (not run time): because the type is chosen in the
+        designer, only the call for that one symbology is generated. Types 1–5 go to <code>BarcodeObj</code>
+        (BarcodeClass); 6→<code>QRCodeObj</code>; 7→<code>DataMatrixObj</code>; 8→<code>Pdf417Obj</code>;
+        9→<code>AztecObj</code>.</p>
+    </section>
+
+    <section id="window">
+      <h2>Window extension <a href="#window" class="top">#</a></h2>
+      <p><b>myBarcodeGen - Draw a barcode on this window</b> draws into the chosen IMAGE control and repaints
+        on <code>EVENT:OpenWindow</code> and <code>EVENT:Sized</code> — set the IMAGE to resize/anchor and the
+        barcode follows the window. It also generates a <b>repaint routine</b>:</p>
+<pre><span class="t">loc:Value</span> = <span class="s">'https://example.com/order/4471'</span>
+<span class="k">DO</span> myBarcodeGenRepaint   <span class="c">! re-encode + redraw from the current value</span></pre>
+      <p>Behind the scenes the handler builds <code>myBC:Value</code> (a <code>CSTRING(512)</code>) from the
+        Value prompt — literal text, or a Clarion variable/expression if you tick “Value is a variable” — then
+        calls the appropriate class.</p>
+    </section>
+
+    <section id="report">
+      <h2>Report extension <a href="#report" class="top">#</a></h2>
+      <p><b>myBarcodeGen - Draw a barcode on this REPORT</b> draws <b>one barcode per record</b> into an IMAGE
+        control in a band. Reports render through the print engine, not a window event loop, so the drawing
+        happens in the <b>Before-Print-Detail</b> embed with <code>SETTARGET(Report)</code>:</p>
+      <ul>
+        <li>Put an IMAGE control in the <b>detail</b> band (or any band that prints per record) and give it a
+          <b>USE / field-equate</b>.</li>
+        <li>The control picker lists the <b>report's</b> controls (it uses <code>FROM(%ReportControl,…)</code>,
+          not a window <code>CONTROL</code> prompt).</li>
+        <li>Point the Value at a per-record field (e.g. <code>ORD:Barcode</code>) for a unique code each row.</li>
+      </ul>
+      <div class="callout warn"><b>Verify placement on a printout</b>
+        Report band-drawing is timing-sensitive. Use the self-test and check a printout/preview; if a code lands
+        in the wrong place, confirm the IMAGE is in the detail band.</div>
+    </section>
+
+    <section id="prompts">
+      <h2>Prompt reference <a href="#prompts" class="top">#</a></h2>
+      <table>
+        <tr><th>Prompt</th><th>Applies to</th><th>Notes</th></tr>
+        <tr><td>Image control</td><td>both</td><td>Window: any IMAGE. Report: an IMAGE in a band (must have a USE/equate).</td></tr>
+        <tr><td>Barcode type</td><td>both</td><td>One of the nine symbologies.</td></tr>
+        <tr><td>Value</td><td>both</td><td>The data to encode (literal or variable).</td></tr>
+        <tr><td>Value is a variable</td><td>both</td><td>Tick to treat Value as Clarion code (a field/expression) read at run time.</td></tr>
+        <tr><td>Show human-readable text</td><td>1D only</td><td>Draws the value under the bars (ignored by 2D codes).</td></tr>
+        <tr><td>QR error correction</td><td>QR only</td><td>L / M / Q / H (1–4); other types ignore it.</td></tr>
+        <tr><td>Dark / Light color</td><td>both</td><td>Module/bar color and background.</td></tr>
+        <tr><td>Quiet-zone modules</td><td>both</td><td>Light border width (0–30; ≥10 recommended for 1D, ≥4 for QR).</td></tr>
+        <tr><td>Draw self-test</td><td>window</td><td>Draws a fixed sample for the chosen type instead of Value.</td></tr>
+      </table>
+    </section>
+
+    <section id="runtime">
+      <h2>Run-time / calling the classes directly <a href="#runtime" class="top">#</a></h2>
+      <p>You don't have to use the prompts — the encoder objects are global, so you can draw from any code.
+        The objects (declared by the global extension) are <code>BarcodeObj</code>, <code>QRCodeObj</code>,
+        <code>DataMatrixObj</code>, <code>Pdf417Obj</code>, <code>AztecObj</code>.</p>
+<pre><span class="c">! 1D — type, value, dark, light, quiet, show-text</span>
+BarcodeObj.<span class="k">Draw</span>(?Image, BC:Code128, <span class="s">'ABC-123'</span>, COLOR:Black, COLOR:White, 10, 1)
+
+<span class="c">! QR — value, ecc(1..4), dark, light, quiet</span>
+QRCodeObj.<span class="k">Draw</span>(?Image, <span class="s">'https://site/x'</span>, 2, COLOR:Black, COLOR:White, 4)
+
+<span class="c">! Data Matrix / PDF417 / Aztec — value, dark, light, quiet</span>
+DataMatrixObj.<span class="k">Draw</span>(?Image, <span class="s">'PART-9912'</span>, COLOR:Black, COLOR:White, 2)
+Pdf417Obj.<span class="k">Draw</span>(?Image, loc:Payload, COLOR:Black, COLOR:White, 2)
+AztecObj.<span class="k">Draw</span>(?Image, loc:Ticket, COLOR:Black, COLOR:White, 2)</pre>
+      <p>Each <code>Draw</code> targets the IMAGE control, clears it (<code>BLANK</code>) and paints in one
+        call. If the value can't be encoded (too large, or invalid characters for the symbology) it returns
+        without drawing, leaving the control unchanged.</p>
+    </section>
+
+    <section id="sym1d">
+      <h2>1D linear codes <a href="#sym1d" class="top">#</a></h2>
+      <ul>
+        <li><b>Code 39</b> — characters <code>0–9 A–Z</code> and <code>- . space $ / + %</code>. Input is
+          upper-cased; the <code>*</code> start/stop is added automatically. Self-checking (no check digit).</li>
+        <li><b>Code 128</b> — full ASCII 32–126. The encoder auto-uses <b>Code C</b> for all-digit, even-length
+          data (compact), otherwise <b>Code B</b>. The mod-103 checksum is computed for you.</li>
+        <li><b>Interleaved 2 of 5</b> — digits only; an odd count gets a leading 0 (ITF needs an even number of
+          digits). No check digit is added.</li>
+        <li><b>EAN-13</b> — 12 digits (the check digit is computed and appended) or 13 (used as-is). 95 modules.</li>
+        <li><b>UPC-A</b> — 11 digits (check appended) or 12. Encoded as EAN-13 with a leading 0; the
+          human-readable line shows the 12-digit UPC.</li>
+      </ul>
+      <div class="callout note"><b>Human-readable text</b>
+        1D codes can draw the value as a line of text beneath the bars (the “Show human-readable text” prompt).
+        2D codes ignore that option.</div>
+    </section>
+
+    <section id="sym2d">
+      <h2>2D codes <a href="#sym2d" class="top">#</a></h2>
+      <ul>
+        <li><b>QR Code</b> — byte mode, versions 1–10, ECC L/M/Q/H (the “QR error correction” prompt), automatic
+          version + mask. See the myQRDraw manual for full detail.</li>
+        <li><b>Data Matrix</b> — ECC200, ASCII encodation, square symbols 10×10…26×26 (single data region),
+          chosen automatically by data size.</li>
+        <li><b>PDF417</b> — Byte compaction, automatic columns/rows and error-correction level. A stacked
+          (multi-row) symbol; drawn with each row taller than a module.</li>
+        <li><b>Aztec</b> — binary encoding, compact and full symbols, automatic layers and word size; the
+          central bullseye is the finder (no quiet zone strictly required, but a small one helps scanners).</li>
+      </ul>
+    </section>
+
+    <section id="capacity">
+      <h2>Capacity &amp; input rules <a href="#capacity" class="top">#</a></h2>
+      <table>
+        <tr><th>Type</th><th>Accepts</th><th>Approx. capacity</th></tr>
+        <tr><td>Code 39</td><td>A–Z 0–9 - . sp $ / + %</td><td>~practical: a few dozen chars (wider = longer)</td></tr>
+        <tr><td>Code 128</td><td>ASCII 32–126</td><td>~80+ chars (more in Code C numeric)</td></tr>
+        <tr><td>ITF</td><td>digits (even count)</td><td>any even number of digits</td></tr>
+        <tr><td>EAN-13 / UPC-A</td><td>digits, fixed length</td><td>13 / 12 digits</td></tr>
+        <tr><td>QR</td><td>any bytes</td><td>versions 1–10: up to ~271 bytes (ECC L), fewer at higher ECC</td></tr>
+        <tr><td>Data Matrix</td><td>any bytes</td><td>up to 44 codewords (26×26): ~44 ASCII / ~88 digits</td></tr>
+        <tr><td>PDF417</td><td>any bytes</td><td>large (hundreds of bytes); auto-sized</td></tr>
+        <tr><td>Aztec</td><td>any bytes</td><td>large; auto-sized (compact + full)</td></tr>
+      </table>
+      <div class="callout warn"><b>Trailing spaces are trimmed</b>
+        Every class <code>CLIP</code>s the value, so a space-padded fixed-length <code>STRING</code> field
+        doesn't inflate the symbol. If a value is too large for its symbology (or has invalid characters for
+        Code 39 / the digit-only codes), <code>Build</code>/<code>Draw</code> returns without drawing.</div>
+    </section>
+
+    <section id="arch">
+      <h2>Architecture <a href="#arch" class="top">#</a></h2>
+      <p>Two layers, mirroring myQRDraw:</p>
+      <ul>
+        <li><b>C# reference — <code>designer/BarcodeCore/</code></b> (+ <code>BarcodeCore.Tests</code>): the
+          encoders written first and validated by decoding every output with ZXing.Net (42 round-trip tests).
+          This is the oracle the Clarion ports are checked against; some tables (e.g. PDF417's 3×929 pattern
+          table) are generated from it.</li>
+        <li><b>Clarion classes</b> — five self-contained classes (<code>.inc</code> declaration +
+          <code>.clw</code> methods), each declared <code>CLASS,TYPE,MODULE('X.CLW'),LINK('X.CLW')</code> so
+          the <code>.clw</code> compiles into the build automatically. The template emits only an
+          <code>INCLUDE</code> per class plus one global instance each, and calls into them.</li>
+      </ul>
+      <p>The global extension wires everything at <code>%AfterGlobalIncludes</code> (the INCLUDEs) and
+        <code>%GlobalData</code> (the instances). Each class builds a module pattern (1D = a bar array;
+        2D = a module matrix) then paints it with <code>BOX</code>es.</p>
+    </section>
+
+    <section id="classes">
+      <h2>The classes &amp; API <a href="#classes" class="top">#</a></h2>
+      <p>Every class exposes a one-call <code>Draw()</code> (window use: set target, clear, paint), plus a
+        <code>Build()</code>/<code>Paint()</code> pair used on reports (build once, paint into the
+        already-set report target).</p>
+
+      <h3>BarcodeClass — 1D (types 1–5), instance <code>BarcodeObj</code></h3>
+      <div class="api">Draw(SIGNED pImageFeq, LONG pType, *CSTRING pValue, LONG pDark, LONG pLight, LONG pQuiet, LONG pShowText)<br>
+        Build(LONG pType, *CSTRING pValue) ,BYTE&nbsp;&nbsp;&nbsp;! 1 ok / 0 invalid<br>
+        PaintBars(SIGNED pImageFeq, LONG pDark, LONG pLight, LONG pQuiet, LONG pShowText)</div>
+      <p><code>pType</code> is a <code>BC:</code> code (1–5). <code>pShowText</code> = 1 draws the human-readable
+        line.</p>
+
+      <h3>QRCodeClass — type 6, instance <code>QRCodeObj</code></h3>
+      <div class="api">Draw(SIGNED pImageFeq, *CSTRING pValue, LONG pEcc, LONG pDark, LONG pLight, LONG pQuiet)<br>
+        BuildMatrix(*CSTRING pValue, LONG pEcc) ,BYTE<br>
+        Paint(SIGNED pImageFeq, LONG pDark, LONG pLight, LONG pQuiet)</div>
+      <p><code>pEcc</code>: 1=L, 2=M, 3=Q, 4=H. (Note the build method is <code>BuildMatrix</code>, not
+        <code>Build</code>.)</p>
+
+      <h3>DataMatrixClass / Pdf417Class / AztecClass — types 7/8/9</h3>
+      <p>Instances <code>DataMatrixObj</code>, <code>Pdf417Obj</code>, <code>AztecObj</code> — identical API:</p>
+      <div class="api">Draw(SIGNED pImageFeq, *CSTRING pValue, LONG pDark, LONG pLight, LONG pQuiet)<br>
+        Build(*CSTRING pValue) ,BYTE<br>
+        Paint(SIGNED pImageFeq, LONG pDark, LONG pLight, LONG pQuiet)</div>
+      <div class="callout note"><b>Window vs report calls</b>
+        The window extension calls <code>…Obj.Draw(…)</code>. The report extension calls
+        <code>IF …Obj.Build(value)</code> then <code>…Obj.Paint(…)</code> with the report as the active target
+        (QR uses <code>BuildMatrix</code> + <code>Paint</code>).</div>
+    </section>
+
+    <section id="drawing">
+      <h2>Drawing model <a href="#drawing" class="top">#</a></h2>
+      <ul>
+        <li><b>1D</b> — the bar pattern is drawn as full-height vertical <code>BOX</code> bars, centred in the
+          control with a quiet zone each side; contiguous dark modules merge into one BOX. Optional
+          human-readable text is drawn with <code>SHOW</code> beneath the bars.</li>
+        <li><b>QR / Data Matrix / Aztec</b> — a square module grid: a light background, then one
+          <code>BOX</code> per dark module, scaled to fit and centred, with a quiet-zone border.</li>
+        <li><b>PDF417</b> — a stacked matrix (rows × columns of modules). Each barcode row is drawn taller than
+          a module so the symbol has the right aspect ratio.</li>
+      </ul>
+      <p>All drawing targets the IMAGE control via <code>SETTARGET</code> and is window/page-relative
+        (<code>GETPOSITION</code> supplies the control's position and size). On a window, <code>Draw</code>
+        also issues <code>BLANK</code> first so a resize leaves no artifacts.</p>
+      <div class="callout tip"><b>Sizing</b>
+        Give 1D codes a <b>wide</b> IMAGE; give 2D codes a roughly <b>square</b> one. The module/bar size is an
+        integer number of dialog units, so a larger control yields a larger, crisper code; the symbol is always
+        centred.</div>
+    </section>
+
+    <section id="multidll">
+      <h2>Multi-DLL <a href="#multidll" class="top">#</a></h2>
+      <p>The encoder instances are global data, so the global extension declares them multi-DLL aware using
+        ABC's standard symbols (no extra prompts): defined in a single-EXE or the root DLL, declared
+        <code>EXTERNAL,DLL(dll_mode)</code> in other DLLs/EXEs, and exported from the root DLL.</p>
+      <pre>#IF(%DefaultExternal = 'None External')
+BarcodeObj BarcodeClass            <span class="c">! single-EXE or root DLL: defined here</span>
+#ELSE
+BarcodeObj BarcodeClass,EXTERNAL,DLL(dll_mode)   <span class="c">! other DLL/EXE: imported</span>
+#ENDIF</pre>
+      <p>Because the class methods are non-<code>VIRTUAL</code> and each class carries an unconditional
+        <code>LINK</code>, every target links its own copy of the method code — only the shared instances are
+        exported, so there's no method export-list to maintain.</p>
+    </section>
+
+    <section id="rs">
+      <h2>Reed–Solomon fields <a href="#rs" class="top">#</a></h2>
+      <p>The 2D codes use error correction over four different Galois fields. The encoders build the field
+        tables (or compute the generator polynomial) at run time — worth knowing if you read the source:</p>
+      <table>
+        <tr><th>Symbology</th><th>Field</th><th>Primitive / modulus</th><th>Generator base</th></tr>
+        <tr><td>QR</td><td>GF(256)</td><td>0x11D</td><td>0</td></tr>
+        <tr><td>Data Matrix</td><td>GF(256)</td><td>0x12D</td><td>1</td></tr>
+        <tr><td>PDF417</td><td>GF(929) prime field</td><td>mod 929 (primitive 3)</td><td>1</td></tr>
+        <tr><td>Aztec</td><td>GF(2^n), n=6/8/10/12</td><td>0x43 / 0x12D / 0x409 / 0x1069</td><td>1</td></tr>
+      </table>
+    </section>
+
+    <section id="verify">
+      <h2>Testing &amp; verification <a href="#verify" class="top">#</a></h2>
+      <ul>
+        <li><b>Automated (dev)</b> — <code>dotnet test designer/BarcodeCore.Tests</code> runs <b>42 round-trip
+          tests</b>: every encoder's output is decoded back with ZXing and must equal the input (plus check-digit
+          and structural assertions). That C# reference is the proven oracle the Clarion ports mirror.</li>
+        <li><b>On your machine</b> — register the template, tick <b>self-test</b> for each type, generate/compile,
+          and scan the drawn code. The 1D self-tests use valid sample values (e.g. a valid EAN-13); the 2D ones
+          use short text.</li>
+      </ul>
+      <div class="callout note"><b>The C# encoders are the source of truth</b>
+        The Clarion classes are ports; they are not compiled by the doc/test tooling here. If a generated app
+        won't compile, the error is almost always a missing/UTF-8 class file or a stale copy — re-copy the ANSI
+        <code>.inc</code>/<code>.clw</code> to the redirection path.</div>
+    </section>
+
+    <section id="trouble">
+      <h2>Troubleshooting <a href="#trouble" class="top">#</a></h2>
+      <table>
+        <tr><th>Symptom</th><th>Cause / fix</th></tr>
+        <tr><td>“Unknown function label LEN / BOX / SETTARGET” compiling a class</td><td>The <code>.clw</code> needs its module-level <code>MAP</code> (it has one) — if you edited it, keep the <code>MEMBER</code> + <code>MAP</code>/<code>END</code> header that pulls in <code>BUILTINS.CLW</code>.</td></tr>
+        <tr><td>A <code>&lt;</code> in a string won't compile</td><td>Clarion treats <code>&lt;</code> as an <code>&lt;nnn&gt;</code> escape; literal <code>&lt;</code> must be <code>&lt;&lt;</code>. The shipped tables avoid <code>&lt;</code> entirely — don't hand-edit the packed PDF417 table.</td></tr>
+        <tr><td>Nothing draws</td><td>Control must be an <b>IMAGE</b>. Check the value isn't too large/invalid for the type (then <code>Build</code> returns 0). For reports, the IMAGE must be in the printed band.</td></tr>
+        <tr><td>Won't scan</td><td>Use a larger/correct-aspect IMAGE (wide for 1D, square for 2D), keep a quiet zone, and use strong dark/light contrast (black on white).</td></tr>
+        <tr><td>1D barcode is huge/dense for short text</td><td>A space-padded field is being encoded — values are CLIP'd, but make sure you're passing the trimmed field (or a CSTRING).</td></tr>
+        <tr><td>Multi-DLL link errors on an instance</td><td>The global extension handles EXTERNAL/export automatically via <code>%DefaultExternal</code>; make sure the global extension is added and the build's root DLL is set correctly.</td></tr>
+        <tr><td>Class file changes ignored</td><td>You have two copies on the path. Keep one authoritative copy (e.g. <code>\clarion12\libsrc\win</code>) and re-copy after edits.</td></tr>
+      </table>
+    </section>
+
+    </div>
+    <footer>myBarcodeGen v1.0 — offline barcode generator for Clarion (9 symbologies). Part of the Clarion
+      Template Maker toolkit. C# reference: <code>designer/BarcodeCore</code> (42 ZXing-validated tests).</footer>
+  </main>
+</div>
+</body>
+</html>

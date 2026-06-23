@@ -226,9 +226,11 @@ rest is like myQRDraw (value literal-or-variable, colors, quiet zone), with **wi
 extensions. Each encoder is a self-contained ANSI Clarion class, ported from the ZXing-validated C# reference
 [`designer/BarcodeCore/`](designer/BarcodeCore/) (**42 round-trip tests**): `BarcodeClass` (1D),
 `QRCodeClass`, `DataMatrixClass` (ECC200), `Pdf417Class` (GF(929) + a packed pattern table), and `AztecClass`
-(variable Galois field, bullseye + spiral). Copy the seven `.inc`/`.clw` class files to the Clarion
-redirection path. Reed–Solomon spans four different fields across the set (GF(256) poly 0x11D/0x12D, the
-prime field GF(929), and GF(2^n) for Aztec).
+(variable Galois field, bullseye + spiral). Copy the five encoder classes (ten `.inc`/`.clw` files) to the
+Clarion redirection path. Reed–Solomon spans four different fields across the set (GF(256) poly 0x11D/0x12D,
+the prime field GF(929), and GF(2^n) for Aztec). Full **developer's manual** (install, the class APIs, per-
+symbology rules, drawing model, multi-DLL, troubleshooting) is in
+[`docs/myBarcodeGen-template.html`](docs/myBarcodeGen-template.html).
 
 ## Install
 
