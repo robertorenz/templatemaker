@@ -119,6 +119,7 @@ INCLUDE('GaugeClass.INC'),ONCE
 #!-----------------------------------------------------------------------------
 #AT(%DataSection),WHERE(%myGaugeDisableThis=0 AND %myGaugeImage)
 %myGaugeObject       GaugeClass                              ! one gauge object for this instance
+Redraw:%myGaugeObject EQUATE(EVENT:User + 200 + %ActiveTemplateInstance) ! private "repaint" event (unique per gauge)
 #ENDAT
 #!
 #! PRIORITY(2000) puts this self-contained CASE EVENT() ABOVE the framework's own
@@ -159,11 +160,13 @@ INCLUDE('GaugeClass.INC'),ONCE
 #ELSE
     %myGaugeObject.SetValue(%myGaugeInitial)
 #ENDIF
-    %myGaugeObject.Draw(%myGaugeImage)
+    POST(Redraw:%myGaugeObject)                              ! first draw, after the window has opened
 #IF(%myGaugeAnimate)
     0{PROP:Timer} = %myGaugeAnimSpeed
 #ENDIF
   OF EVENT:Sized
+    POST(Redraw:%myGaugeObject)                              ! redraw AFTER the resizer settles (fresh size)
+  OF Redraw:%myGaugeObject
     %myGaugeObject.Draw(%myGaugeImage)
 #IF(%myGaugeAnimate)
   OF EVENT:Timer
@@ -353,6 +356,7 @@ INCLUDE('GaugeClass.INC'),ONCE
 #!
 #AT(%DataSection),WHERE(%myGaugeCtlDisable=0)
 %myGaugeCtlObject       GaugeClass                              ! one gauge object for this control
+Redraw:%myGaugeCtlObject EQUATE(EVENT:User + 200 + %ActiveTemplateInstance) ! private "repaint" event (unique per gauge)
 #ENDAT
 #!
 #AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%myGaugeCtlDisable=0)
@@ -390,11 +394,13 @@ INCLUDE('GaugeClass.INC'),ONCE
 #ELSE
     %myGaugeCtlObject.SetValue(%myGaugeCtlInitial)
 #ENDIF
-    %myGaugeCtlObject.Draw(%myGaugeCtlImage)
+    POST(Redraw:%myGaugeCtlObject)                           ! first draw, after the window has opened
 #IF(%myGaugeCtlAnimate)
     0{PROP:Timer} = %myGaugeCtlAnimSpeed
 #ENDIF
   OF EVENT:Sized
+    POST(Redraw:%myGaugeCtlObject)                           ! redraw AFTER the resizer settles (fresh size)
+  OF Redraw:%myGaugeCtlObject
     %myGaugeCtlObject.Draw(%myGaugeCtlImage)
 #IF(%myGaugeCtlAnimate)
   OF EVENT:Timer

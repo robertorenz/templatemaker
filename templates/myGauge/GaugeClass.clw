@@ -152,9 +152,13 @@ poly  SIGNED,DIM(6)
 txt   STRING(48)
   CODE
   GETPOSITION(pImageFeq, ImgX, ImgY, w, h)
-  IF pWindowMode                                              ! window: clear ONLY this gauge's rectangle. A bare
-    BLANK(ImgX, ImgY, w, h)                                   ! BLANK wipes the whole window graphics layer, so a
-  END                                                         ! second gauge's clear would erase the first.
+  IF pWindowMode                                              ! window: clear ONLY this gauge's rectangle - a bare
+    IF SELF.LastW > 0                                         ! BLANK wipes the whole window layer, erasing other
+      BLANK(SELF.LastX, SELF.LastY, SELF.LastW, SELF.LastH)   ! gauges. Clear where we drew LAST (so a resize that
+    END                                                       ! moves/shrinks the image leaves no trail) ...
+    BLANK(ImgX, ImgY, w, h)                                   ! ... and the current rect.
+    SELF.LastX = ImgX; SELF.LastY = ImgY; SELF.LastW = w; SELF.LastH = h
+  END
   cx = ImgX + INT(w * SELF.PivotXPct / 100)                   ! window-relative origin (SETTARGET(,feq), myPie #5)
   cy = ImgY + INT(h * SELF.PivotYPct / 100)
   IF w < h THEN r = w / 2 ELSE r = h / 2.

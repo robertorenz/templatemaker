@@ -81,6 +81,11 @@ ZColor             LONG,DIM(16)
 NZones             LONG
 ! ---- animation ----
 AnimStepPct        REAL                                      ! % of range moved per AnimStep
+! ---- redraw bookkeeping (window mode) ----
+LastX              LONG                                      ! last drawn rect, so a resize clears the OLD area too
+LastY              LONG
+LastW              LONG
+LastH              LONG
 ! ---- methods --------------------------------------------------------------
 Construct          PROCEDURE
 SetRange           PROCEDURE(REAL pMin,REAL pMax)
