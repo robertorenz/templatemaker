@@ -10,7 +10,10 @@
 !
 !  This file MUST be stored in ANSI (not UTF-8).
 ! ============================================================================
-  MEMBER()
+  MEMBER                                  ! bare MEMBER (no parens) so the compiler auto-includes BUILTINS.CLW
+                                          ! (LEN, BOX, SETTARGET, GETPOSITION, SETPENCOLOR, BLANK, ...).
+                                          ! MEMBER() with empty parens means "member of no program" and
+                                          ! suppresses that include, making those library calls "Unknown".
 
   INCLUDE('QRCodeClass.INC'),ONCE
 
