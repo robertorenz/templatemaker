@@ -125,7 +125,7 @@ pic  CSTRING(16)
   RETURN CLIP(LEFT(FORMAT(v, pic)))
 
 !=== drawing ================================================================
-GaugeClass.Paint PROCEDURE(SIGNED pImageFeq)
+GaugeClass.Paint PROCEDURE(SIGNED pImageFeq,BYTE pCtrlRelative=0)
 ImgX  LONG
 ImgY  LONG
 w     LONG
@@ -152,6 +152,9 @@ poly  SIGNED,DIM(6)
 txt   STRING(48)
   CODE
   GETPOSITION(pImageFeq, ImgX, ImgY, w, h)
+  IF pCtrlRelative                                            ! window: SETTARGET(,feq) gives a control-relative
+    ImgX = 0; ImgY = 0                                        ! surface (origin 0,0), so drop the window offset -
+  END                                                         ! else an image far from x=0 draws off its own edge
   cx = ImgX + INT(w * SELF.PivotXPct / 100)
   cy = ImgY + INT(h * SELF.PivotYPct / 100)
   IF w < h THEN r = w / 2 ELSE r = h / 2.

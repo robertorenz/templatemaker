@@ -91,7 +91,7 @@ Preset             PROCEDURE(LONG pStyle)
 AddZone            PROCEDURE(REAL pFrom,REAL pTo,LONG pColor)
 ClearZones         PROCEDURE
 Draw               PROCEDURE(SIGNED pImageFeq)               ! window: set target, clear, paint
-Paint              PROCEDURE(SIGNED pImageFeq)               ! paint into the current target (reports)
+Paint              PROCEDURE(SIGNED pImageFeq,BYTE pCtrlRelative=0) ! paint into the current target; pCtrlRelative=1 draws at the control origin (windows), 0 keeps the band offset (reports)
 AnimStep           PROCEDURE(),BYTE                          ! ease Value->Target + redraw; 1 = still moving
 ! ---- internal ----
 Clamp              PROCEDURE(REAL v),REAL
