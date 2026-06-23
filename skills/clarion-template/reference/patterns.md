@@ -265,6 +265,44 @@ silently target the window or draw nothing:
   verifiable — give the report extension a fixed self-test value and confirm by scanning a printout. If a
   single graphic per *page* (not per record) is wanted, target a page-header band / a different embed.
 
+## Shipping a self-contained CLASS (.inc/.clw) from a template
+
+When a template needs real logic (an encoder, a parser), put it in a **CLASS** in an external `.inc`
+(declaration) + `.clw` (methods) rather than emitting dozens of free procedures into `%ProgramProcedures` —
+the methods then compile in their own module and the program's global procedure area stays lean. Wiring that
+actually compiles (corpus: CapeSoft `StringTheory`/`Reflection`, ABC `ABFILE`):
+
+- **The `.clw` header MUST be bare `MEMBER` — NOT `MEMBER()`.** Empty parens declare "member of *no*
+  program" and **suppress the automatic `BUILTINS.CLW` include**, so every prototyped runtime function
+  (`LEN`, `BOX`, `SETTARGET`, `GETPOSITION`, `SETPENCOLOR`, `BLANK`, `CLIP`, …) fails with **"Unknown
+  function/procedure label"** — while intrinsic keywords (`INT`, `ABS`, `BSHIFT`, `BAND`, `CHOOSE`) still
+  compile, which makes the cause look mysterious. Header: `  MEMBER` then `  INCLUDE('MyClass.INC'),ONCE`.
+- **Self-contained link:** declare the class `MyClass CLASS,TYPE,MODULE('MyClass.CLW'),LINK('MyClass.CLW')`.
+  The `LINK` adds the `.clw` to the project automatically — no manual project edit. Keep methods **non-VIRTUAL**
+  so calls dispatch statically (each target links its own copy of the code; no method export list to maintain).
+- **The instance is GLOBAL DATA → make it multi-DLL aware** (else a multi-DLL build fails: procedures in other
+  DLLs reference an instance that was never declared `EXTERNAL` there). Use ABC's built-in symbols, no extra
+  prompts (corpus: `cleansdw.tpw`):
+  ```
+  #AT(%GlobalData),WHERE(%Disable=0)
+    #IF(%DefaultExternal = 'None External')
+  MyObj  MyClass                              #! single-EXE or root DLL: defined here
+    #ELSE
+  MyObj  MyClass,EXTERNAL,DLL(dll_mode)       #! other DLL/EXE: imported
+    #ENDIF
+  #ENDAT
+  #AT(%DLLExportList),WHERE(%Disable=0)
+    #IF(%DefaultExternal = 'None External' AND %ProgramExtension='DLL' AND %DefaultExport)
+  $MyObj  @?                                  #! export the shared instance from the root DLL
+    #ENDIF
+  #ENDAT
+  ```
+  Include the header with `#AT(%AfterGlobalIncludes)` → `INCLUDE('MyClass.INC'),ONCE`.
+- **Ship the `.inc`/`.clw` and tell the developer to copy them to a redirection-path folder** (app dir or
+  `\clarion12\libsrc\win`). For Clarion 12 store them in **ANSI** (not UTF-8 — a BOM or multibyte char breaks
+  the compiler; pure-ASCII content is safe either way).
+- Reference: the `myQRDraw` set (`QRCodeClass.inc`/`.clw`).
+
 ## Gotchas checklist
 
 - [ ] Every `#AT` honors the disable prompt via `WHERE()`.
