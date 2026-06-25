@@ -480,6 +480,10 @@ myPiePanel:Depth   SIGNED                                    ! 3D depth shown in
 myPiePanel:ShowLeg BYTE                                      ! show-legend checkbox
 myPiePanel:ShowPct BYTE                                      ! show-percentages checkbox
 myPiePanel:EIP     QEIPManager                              ! drives in-cell editing on the pie's slice queue
+myPiePanel:EIPEQ   EditQueue                                ! the EIP column->editor map. EIP.EQ is a NULL &ref
+                                                            !   until WE assign it (BrowseClass NEWs its own);
+                                                            !   AddControl derefs it with no null-check, so an
+                                                            !   unassigned EQ GPFs on open. Give it real storage.
 myPiePanel:EIPFlds FieldPairsClass                          ! maps each editable column to its queue field
 myPiePanel:EIPVCR  LONG                                     ! VCRRequest backing store (&LONG GPFs if NULL)
 myPiePanel:EIPLbl  EditEntryClass                           ! type-in-cell editor for the Label column
@@ -501,6 +505,7 @@ myPiePanel:Sync    EQUATE(EVENT:User+199)                    ! deferred "load fr
       myPiePanel:EIPFlds.AddPair(%myPiePanelPrefix:QLabel,%myPiePanelPrefix:QLabel)  ! one pair per editable
       myPiePanel:EIPFlds.AddPair(%myPiePanelPrefix:QValue,%myPiePanelPrefix:QValue)  !   column, in visible
       myPiePanel:EIPFlds.AddPair(%myPiePanelPrefix:QColor,%myPiePanelPrefix:QColor)  !   column order
+      myPiePanel:EIP.EQ &= myPiePanel:EIPEQ                   ! REQUIRED: AddControl derefs EQ with no null-check
       myPiePanel:EIP.Q &= %myPiePanelPrefix:Q
       myPiePanel:EIP.Fields &= myPiePanel:EIPFlds
       myPiePanel:EIP.ListControl = ?myPiePanelList
