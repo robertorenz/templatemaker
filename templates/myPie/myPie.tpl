@@ -1,4 +1,4 @@
-#TEMPLATE(myPie,'myPie - Draw a Pie Chart into a Window - v1.3'),FAMILY('ABC')
+#TEMPLATE(myPie,'myPie - Draw a Pie Chart into a Window - v1.4'),FAMILY('ABC')
 #!-----------------------------------------------------------------------------
 #!  myPie template set
 #!
@@ -260,10 +260,13 @@ myPieRepaint ROUTINE
       #DISPLAY('the pie + legend. No global or procedure extension needed.')
       #DISPLAY('Size / move the control wherever you want the chart.')
       #DISPLAY('On the Segments tab, add one slice per segment (Label / Value /')
-      #DISPLAY('Color). Drop several of these on one window if you like.')
+      #DISPLAY('Color) - these SEED the runtime slice queue. Drop several of')
+      #DISPLAY('these on one window if you like.')
       #DISPLAY('')
-      #DISPLAY('Run time: change a value then repaint, e.g.')
-      #DISPLAY('   Pie1:Slices[2] = 75 ;  DO Repaint:Pie1')
+      #DISPLAY('The slices live in a runtime QUEUE (<Image>:Q) - unbounded count.')
+      #DISPLAY('Drop a "Pie Controls" panel to edit slices in-cell at run time,')
+      #DISPLAY('or change the queue yourself then repaint, e.g.')
+      #DISPLAY('   <Image>:QValue = 75 ; PUT(<Image>:Q) ;  DO Repaint:<Image>')
     #ENDBOXED
   #ENDTAB
 #ENDSHEET
@@ -286,13 +289,28 @@ myPieRepaint ROUTINE
   #ENDLOOP
 #ENDAT
 #!-----------------------------------------------------------------------------
-#! Per-instance data (DIM'd at gen time from the segment count; prefixed by the
-#! Name so several pies on one window never collide). Only emit with >=1 segment.
+#! Per-instance data. The slice data is now a RUNTIME QUEUE (unbounded slice
+#! count); the gen-time Segments prompts only SEED it. PIE() still needs plain
+#! arrays, so we keep fixed DIM(64) working buffers and rebuild them from the
+#! queue on every redraw. Data goes BEFORE the window (%DataSectionBeforeWindow)
+#! so a myPiePanel's LIST,FROM(<this queue>) is legal (window controls cannot
+#! forward-reference data declared after the window).
+#!
+#! The QUEUE MUST carry ,PRE() - VALIDATED: a queue with colon-bearing field
+#! labels (e.g. <key>:QLabel) is only bare-accessible WITH ,PRE(); without it
+#! every reference is "Unknown identifier" (pievalid2 standalone build).
 #!-----------------------------------------------------------------------------
-#AT(%DataSection),WHERE(%myPieCtlDisable=0 AND ITEMS(%myPieCtlSeg))
-%myPieCtlKey:Slices SIGNED,DIM(%(ITEMS(%myPieCtlSeg)))      ! relative slice sizes (change + DO Repaint:<Name>)
-%myPieCtlKey:Colors LONG,DIM(%(ITEMS(%myPieCtlSeg)))        ! one fill color per slice
+#AT(%DataSectionBeforeWindow),WHERE(%myPieCtlDisable=0 AND ITEMS(%myPieCtlSeg))
+%myPieCtlKey:Q       QUEUE,PRE()                            ! one row per slice (unbounded; a myPiePanel edits it)
+%myPieCtlKey:QLabel    STRING(64)                           ! slice label
+%myPieCtlKey:QValue    LONG                                 ! slice value (relative size)
+%myPieCtlKey:QColor    LONG                                 ! slice fill color
+                     END
+%myPieCtlKey:Slices SIGNED,DIM(64)                          ! PIE() slices buffer (rebuilt from :Q each redraw)
+%myPieCtlKey:Colors LONG,DIM(64)                            ! PIE() colors buffer (rebuilt from :Q each redraw)
 %myPieCtlKey:Total  LONG                                    ! sum of slices (for percentages)
+%myPieCtlKey:N      LONG                                    ! active slice count (= RECORDS(:Q), capped at 64)
+%myPieCtlKey:Ix     LONG                                    ! loop index
 %myPieCtlKey:W      SIGNED                                  ! current image width
 %myPieCtlKey:H      SIGNED                                  ! current image height
 %myPieCtlKey:PieDim SIGNED                                  ! pie diameter
@@ -322,14 +340,28 @@ Repaint:%myPieCtlKey ROUTINE
     %myPieCtlKey:Depth   = %myPieCtlDepth                   ! seed the live-adjustable properties from the
     %myPieCtlKey:ShowLeg = %myPieCtlShowLegend             !   design-time prompts (a myPiePanel can change
     %myPieCtlKey:ShowPct = %myPieCtlShowPct                !   them at run time, then POST Redraw:<Name>)
+    FREE(%myPieCtlKey:Q)                                    ! seed the slice QUEUE from the gen-time Segments
     #FOR(%myPieCtlSeg)
-    %myPieCtlKey:Slices[%(INSTANCE(%myPieCtlSeg))] = %myPieCtlSegValue                 ! %myPieCtlSegLabel
-    %myPieCtlKey:Colors[%(INSTANCE(%myPieCtlSeg))] = %myPieCtlSegColor
+    %myPieCtlKey:QLabel = '%myPieCtlSegLabel'
+    %myPieCtlKey:QValue = %myPieCtlSegValue
+    %myPieCtlKey:QColor = %myPieCtlSegColor
+    ADD(%myPieCtlKey:Q)
     #ENDFOR
     POST(Redraw:%myPieCtlKey)                               ! first draw, after the window opens
   OF EVENT:Sized
     POST(Redraw:%myPieCtlKey)                               ! redraw after the resize settles
   OF Redraw:%myPieCtlKey
+    CLEAR(%myPieCtlKey:Slices)                              ! rebuild PIE() buffers from the live queue:
+    CLEAR(%myPieCtlKey:Colors)                              !   unused trailing slots stay 0 (a 0-value slice
+    %myPieCtlKey:Total = 0                                  !   is a 0-degree wedge = invisible, so a fixed
+    %myPieCtlKey:N = RECORDS(%myPieCtlKey:Q)                !   DIM(64) holds an "unbounded" slice count)
+    IF %myPieCtlKey:N > 64 THEN %myPieCtlKey:N = 64.
+    LOOP %myPieCtlKey:Ix = 1 TO %myPieCtlKey:N
+      GET(%myPieCtlKey:Q,%myPieCtlKey:Ix)
+      %myPieCtlKey:Slices[%myPieCtlKey:Ix] = %myPieCtlKey:QValue
+      %myPieCtlKey:Colors[%myPieCtlKey:Ix] = %myPieCtlKey:QColor
+      %myPieCtlKey:Total += %myPieCtlKey:QValue
+    END
     %myPieCtlKey:W = %myPieCtlImage{PROP:Width}
     %myPieCtlKey:H = %myPieCtlImage{PROP:Height}
     IF %myPieCtlKey:ShowLeg
@@ -348,28 +380,25 @@ Repaint:%myPieCtlKey ROUTINE
     %myPieCtlKey:Indt = %myPieCtlKey:PieDim * 2 / 100      ! small inset so the pie clears the edge
     PIE(%myPieCtlKey:Indt,%myPieCtlKey:Indt,%myPieCtlKey:PieDim - %myPieCtlKey:Indt * 2,%myPieCtlKey:PieDim - %myPieCtlKey:Indt * 2,%myPieCtlKey:Slices,%myPieCtlKey:Colors,%myPieCtlKey:Depth)
     IF %myPieCtlKey:ShowLeg                                  ! legend (runtime-gated so a panel can toggle it)
-    %myPieCtlKey:Total = 0
-    #FOR(%myPieCtlSeg)
-    %myPieCtlKey:Total = %myPieCtlKey:Total + %myPieCtlKey:Slices[%(INSTANCE(%myPieCtlSeg))]
-    #ENDFOR
-    %myPieCtlKey:LegX = %myPieCtlKey:PieDim + 8
-    %myPieCtlKey:LegY = 6
-    #FOR(%myPieCtlSeg)
-    SETPENCOLOR(%myPieCtlSegColor)
-    BOX(%myPieCtlKey:LegX,%myPieCtlKey:LegY,9,8,%myPieCtlSegColor)             ! color swatch
-    SETPENCOLOR(COLOR:Black)
-    IF %myPieCtlKey:ShowPct
-    IF %myPieCtlKey:Total
-    %myPieCtlKey:Pct = INT(%myPieCtlKey:Slices[%(INSTANCE(%myPieCtlSeg))] * 100 / %myPieCtlKey:Total + 0.5)
-    ELSE
-    %myPieCtlKey:Pct = 0
-    END
-    SHOW(%myPieCtlKey:LegX + 14,%myPieCtlKey:LegY,'%myPieCtlSegLabel = ' & %myPieCtlKey:Pct & '%%')
-    ELSE
-    SHOW(%myPieCtlKey:LegX + 14,%myPieCtlKey:LegY,'%myPieCtlSegLabel')
-    END
-    %myPieCtlKey:LegY = %myPieCtlKey:LegY + 13
-    #ENDFOR
+      %myPieCtlKey:LegX = %myPieCtlKey:PieDim + 8
+      %myPieCtlKey:LegY = 6
+      LOOP %myPieCtlKey:Ix = 1 TO %myPieCtlKey:N            ! legend now walks the QUEUE at run time
+        GET(%myPieCtlKey:Q,%myPieCtlKey:Ix)
+        SETPENCOLOR(%myPieCtlKey:QColor)
+        BOX(%myPieCtlKey:LegX,%myPieCtlKey:LegY,9,8,%myPieCtlKey:QColor)             ! color swatch
+        SETPENCOLOR(COLOR:Black)
+        IF %myPieCtlKey:ShowPct
+          IF %myPieCtlKey:Total
+            %myPieCtlKey:Pct = INT(%myPieCtlKey:QValue * 100 / %myPieCtlKey:Total + 0.5)
+          ELSE
+            %myPieCtlKey:Pct = 0
+          END
+          SHOW(%myPieCtlKey:LegX + 14,%myPieCtlKey:LegY,CLIP(%myPieCtlKey:QLabel) & ' = ' & %myPieCtlKey:Pct & '%%')
+        ELSE
+          SHOW(%myPieCtlKey:LegX + 14,%myPieCtlKey:LegY,CLIP(%myPieCtlKey:QLabel))
+        END
+        %myPieCtlKey:LegY = %myPieCtlKey:LegY + 13
+      END
     END                                                      ! end IF ShowLeg
     SETTARGET()
   END
@@ -390,23 +419,15 @@ Repaint:%myPieCtlKey ROUTINE
 #!#############################################################################
 #CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,DESCRIPTION('Pie controls'),HLP('~myPie')
   CONTROLS
-    GROUP('Pie controls'),AT(2,2,108,156),BOXED,USE(?myPiePanelGroup)
+    GROUP('Pie controls'),AT(2,2,150,210),BOXED,USE(?myPiePanelGroup)
       PROMPT('3D depth:'),AT(8,14,46,10),USE(?myPiePanelDepthP)
       SPIN(@n3),AT(58,12,48,12),RANGE(0,60),STEP(1),USE(myPiePanel:Depth)
-      CHECK(' Show legend'),AT(8,28,98,10),USE(myPiePanel:ShowLeg)
-      CHECK(' Show percentages'),AT(8,40,98,10),USE(myPiePanel:ShowPct)
-      PROMPT('Slice 1:'),AT(8,56,46,10),USE(?myPiePanelS1P)
-      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,54,48,12),USE(myPiePanel:Slice1)
-      PROMPT('Slice 2:'),AT(8,70,46,10),USE(?myPiePanelS2P)
-      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,68,48,12),USE(myPiePanel:Slice2)
-      PROMPT('Slice 3:'),AT(8,84,46,10),USE(?myPiePanelS3P)
-      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,82,48,12),USE(myPiePanel:Slice3)
-      PROMPT('Slice 4:'),AT(8,98,46,10),USE(?myPiePanelS4P)
-      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,96,48,12),USE(myPiePanel:Slice4)
-      PROMPT('Slice 5:'),AT(8,112,46,10),USE(?myPiePanelS5P)
-      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,110,48,12),USE(myPiePanel:Slice5)
-      PROMPT('Slice 6:'),AT(8,126,46,10),USE(?myPiePanelS6P)
-      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,124,48,12),USE(myPiePanel:Slice6)
+      CHECK(' Show legend'),AT(8,28,138,10),USE(myPiePanel:ShowLeg)
+      CHECK(' Show percentages'),AT(8,40,138,10),USE(myPiePanel:ShowPct)
+      LIST,AT(8,56,138,134),USE(?myPiePanelList),VSCROLL,FROM(myPiePanel:FromQ), |
+        ALRT(MouseLeft2),ALRT(F2Key),ALRT(InsertKey),ALRT(DeleteKey), |
+        FORMAT('66L(2)|M~Label~@s64@40R(2)|M~Value~@n-11@40R(2)|M~Color~@n-11@')
+      PROMPT('Dbl-click / F2 / Enter a cell to edit. Ins / Del add / remove rows.'),AT(8,193,138,16),USE(?myPiePanelHint)
     END
   END
 #SHEET
@@ -414,17 +435,17 @@ Repaint:%myPieCtlKey ROUTINE
     #BOXED('Target')
       #PROMPT('&Disable this panel',CHECK),%myPiePanelDisable,DEFAULT(0),AT(10)
       #PROMPT('&Pie Image to control:',CONTROL),%myPiePanelImage,REQ
-      #PROMPT('&Slice spinners to wire (0-6):',SPIN(@n1,0,6,1)),%myPiePanelSlices,DEFAULT(3)
     #ENDBOXED
     #DISPLAY('PICK the IMAGE control of a myPie - Pie Chart on this window - the')
-    #DISPLAY('panel binds to that pie by its Image. Wire 0-6 slice spinners; delete')
-    #DISPLAY('the unused Slice rows in the Designer. Any change redraws the pie live.')
+    #DISPLAY('panel binds to that pie by its Image. The slice list is fully')
+    #DISPLAY('editable at run time: double-click (or F2 / Enter) a cell to edit it,')
+    #DISPLAY('press Insert to add a slice, Delete to remove one. The 3D-depth')
+    #DISPLAY('spinner and the legend / percentage checkboxes drive the pie too.')
+    #DISPLAY('Every change redraws the pie live - the slice count is unbounded.')
   #ENDTAB
 #ENDSHEET
 #!-----------------------------------------------------------------------------
 #ATSTART
-  #DECLARE(%myPiePanelI)
-  #DECLARE(%myPiePanelFirst)
 #! derive the target pie's data prefix from the PICKED Image feq (strip '?' and
 #! any ':') - identical rule to myPieControl, so the names match exactly
   #DECLARE(%myPiePanelPrefix)
@@ -439,63 +460,116 @@ Repaint:%myPieCtlKey ROUTINE
 #!-----------------------------------------------------------------------------
 #! Panel-local data (fixed labels - the panel is one-per-window) + a private
 #! "sync" event so we read the pie's values AFTER its OpenWindow has set them.
-#! data is BEFORE the window so its controls can USE these labels (forward refs fail)
+#! data is BEFORE the window so its controls can USE these labels (forward refs fail).
+#!
+#! The in-cell edit-in-place (EIP) drives the shipped QEIPManager directly (no
+#! BrowseBox). The queue it edits is the PIE's (%myPiePanelPrefix:Q), already
+#! declared before the window by myPieControl. ,ONCE INCLUDEs pull the EIP +
+#! field-pair classes; reuse the app's existing GlobalErrors (do NOT declare a
+#! second ErrorClass). VALIDATED shape: pievalid standalone build, 0 errors.
 #AT(%DataSectionBeforeWindow),WHERE(%myPiePanelDisable=0)
+  INCLUDE('ABQEIP.INC'),ONCE                                 ! QEIPManager (pulls ABEIP + ABWINDOW)
+  INCLUDE('ABUTIL.INC'),ONCE                                 ! FieldPairsClass
+  INCLUDE('ABERROR.INC'),ONCE                                ! ErrorClass (GlobalErrors type)
+  INCLUDE('KEYCODES.CLW'),ONCE                               ! F2Key / InsertKey / DeleteKey / EnterKey
+  INCLUDE('EQUATES.CLW'),ONCE                                ! MouseLeft2 / EVENT: / VCR: / COLOR:
+myPiePanel:FromQ   QUEUE,PRE()                              ! placeholder LIST,FROM target - the control
+myPiePanel:FromQF    STRING(1)                              !   structure cannot reference the pie's derived
+                   END                                      !   queue label, so we FROM this fixed queue and
 myPiePanel:Depth   SIGNED                                    ! 3D depth shown in the panel
 myPiePanel:ShowLeg BYTE                                      ! show-legend checkbox
 myPiePanel:ShowPct BYTE                                      ! show-percentages checkbox
-myPiePanel:Slice1  SIGNED                                    ! slice value spinners (wire 0-6)
-myPiePanel:Slice2  SIGNED
-myPiePanel:Slice3  SIGNED
-myPiePanel:Slice4  SIGNED
-myPiePanel:Slice5  SIGNED
-myPiePanel:Slice6  SIGNED
+myPiePanel:EIP     QEIPManager                              ! drives in-cell editing on the pie's slice queue
+myPiePanel:EIPFlds FieldPairsClass                          ! maps each editable column to its queue field
+myPiePanel:EIPVCR  LONG                                     ! VCRRequest backing store (&LONG GPFs if NULL)
+myPiePanel:EIPLbl  EditEntryClass                           ! type-in-cell editor for the Label column
+myPiePanel:EIPVal  EditEntryClass                           ! type-in-cell editor for the Value column
+myPiePanel:EIPClr  EditColorClass                           ! color-dialog editor for the Color column
+myPiePanel:EIPRun  BYTE                                     ! re-entrancy guard (Run re-enters TakeFieldEvent)
+myPiePanel:EIPSet  BYTE                                     ! one-time-setup guard
+myPiePanel:EIPRet  BYTE                                     ! EIP.Run() result
 myPiePanel:Sync    EQUATE(EVENT:User+199)                    ! deferred "load from the pie" event
 #ENDAT
 #!-----------------------------------------------------------------------------
 #AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPiePanelDisable=0)
   CASE EVENT()
   OF EVENT:OpenWindow
+    IF NOT myPiePanel:EIPSet                                 ! one-time EIP wiring, after the window is open
+      myPiePanel:EIPSet = 1
+      ?myPiePanelList{PROP:From} = %myPiePanelPrefix:Q        ! bind the list to the pie's real slice queue
+      myPiePanel:EIPFlds.Init()
+      myPiePanel:EIPFlds.AddPair(%myPiePanelPrefix:QLabel,%myPiePanelPrefix:QLabel)  ! one pair per editable
+      myPiePanel:EIPFlds.AddPair(%myPiePanelPrefix:QValue,%myPiePanelPrefix:QValue)  !   column, in visible
+      myPiePanel:EIPFlds.AddPair(%myPiePanelPrefix:QColor,%myPiePanelPrefix:QColor)  !   column order
+      myPiePanel:EIP.Q &= %myPiePanelPrefix:Q
+      myPiePanel:EIP.Fields &= myPiePanel:EIPFlds
+      myPiePanel:EIP.ListControl = ?myPiePanelList
+      myPiePanel:EIP.Errors &= GlobalErrors                  ! reuse the app's existing ErrorClass
+      myPiePanel:EIPVCR = VCR:None
+      myPiePanel:EIP.VCRRequest &= myPiePanel:EIPVCR
+      myPiePanel:EIP.AddControl(myPiePanel:EIPLbl,1,0)        ! col 1 Label  - type-in-cell
+      myPiePanel:EIP.AddControl(myPiePanel:EIPVal,2,0)        ! col 2 Value  - type-in-cell
+      myPiePanel:EIP.AddControl(myPiePanel:EIPClr,3,0)        ! col 3 Color  - color dialog
+    END
     POST(myPiePanel:Sync)                                    ! load after the pie's OpenWindow ran (POST defers it)
   OF myPiePanel:Sync
     myPiePanel:Depth   = %myPiePanelPrefix:Depth                ! seed the panel from the pie's current values
     myPiePanel:ShowLeg = %myPiePanelPrefix:ShowLeg
     myPiePanel:ShowPct = %myPiePanelPrefix:ShowPct
-#SET(%myPiePanelI,1)
-#LOOP,WHILE(%myPiePanelI <= %myPiePanelSlices)
-    myPiePanel:Slice%myPiePanelI = %myPiePanelPrefix:Slices[%myPiePanelI]
-#SET(%myPiePanelI,%myPiePanelI+1)
-#ENDLOOP
     DISPLAY()                                                ! refresh the panel controls
   END
 #ENDAT
 #!-----------------------------------------------------------------------------
 #! Control changes are FIELD events, so they arrive in TakeFieldEvent (NOT
-#! TakeWindowEvent). On Accepted (or a spin step), push the panel values into the
-#! pie and POST its redraw, so the chart updates live.
+#! TakeWindowEvent). The 3D-depth spinner + the two checkboxes push their values
+#! into the pie on change. The slice LIST is the EIP surface: a double-click /
+#! F2 / Enter on it runs the QEIPManager (MODAL - it runs its own ACCEPT loop,
+#! positions the cell editor, PUTs the queue on commit); Ins / Del add / remove a
+#! slice row. A re-entrancy guard is REQUIRED - EIP.Run() re-enters this method.
+#! After any edit/insert/delete, POST the pie's redraw so the chart updates live.
 #AT(%WindowManagerMethodCodeSection,'TakeFieldEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPiePanelDisable=0)
   CASE FIELD()
-#SET(%myPiePanelFirst,1)
-#FOR(%Control),WHERE(%ControlInstance=%ActiveTemplateInstance)
-#IF(%myPiePanelFirst)
-  OF %Control
-#SET(%myPiePanelFirst,0)
-#ELSE
-  OROF %Control
-#ENDIF
-#ENDFOR
+  OF ?myPiePanel:Depth                                       ! the depth spinner + the two checkboxes
+  OROF ?myPiePanel:ShowLeg
+  OROF ?myPiePanel:ShowPct
     CASE EVENT()
     OF EVENT:Accepted
     OROF EVENT:NewSelection                                  ! a spin step also fires NewSelection
       %myPiePanelPrefix:Depth   = myPiePanel:Depth
       %myPiePanelPrefix:ShowLeg = myPiePanel:ShowLeg
       %myPiePanelPrefix:ShowPct = myPiePanel:ShowPct
-#SET(%myPiePanelI,1)
-#LOOP,WHILE(%myPiePanelI <= %myPiePanelSlices)
-      %myPiePanelPrefix:Slices[%myPiePanelI] = myPiePanel:Slice%myPiePanelI
-#SET(%myPiePanelI,%myPiePanelI+1)
-#ENDLOOP
       POST(Redraw:%myPiePanelPrefix)                            ! the pie repaints with the new values
+    END
+  OF ?myPiePanelList                                          ! the editable slice list
+    IF NOT myPiePanel:EIPRun                                  ! guard: EIP.Run re-enters TakeFieldEvent
+      CASE EVENT()
+      OF EVENT:AlertKey
+        CASE KEYCODE()
+        OF MouseLeft2                                         ! double-click / F2 / Enter -> in-cell edit
+        OROF F2Key
+        OROF EnterKey
+          myPiePanel:EIPRun = 1
+          myPiePanel:EIPRet = myPiePanel:EIP.Run(ChangeRecord)
+          myPiePanel:EIPRun = 0
+          DISPLAY(?myPiePanelList)
+          POST(Redraw:%myPiePanelPrefix)
+        OF InsertKey                                          ! add a slice below the selection
+          CLEAR(%myPiePanelPrefix:Q)
+          %myPiePanelPrefix:QLabel = 'New'
+          %myPiePanelPrefix:QValue = 1
+          %myPiePanelPrefix:QColor = COLOR:Silver
+          ADD(%myPiePanelPrefix:Q,CHOICE(?myPiePanelList)+1)
+          DISPLAY(?myPiePanelList)
+          POST(Redraw:%myPiePanelPrefix)
+        OF DeleteKey                                          ! remove the selected slice
+          GET(%myPiePanelPrefix:Q,CHOICE(?myPiePanelList))
+          IF NOT ERRORCODE()
+            DELETE(%myPiePanelPrefix:Q)
+            DISPLAY(?myPiePanelList)
+            POST(Redraw:%myPiePanelPrefix)
+          END
+        END
+      END
     END
   END
 #ENDAT

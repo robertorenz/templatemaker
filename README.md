@@ -139,12 +139,17 @@ needed). Drop several on one window. Or use the two-extension route for an exist
 registrations in all:
 - **`myPieControl`** (CONTROL) — the drag-on pie. Set the 3D depth, background, legend/percentages, and the
   segments (label / relative **value** / **color**); each control owns its own data (keyed off its **Image
-  control**, so there are no names to keep in sync) and redraws on open/resize. Depth / legend / percentages
-  are **run-time variables** so a panel can change them live.
+  control**, so there are no names to keep in sync) and redraws on open/resize. The segments **seed a runtime
+  `QUEUE`** (`<Image>:Q`, fields `QLabel`/`QValue`/`QColor`) — so the slice count is **unbounded** at run
+  time, not fixed at generation. The redraw rebuilds the `PIE()` arrays (fixed `DIM(64)` buffers; a 0-value
+  slice is an invisible 0° wedge) and walks the queue for the legend. Depth / legend / percentages are
+  **run-time variables** so a panel can change them live.
 - **`myPiePanel`** (CONTROL) — a drag-on **live control panel**: a 3D-depth **spinner**, show-legend and
-  show-percentages **checkboxes**, and up to six **slice-value spinners**. Link it by **picking the pie's
-  Image control** (a drop-list — no typed names); changing any input pushes the value into that pie's data
-  and repaints it **live**.
+  show-percentages **checkboxes**, and an **editable slice list with true in-cell edit-in-place**. Link it by
+  **picking the pie's Image control** (a drop-list — no typed names). **Double-click / F2 / Enter** a cell to
+  edit it (Label and Value type in place, Color opens the color dialog); **Insert** adds a slice, **Delete**
+  removes one — so you are no longer capped at a handful of slices. Editing drives the shipped **`QEIPManager`**
+  directly (no BrowseBox) over the pie's slice queue, and every change repaints the pie **live**.
 - **`myPieGlobal`** (APPLICATION) — adds the global helper `myPieDraw(window, imageFeq, slices[], colors[],
   …)` to the program module. Add once, globally (only needed for the procedure-extension route).
 - **`myPie`** (PROCEDURE) — drop on a window procedure; pick a sized **IMAGE control**, set 3D depth /
