@@ -276,13 +276,13 @@ myPieRepaint ROUTINE
   #ENDFOR
 #! key this pie's data off its IMAGE field-equate (strip '?' and any ':') so a
 #! Pie Controls panel can derive the SAME prefix just by picking the Image
-  #DECLARE(%myPieCtlName)
+  #DECLARE(%myPieCtlKey)
   #DECLARE(%myPieCtlCp)
-  #SET(%myPieCtlName,SUB(%myPieCtlImage,2,250))
-  #SET(%myPieCtlCp,INSTRING(':',%myPieCtlName,1,1))
+  #SET(%myPieCtlKey,SUB(%myPieCtlImage,2,250))
+  #SET(%myPieCtlCp,INSTRING(':',%myPieCtlKey,1,1))
   #LOOP,WHILE(%myPieCtlCp)
-    #SET(%myPieCtlName,SUB(%myPieCtlName,1,%myPieCtlCp-1) & '_' & SUB(%myPieCtlName,%myPieCtlCp+1,250))
-    #SET(%myPieCtlCp,INSTRING(':',%myPieCtlName,1,1))
+    #SET(%myPieCtlKey,SUB(%myPieCtlKey,1,%myPieCtlCp-1) & '_' & SUB(%myPieCtlKey,%myPieCtlCp+1,250))
+    #SET(%myPieCtlCp,INSTRING(':',%myPieCtlKey,1,1))
   #ENDLOOP
 #ENDAT
 #!-----------------------------------------------------------------------------
@@ -290,26 +290,26 @@ myPieRepaint ROUTINE
 #! Name so several pies on one window never collide). Only emit with >=1 segment.
 #!-----------------------------------------------------------------------------
 #AT(%DataSection),WHERE(%myPieCtlDisable=0 AND ITEMS(%myPieCtlSeg))
-%myPieCtlName:Slices SIGNED,DIM(%(ITEMS(%myPieCtlSeg)))      ! relative slice sizes (change + DO Repaint:<Name>)
-%myPieCtlName:Colors LONG,DIM(%(ITEMS(%myPieCtlSeg)))        ! one fill color per slice
-%myPieCtlName:Total  LONG                                    ! sum of slices (for percentages)
-%myPieCtlName:W      SIGNED                                  ! current image width
-%myPieCtlName:H      SIGNED                                  ! current image height
-%myPieCtlName:PieDim SIGNED                                  ! pie diameter
-%myPieCtlName:Indt   SIGNED                                  ! pie inset
-%myPieCtlName:LegX   SIGNED                                  ! legend left
-%myPieCtlName:LegY   SIGNED                                  ! legend row y
-%myPieCtlName:Pct    SIGNED                                  ! a slice percentage
-%myPieCtlName:Depth  SIGNED                                  ! 3D depth      - live-adjustable (see myPiePanel)
-%myPieCtlName:ShowLeg BYTE                                   ! show legend   - live-adjustable
-%myPieCtlName:ShowPct BYTE                                   ! show percent  - live-adjustable
-Redraw:%myPieCtlName EQUATE(EVENT:User+200+%ActiveTemplateInstance) ! private repaint event (unique per pie)
+%myPieCtlKey:Slices SIGNED,DIM(%(ITEMS(%myPieCtlSeg)))      ! relative slice sizes (change + DO Repaint:<Name>)
+%myPieCtlKey:Colors LONG,DIM(%(ITEMS(%myPieCtlSeg)))        ! one fill color per slice
+%myPieCtlKey:Total  LONG                                    ! sum of slices (for percentages)
+%myPieCtlKey:W      SIGNED                                  ! current image width
+%myPieCtlKey:H      SIGNED                                  ! current image height
+%myPieCtlKey:PieDim SIGNED                                  ! pie diameter
+%myPieCtlKey:Indt   SIGNED                                  ! pie inset
+%myPieCtlKey:LegX   SIGNED                                  ! legend left
+%myPieCtlKey:LegY   SIGNED                                  ! legend row y
+%myPieCtlKey:Pct    SIGNED                                  ! a slice percentage
+%myPieCtlKey:Depth  SIGNED                                  ! 3D depth      - live-adjustable (see myPiePanel)
+%myPieCtlKey:ShowLeg BYTE                                   ! show legend   - live-adjustable
+%myPieCtlKey:ShowPct BYTE                                   ! show percent  - live-adjustable
+Redraw:%myPieCtlKey EQUATE(EVENT:User+200+%ActiveTemplateInstance) ! private repaint event (unique per pie)
 #ENDAT
 #!-----------------------------------------------------------------------------
 #! Repaint ROUTINE - "DO Repaint:<Name>" after changing the slice values.
 #AT(%ProcedureRoutines),WHERE(%myPieCtlDisable=0 AND ITEMS(%myPieCtlSeg))
-Repaint:%myPieCtlName ROUTINE
-  POST(Redraw:%myPieCtlName)
+Repaint:%myPieCtlKey ROUTINE
+  POST(Redraw:%myPieCtlKey)
 #ENDAT
 #!-----------------------------------------------------------------------------
 #! Self-contained handler at the TOP of TakeWindowEvent (PRIORITY 2000). Drawing
@@ -319,56 +319,56 @@ Repaint:%myPieCtlName ROUTINE
 #AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPieCtlDisable=0 AND ITEMS(%myPieCtlSeg))
   CASE EVENT()
   OF EVENT:OpenWindow
-    %myPieCtlName:Depth   = %myPieCtlDepth                   ! seed the live-adjustable properties from the
-    %myPieCtlName:ShowLeg = %myPieCtlShowLegend             !   design-time prompts (a myPiePanel can change
-    %myPieCtlName:ShowPct = %myPieCtlShowPct                !   them at run time, then POST Redraw:<Name>)
+    %myPieCtlKey:Depth   = %myPieCtlDepth                   ! seed the live-adjustable properties from the
+    %myPieCtlKey:ShowLeg = %myPieCtlShowLegend             !   design-time prompts (a myPiePanel can change
+    %myPieCtlKey:ShowPct = %myPieCtlShowPct                !   them at run time, then POST Redraw:<Name>)
     #FOR(%myPieCtlSeg)
-    %myPieCtlName:Slices[%(INSTANCE(%myPieCtlSeg))] = %myPieCtlSegValue                 ! %myPieCtlSegLabel
-    %myPieCtlName:Colors[%(INSTANCE(%myPieCtlSeg))] = %myPieCtlSegColor
+    %myPieCtlKey:Slices[%(INSTANCE(%myPieCtlSeg))] = %myPieCtlSegValue                 ! %myPieCtlSegLabel
+    %myPieCtlKey:Colors[%(INSTANCE(%myPieCtlSeg))] = %myPieCtlSegColor
     #ENDFOR
-    POST(Redraw:%myPieCtlName)                               ! first draw, after the window opens
+    POST(Redraw:%myPieCtlKey)                               ! first draw, after the window opens
   OF EVENT:Sized
-    POST(Redraw:%myPieCtlName)                               ! redraw after the resize settles
-  OF Redraw:%myPieCtlName
-    %myPieCtlName:W = %myPieCtlImage{PROP:Width}
-    %myPieCtlName:H = %myPieCtlImage{PROP:Height}
-    IF %myPieCtlName:ShowLeg
-      %myPieCtlName:PieDim = %myPieCtlName:W * 55 / 100       ! pie gets the left 55pct, legend the rest
+    POST(Redraw:%myPieCtlKey)                               ! redraw after the resize settles
+  OF Redraw:%myPieCtlKey
+    %myPieCtlKey:W = %myPieCtlImage{PROP:Width}
+    %myPieCtlKey:H = %myPieCtlImage{PROP:Height}
+    IF %myPieCtlKey:ShowLeg
+      %myPieCtlKey:PieDim = %myPieCtlKey:W * 55 / 100       ! pie gets the left 55pct, legend the rest
     ELSE
-      %myPieCtlName:PieDim = %myPieCtlName:W
+      %myPieCtlKey:PieDim = %myPieCtlKey:W
     END
-    IF %myPieCtlName:H < %myPieCtlName:PieDim THEN %myPieCtlName:PieDim = %myPieCtlName:H.   ! keep it on-screen
+    IF %myPieCtlKey:H < %myPieCtlKey:PieDim THEN %myPieCtlKey:PieDim = %myPieCtlKey:H.   ! keep it on-screen
     SETTARGET(%Window,%myPieCtlImage)                        ! the IMAGE is the target: 0,0 = its corner
     BLANK                                                    ! clears ONLY this image (no window-wide wipe)
     IF %myPieCtlBackColor <> COLOR:None
       SETPENCOLOR(%myPieCtlBackColor)
-      BOX(0,0,%myPieCtlName:W,%myPieCtlName:H,%myPieCtlBackColor)
+      BOX(0,0,%myPieCtlKey:W,%myPieCtlKey:H,%myPieCtlBackColor)
     END
     SETPENCOLOR(COLOR:Black)                                 ! slice outlines
-    %myPieCtlName:Indt = %myPieCtlName:PieDim * 2 / 100      ! small inset so the pie clears the edge
-    PIE(%myPieCtlName:Indt,%myPieCtlName:Indt,%myPieCtlName:PieDim - %myPieCtlName:Indt * 2,%myPieCtlName:PieDim - %myPieCtlName:Indt * 2,%myPieCtlName:Slices,%myPieCtlName:Colors,%myPieCtlName:Depth)
-    IF %myPieCtlName:ShowLeg                                  ! legend (runtime-gated so a panel can toggle it)
-    %myPieCtlName:Total = 0
+    %myPieCtlKey:Indt = %myPieCtlKey:PieDim * 2 / 100      ! small inset so the pie clears the edge
+    PIE(%myPieCtlKey:Indt,%myPieCtlKey:Indt,%myPieCtlKey:PieDim - %myPieCtlKey:Indt * 2,%myPieCtlKey:PieDim - %myPieCtlKey:Indt * 2,%myPieCtlKey:Slices,%myPieCtlKey:Colors,%myPieCtlKey:Depth)
+    IF %myPieCtlKey:ShowLeg                                  ! legend (runtime-gated so a panel can toggle it)
+    %myPieCtlKey:Total = 0
     #FOR(%myPieCtlSeg)
-    %myPieCtlName:Total = %myPieCtlName:Total + %myPieCtlName:Slices[%(INSTANCE(%myPieCtlSeg))]
+    %myPieCtlKey:Total = %myPieCtlKey:Total + %myPieCtlKey:Slices[%(INSTANCE(%myPieCtlSeg))]
     #ENDFOR
-    %myPieCtlName:LegX = %myPieCtlName:PieDim + 8
-    %myPieCtlName:LegY = 6
+    %myPieCtlKey:LegX = %myPieCtlKey:PieDim + 8
+    %myPieCtlKey:LegY = 6
     #FOR(%myPieCtlSeg)
     SETPENCOLOR(%myPieCtlSegColor)
-    BOX(%myPieCtlName:LegX,%myPieCtlName:LegY,9,8,%myPieCtlSegColor)             ! color swatch
+    BOX(%myPieCtlKey:LegX,%myPieCtlKey:LegY,9,8,%myPieCtlSegColor)             ! color swatch
     SETPENCOLOR(COLOR:Black)
-    IF %myPieCtlName:ShowPct
-    IF %myPieCtlName:Total
-    %myPieCtlName:Pct = INT(%myPieCtlName:Slices[%(INSTANCE(%myPieCtlSeg))] * 100 / %myPieCtlName:Total + 0.5)
+    IF %myPieCtlKey:ShowPct
+    IF %myPieCtlKey:Total
+    %myPieCtlKey:Pct = INT(%myPieCtlKey:Slices[%(INSTANCE(%myPieCtlSeg))] * 100 / %myPieCtlKey:Total + 0.5)
     ELSE
-    %myPieCtlName:Pct = 0
+    %myPieCtlKey:Pct = 0
     END
-    SHOW(%myPieCtlName:LegX + 14,%myPieCtlName:LegY,'%myPieCtlSegLabel = ' & %myPieCtlName:Pct & '%%')
+    SHOW(%myPieCtlKey:LegX + 14,%myPieCtlKey:LegY,'%myPieCtlSegLabel = ' & %myPieCtlKey:Pct & '%%')
     ELSE
-    SHOW(%myPieCtlName:LegX + 14,%myPieCtlName:LegY,'%myPieCtlSegLabel')
+    SHOW(%myPieCtlKey:LegX + 14,%myPieCtlKey:LegY,'%myPieCtlSegLabel')
     END
-    %myPieCtlName:LegY = %myPieCtlName:LegY + 13
+    %myPieCtlKey:LegY = %myPieCtlKey:LegY + 13
     #ENDFOR
     END                                                      ! end IF ShowLeg
     SETTARGET()
