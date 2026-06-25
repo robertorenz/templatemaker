@@ -132,22 +132,29 @@ Install: register `myFuncs.tpl`, then add **myFuncs - Global Function Library (G
 Global → Extensions, generate, and build. (No source files to copy — everything is generated.)
 
 ### `templates/myPie/` — pie chart on a window
-Two ABC extensions that render a pie chart into an IMAGE control using Clarion's built-in `PIE` graphics
-primitive (no external files):
-- **`myPieGlobal`** (APPLICATION) — adds a global helper `myPieDraw(imageFeq, slices[], colors[], depth)`
-  to the program module that does `SETTARGET(,image)` + `PIE(...)`. Add once, globally.
-- **`myPie`** (PROCEDURE) — drop on a window procedure; pick a sized **IMAGE control**, set an optional 3D
-  depth and background, and define 4–5+ segments (label / relative **value** / **color**). It draws the pie
-  plus a **legend** (color swatch + label + **percentage**), redraws automatically on **window resize**, and
-  exposes a **`myPieRepaint`** routine — change `myPie:Slices[n]` at run time and `DO myPieRepaint` to
-  repaint (percentages recompute automatically).
+Renders a pie chart into an IMAGE control using Clarion's built-in `PIE` graphics primitive (no external
+files). **Easiest path: a control template** — drag **myPie - Pie Chart** straight onto a window and it
+drops the IMAGE *and* wires the pie + legend in one go, fully self-contained (no global/procedure extension
+needed). Drop several on one window. Or use the two-extension route for an existing IMAGE control. Three
+registrations in all:
+- **`myPieControl`** (CONTROL) — the drag-on pie. Set a name, 3D depth, background, legend/percentages, and
+  the segments (label / relative **value** / **color**); each control owns its own data and redraws on
+  open/resize. Change a value at run time and `DO Repaint:<Name>` to repaint.
+- **`myPieGlobal`** (APPLICATION) — adds the global helper `myPieDraw(window, imageFeq, slices[], colors[],
+  …)` to the program module. Add once, globally (only needed for the procedure-extension route).
+- **`myPie`** (PROCEDURE) — drop on a window procedure; pick a sized **IMAGE control**, set 3D depth /
+  background, and define the segments. Draws the pie plus a **legend** (swatch + label + **percentage**),
+  redraws on **resize**, and exposes a **`myPieRepaint`** routine.
 
 `PIE` (`builtins.clw:1402`) takes a SIGNED array of relative slice sizes and a LONG array of colors and
-draws the whole chart in one call; `SETTARGET(window, ?image)` aims the graphics at the IMAGE control.
+draws the whole chart in one call. The drawing uses **`SETTARGET(window, ?image)`** so the IMAGE itself is
+the target (origin `0,0`, the graphics belong to the control and survive a repaint/resize, and a `BLANK`
+clears only that image) — the same model as myGauge, so multiple pies never erase each other.
 
-Install: register `myPie.tpl`; add **myPie - Global Helper** under Global → Extensions; drop a sized
-IMAGE control (e.g. `?PieImage`) on a window; add the **myPie** procedure extension to that procedure,
-pick the image, define segments; generate and build.
+Install: register `myPie.tpl`, then either drop **myPie - Pie Chart** from the control toolbox, or add
+**myPie - Global Helper** (Global → Extensions) + the **myPie** procedure extension on a window. **Upgrade
+note:** the `myPieDraw` helper gained a leading `WINDOW` parameter, so **regenerate** any app built against
+the older one (a stale call shows as "No matching prototype available").
 
 ### `templates/myFontChanger/` — global + per-list font picker
 A single global (APPLICATION-scope) ABC extension, no per-procedure setup:
@@ -532,6 +539,16 @@ the C engine is 3.8× faster, both engines interoperate (compress with one, deco
 pass `SelfTest()`, and a pure-Clarion build links clean with the C files entirely absent. The reusable
 lesson — a **C fast-path as a `VIRTUAL`-override subclass** that the template selects — is captured for the
 next template that wants one.
+
+**myPie gains a drag-on control template + a drawing fix (v2.21).** myPie now ships a **control template**,
+**myPie - Pie Chart**, so you can drag a ready-made chart straight onto a window from the control toolbox —
+it drops the IMAGE *and* wires the pie + legend in one go, fully self-contained (no global/procedure
+extension), with many per window. The drawing also moved to myGauge's **2-arg `SETTARGET(%Window,?image)`**
+model: the IMAGE is the target (origin `0,0`), so the chart belongs to the control (survives a
+repaint/resize) and a `BLANK` clears **only that image** instead of wiping the whole window — fixing
+multiple pies (or other controls) erasing each other. The `myPieDraw` helper gained a leading `WINDOW`
+parameter to match, so **regenerate** any app built against the old one. Validated against the real Clarion
+compiler: the template registers cleanly (`ClarionCL -tr`) and the generated helper code compiles.
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:

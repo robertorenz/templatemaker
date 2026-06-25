@@ -1,4 +1,4 @@
-#TEMPLATE(myPie,'myPie - Draw a Pie Chart into a Window - v1.2'),FAMILY('ABC')
+#TEMPLATE(myPie,'myPie - Draw a Pie Chart into a Window - v1.3'),FAMILY('ABC')
 #!-----------------------------------------------------------------------------
 #!  myPie template set
 #!
@@ -12,19 +12,25 @@
 #!               on OpenWindow and on resize. Exposes a myPieRepaint ROUTINE so
 #!               you can change the slice values at run time and repaint.
 #!
+#!  myPieControl (CONTROL template)       - drag a ready-made pie onto a window:
+#!               it drops the IMAGE *and* wires the pie + legend in one go,
+#!               fully self-contained (no global/procedure extension needed).
+#!
 #!  Self-contained: no external .inc/.clw.
 #!
 #!  VERIFIED corpus facts:
 #!    PIE(x,y,w,h,*SIGNED[] slices,*LONG[] colors,depth,...)  builtins.clw:1402
 #!    BOX(x,y,w,h,fill)                                       builtins.clw:467
 #!    SHOW(x,y,str)  - draw text, dialog units                builtins.clw:1820
-#!    SETTARGET(window,?image) - band = IMAGE control         builtins.clw:1791
-#!    GETPOSITION(?image,x,y) - control X,Y in the window     builtins.clw
+#!    SETTARGET(window,?image) - target the IMAGE control     builtins.clw:1791
 #!    SETPENCOLOR(color)                                      builtins.clw:1764
 #!
-#!  Issue #5: SETTARGET(,?image) (window omitted) draws WINDOW-relative, so
-#!  (0,0) is the window corner, not the image. We GETPOSITION the image and
-#!  draw at its X,Y so the pie + legend land on the control.
+#!  Drawing model (matches myGauge v2.16): SETTARGET(%Window,?image) makes the
+#!  IMAGE itself the target, so (0,0) is the image's top-left, the graphics
+#!  belong to the control (they survive a WM_PAINT / resize), and BLANK clears
+#!  ONLY this image. A window-omitted SETTARGET(,?image) draws on the window
+#!  layer instead - its BLANK wipes the whole window (erasing other pies /
+#!  controls) and the drawing is lost on the next repaint.
 #!-----------------------------------------------------------------------------
 #!#############################################################################
 #!  GLOBAL EXTENSION - myPieGlobal
@@ -47,7 +53,7 @@
 #! form would not - anytext.tpl:207).
 #!-----------------------------------------------------------------------------
 #AT(%GlobalMap),WHERE(%myPieDisable=0)
-myPieDraw(SIGNED pImageFeq,*SIGNED[] pSlices,*LONG[] pColors,SIGNED pPieW,SIGNED pPieH,SIGNED pDepth=0,LONG pBackColor=COLOR:White)
+myPieDraw(WINDOW pWin,SIGNED pImageFeq,*SIGNED[] pSlices,*LONG[] pColors,SIGNED pPieW,SIGNED pPieH,SIGNED pDepth=0,LONG pBackColor=COLOR:White)
 #ENDAT
 #!-----------------------------------------------------------------------------
 #! Helper body in the program module (%ProgramProcedures is NOT auto-indented,
@@ -57,25 +63,20 @@ myPieDraw(SIGNED pImageFeq,*SIGNED[] pSlices,*LONG[] pColors,SIGNED pPieW,SIGNED
 #! multi-DLL move the body to the shared/root target.
 #!-----------------------------------------------------------------------------
 #AT(%ProgramProcedures),WHERE(%myPieDisable=0)
-myPieDraw  PROCEDURE(SIGNED pImageFeq,*SIGNED[] pSlices,*LONG[] pColors,SIGNED pPieW,SIGNED pPieH,SIGNED pDepth=0,LONG pBackColor=COLOR:White)
-ImgX  LONG                                                    ! image position in the window (see below)
-ImgY  LONG
+myPieDraw  PROCEDURE(WINDOW pWin,SIGNED pImageFeq,*SIGNED[] pSlices,*LONG[] pColors,SIGNED pPieW,SIGNED pPieH,SIGNED pDepth=0,LONG pBackColor=COLOR:White)
 Indt  LONG                                                    ! pie inset so it isn't on the box edge
   CODE
-  SETTARGET(,pImageFeq)                                       ! draw into the IMAGE control
-  GETPOSITION(pImageFeq,ImgX,ImgY)                            ! draw AT the image's X,Y - SETTARGET(,feq) is
-                                                              !   window-relative, so (0,0) is the WINDOW
-                                                              !   corner, not the image (GitHub issue #5).
-  BLANK                                                       ! WIPE all prior graphics (no resize artifacts).
-                                                              !   A filled BOX only paints over - old/larger
-                                                              !   drawings survive a shrink; BLANK truly clears.
+  SETTARGET(pWin,pImageFeq)                                   ! the IMAGE is the target: 0,0 = its top-left, the
+  BLANK                                                       !   drawing belongs to the image (survives WM_PAINT /
+                                                              !   resize), and BLANK clears ONLY this image - a
+                                                              !   window-omitted SETTARGET + BLANK wipes the window.
   IF pBackColor <> COLOR:None                                 ! COLOR:None = keep the image's own backdrop
     SETPENCOLOR(pBackColor)                                   ! paint the chosen background
-    BOX(ImgX,ImgY,pImageFeq{PROP:Width},pImageFeq{PROP:Height},pBackColor)
+    BOX(0,0,pImageFeq{PROP:Width},pImageFeq{PROP:Height},pBackColor)
   END
   SETPENCOLOR(COLOR:Black)                                    ! slice outlines
   Indt = pPieW * .02                                          ! small inset so the pie clears the box edge
-  PIE(ImgX+Indt,ImgY+Indt,pPieW-Indt*2,pPieH-Indt*2,pSlices,pColors,pDepth)   ! the pie itself
+  PIE(Indt,Indt,pPieW-Indt*2,pPieH-Indt*2,pSlices,pColors,pDepth)   ! the pie itself
   SETTARGET()                                                 ! restore previous target
 #ENDAT
 #!#############################################################################
@@ -144,8 +145,6 @@ myPie:H              SIGNED                                  ! current image hei
 myPie:PieDim         SIGNED                                  ! pie diameter
 myPie:LegX           SIGNED                                  ! legend left
 myPie:LegY           SIGNED                                  ! legend row y
-myPie:ImgX           SIGNED                                  ! image X,Y in the window (issue #5)
-myPie:ImgY           SIGNED
 myPie:Pct            SIGNED                                  ! a slice percentage
 #ENDAT
 #!-----------------------------------------------------------------------------
@@ -188,16 +187,15 @@ myPieRepaint ROUTINE
     myPie:PieDim = myPie:W
     #ENDIF
     IF myPie:H < myPie:PieDim THEN myPie:PieDim = myPie:H.    ! keep the pie square / on-screen
-    myPieDraw(%myPieImage,myPie:Slices,myPie:Colors,myPie:PieDim,myPie:PieDim,%myPieDepth,%myPieBackColor)
+    myPieDraw(%Window,%myPieImage,myPie:Slices,myPie:Colors,myPie:PieDim,myPie:PieDim,%myPieDepth,%myPieBackColor)
     #IF(%myPieShowLegend)
     myPie:Total = 0
     #FOR(%myPieSeg)
     myPie:Total = myPie:Total + myPie:Slices[%(INSTANCE(%myPieSeg))]
     #ENDFOR
-    SETTARGET(,%myPieImage)                                   ! add the legend to the same image
-    GETPOSITION(%myPieImage,myPie:ImgX,myPie:ImgY)            ! offset by the image X,Y (issue #5)
-    myPie:LegX = myPie:ImgX + myPie:PieDim + 8
-    myPie:LegY = myPie:ImgY + 6
+    SETTARGET(%Window,%myPieImage)                            ! add the legend to the same image (0,0 = image corner)
+    myPie:LegX = myPie:PieDim + 8
+    myPie:LegY = 6
     #FOR(%myPieSeg)
     SETPENCOLOR(%myPieSegColor)
     BOX(myPie:LegX,myPie:LegY,9,8,%myPieSegColor)             ! color swatch
@@ -216,6 +214,147 @@ myPieRepaint ROUTINE
     #ENDFOR
     SETTARGET()
     #ENDIF
+  END
+#ENDAT
+#!#############################################################################
+#!  CONTROL TEMPLATE - myPieControl  -  drag a ready-made pie chart onto a window
+#!#############################################################################
+#!  Drops an IMAGE control AND wires the pie + legend in one drag - self-
+#!  contained, so NO myPieGlobal / myPie extension is needed. The draw is inlined
+#!  per control instance (each pie owns its own data + private redraw event), and
+#!  uses the 2-arg SETTARGET(%Window,?image) model so several pies on one window
+#!  never erase each other. WINDOW + MULTI = many per window. The control's own
+#!  IMAGE feq is captured in %myPieCtlImage via the proven #FOR(%Control),
+#!  WHERE(%ControlInstance=%ActiveTemplateInstance) idiom (corpus CONTROL.TPW).
+#!#############################################################################
+#CONTROL(myPieControl,'myPie - Pie Chart (drag onto a window)'),WINDOW,MULTI,DESCRIPTION('Pie chart ' & %myPieCtlName),HLP('~myPie')
+#! the pie canvas - one IMAGE; its feq auto-uniques on multi-drop and is captured below
+  CONTROLS
+    IMAGE,AT(,,140,120),USE(?Pie)
+  END
+#SHEET
+  #TAB('&General')
+    #BOXED('Pie')
+      #PROMPT('&Disable this pie',CHECK),%myPieCtlDisable,DEFAULT(0),AT(10)
+      #PROMPT('&Name (data prefix):',@s64),%myPieCtlName,REQ,DEFAULT('Pie' & %ActiveTemplateInstance)
+    #ENDBOXED
+    #BOXED('Look')
+      #PROMPT('3D &Depth (0 = flat):',SPIN(@n3,0,60,1)),%myPieCtlDepth,DEFAULT(0)
+      #PROMPT('&Background color:',COLOR),%myPieCtlBackColor,DEFAULT(0FFFFFFH)
+      #PROMPT('Show &legend',CHECK),%myPieCtlShowLegend,DEFAULT(1),AT(10)
+      #PROMPT('Show &percentages in legend',CHECK),%myPieCtlShowPct,DEFAULT(1),AT(10)
+    #ENDBOXED
+  #ENDTAB
+  #TAB('&Segments')
+    #DISPLAY('One slice per segment. Value is the RELATIVE size of the slice.')
+    #BUTTON('Pie Segments'),MULTI(%myPieCtlSeg,%myPieCtlSegLabel & ' = ' & %myPieCtlSegValue),INLINE
+      #PROMPT('&Label:',@s30),%myPieCtlSegLabel
+      #PROMPT('&Value (relative size):',SPIN(@n7,1,1000000,1)),%myPieCtlSegValue,DEFAULT(1),REQ
+      #PROMPT('&Color:',COLOR),%myPieCtlSegColor,DEFAULT(0008000H)
+    #ENDBUTTON
+  #ENDTAB
+  #TAB('&Instructions')
+    #BOXED('How to use myPie - Pie Chart')
+      #DISPLAY('Drag this control onto a window - it drops the Image AND wires')
+      #DISPLAY('the pie + legend. No global or procedure extension needed.')
+      #DISPLAY('Size / move the control wherever you want the chart.')
+      #DISPLAY('On the Segments tab, add one slice per segment (Label / Value /')
+      #DISPLAY('Color). Drop several of these on one window if you like.')
+      #DISPLAY('')
+      #DISPLAY('Run time: change a value then repaint, e.g.')
+      #DISPLAY('   Pie1:Slices[2] = 75 ;  DO Repaint:Pie1')
+    #ENDBOXED
+  #ENDTAB
+#ENDSHEET
+#!-----------------------------------------------------------------------------
+#! Capture THIS instance's IMAGE field equate (auto-uniqued by AppGen on drop).
+#ATSTART
+  #DECLARE(%myPieCtlImage)
+  #FOR(%Control),WHERE(%ControlInstance=%ActiveTemplateInstance)
+    #SET(%myPieCtlImage,%Control)
+  #ENDFOR
+#ENDAT
+#!-----------------------------------------------------------------------------
+#! Per-instance data (DIM'd at gen time from the segment count; prefixed by the
+#! Name so several pies on one window never collide). Only emit with >=1 segment.
+#!-----------------------------------------------------------------------------
+#AT(%DataSection),WHERE(%myPieCtlDisable=0 AND ITEMS(%myPieCtlSeg))
+%myPieCtlName:Slices SIGNED,DIM(%(ITEMS(%myPieCtlSeg)))      ! relative slice sizes (change + DO Repaint:<Name>)
+%myPieCtlName:Colors LONG,DIM(%(ITEMS(%myPieCtlSeg)))        ! one fill color per slice
+%myPieCtlName:Total  LONG                                    ! sum of slices (for percentages)
+%myPieCtlName:W      SIGNED                                  ! current image width
+%myPieCtlName:H      SIGNED                                  ! current image height
+%myPieCtlName:PieDim SIGNED                                  ! pie diameter
+%myPieCtlName:Indt   SIGNED                                  ! pie inset
+%myPieCtlName:LegX   SIGNED                                  ! legend left
+%myPieCtlName:LegY   SIGNED                                  ! legend row y
+%myPieCtlName:Pct    SIGNED                                  ! a slice percentage
+Redraw:%myPieCtlName EQUATE(EVENT:User+200+%ActiveTemplateInstance) ! private repaint event (unique per pie)
+#ENDAT
+#!-----------------------------------------------------------------------------
+#! Repaint ROUTINE - "DO Repaint:<Name>" after changing the slice values.
+#AT(%ProcedureRoutines),WHERE(%myPieCtlDisable=0 AND ITEMS(%myPieCtlSeg))
+Repaint:%myPieCtlName ROUTINE
+  POST(Redraw:%myPieCtlName)
+#ENDAT
+#!-----------------------------------------------------------------------------
+#! Self-contained handler at the TOP of TakeWindowEvent (PRIORITY 2000). Drawing
+#! is POSTed so it runs AFTER the window opens / the resizer settles. The pie
+#! fills the left 55%% when a legend is shown, else the whole control.
+#!-----------------------------------------------------------------------------
+#AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPieCtlDisable=0 AND ITEMS(%myPieCtlSeg))
+  CASE EVENT()
+  OF EVENT:OpenWindow
+    #FOR(%myPieCtlSeg)
+    %myPieCtlName:Slices[%(INSTANCE(%myPieCtlSeg))] = %myPieCtlSegValue                 ! %myPieCtlSegLabel
+    %myPieCtlName:Colors[%(INSTANCE(%myPieCtlSeg))] = %myPieCtlSegColor
+    #ENDFOR
+    POST(Redraw:%myPieCtlName)                               ! first draw, after the window opens
+  OF EVENT:Sized
+    POST(Redraw:%myPieCtlName)                               ! redraw after the resize settles
+  OF Redraw:%myPieCtlName
+    %myPieCtlName:W = %myPieCtlImage{PROP:Width}
+    %myPieCtlName:H = %myPieCtlImage{PROP:Height}
+    #IF(%myPieCtlShowLegend)
+    %myPieCtlName:PieDim = %myPieCtlName:W * 55 / 100         ! pie gets the left 55pct, legend the rest
+    #ELSE
+    %myPieCtlName:PieDim = %myPieCtlName:W
+    #ENDIF
+    IF %myPieCtlName:H < %myPieCtlName:PieDim THEN %myPieCtlName:PieDim = %myPieCtlName:H.   ! keep it on-screen
+    SETTARGET(%Window,%myPieCtlImage)                        ! the IMAGE is the target: 0,0 = its corner
+    BLANK                                                    ! clears ONLY this image (no window-wide wipe)
+    IF %myPieCtlBackColor <> COLOR:None
+      SETPENCOLOR(%myPieCtlBackColor)
+      BOX(0,0,%myPieCtlName:W,%myPieCtlName:H,%myPieCtlBackColor)
+    END
+    SETPENCOLOR(COLOR:Black)                                 ! slice outlines
+    %myPieCtlName:Indt = %myPieCtlName:PieDim * 2 / 100      ! small inset so the pie clears the edge
+    PIE(%myPieCtlName:Indt,%myPieCtlName:Indt,%myPieCtlName:PieDim - %myPieCtlName:Indt * 2,%myPieCtlName:PieDim - %myPieCtlName:Indt * 2,%myPieCtlName:Slices,%myPieCtlName:Colors,%myPieCtlDepth)
+    #IF(%myPieCtlShowLegend)
+    %myPieCtlName:Total = 0
+    #FOR(%myPieCtlSeg)
+    %myPieCtlName:Total = %myPieCtlName:Total + %myPieCtlName:Slices[%(INSTANCE(%myPieCtlSeg))]
+    #ENDFOR
+    %myPieCtlName:LegX = %myPieCtlName:PieDim + 8
+    %myPieCtlName:LegY = 6
+    #FOR(%myPieCtlSeg)
+    SETPENCOLOR(%myPieCtlSegColor)
+    BOX(%myPieCtlName:LegX,%myPieCtlName:LegY,9,8,%myPieCtlSegColor)             ! color swatch
+    SETPENCOLOR(COLOR:Black)
+    #IF(%myPieCtlShowPct)
+    IF %myPieCtlName:Total
+    %myPieCtlName:Pct = INT(%myPieCtlName:Slices[%(INSTANCE(%myPieCtlSeg))] * 100 / %myPieCtlName:Total + 0.5)
+    ELSE
+    %myPieCtlName:Pct = 0
+    END
+    SHOW(%myPieCtlName:LegX + 14,%myPieCtlName:LegY,'%myPieCtlSegLabel = ' & %myPieCtlName:Pct & '%%')
+    #ELSE
+    SHOW(%myPieCtlName:LegX + 14,%myPieCtlName:LegY,'%myPieCtlSegLabel')
+    #ENDIF
+    %myPieCtlName:LegY = %myPieCtlName:LegY + 13
+    #ENDFOR
+    #ENDIF
+    SETTARGET()
   END
 #ENDAT
 #!-----------------------------------------------------------------------------
