@@ -467,17 +467,26 @@ myPiePanel:Sync    EQUATE(EVENT:User+199)                    ! deferred "load fr
 #SET(%myPiePanelI,%myPiePanelI+1)
 #ENDLOOP
     DISPLAY()                                                ! refresh the panel controls
-  OF EVENT:Accepted                                          ! any panel input changed -> push to the pie + redraw
-    CASE FIELD()
+  END
+#ENDAT
+#!-----------------------------------------------------------------------------
+#! Control changes are FIELD events, so they arrive in TakeFieldEvent (NOT
+#! TakeWindowEvent). On Accepted (or a spin step), push the panel values into the
+#! pie and POST its redraw, so the chart updates live.
+#AT(%WindowManagerMethodCodeSection,'TakeFieldEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPiePanelDisable=0)
+  CASE FIELD()
 #SET(%myPiePanelFirst,1)
 #FOR(%Control),WHERE(%ControlInstance=%ActiveTemplateInstance)
 #IF(%myPiePanelFirst)
-    OF %Control
+  OF %Control
 #SET(%myPiePanelFirst,0)
 #ELSE
-    OROF %Control
+  OROF %Control
 #ENDIF
 #ENDFOR
+    CASE EVENT()
+    OF EVENT:Accepted
+    OROF EVENT:NewSelection                                  ! a spin step also fires NewSelection
       %myPiePanelPrefix:Depth   = myPiePanel:Depth
       %myPiePanelPrefix:ShowLeg = myPiePanel:ShowLeg
       %myPiePanelPrefix:ShowPct = myPiePanel:ShowPct
