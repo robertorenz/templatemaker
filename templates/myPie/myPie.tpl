@@ -227,7 +227,7 @@ myPieRepaint ROUTINE
 #!  IMAGE feq is captured in %myPieCtlImage via the proven #FOR(%Control),
 #!  WHERE(%ControlInstance=%ActiveTemplateInstance) idiom (corpus CONTROL.TPW).
 #!#############################################################################
-#CONTROL(myPieControl,'myPie - Pie Chart (drag onto a window)'),WINDOW,MULTI,DESCRIPTION('Pie chart ' & %myPieCtlName),HLP('~myPie')
+#CONTROL(myPieControl,'myPie - Pie Chart (drag onto a window)'),WINDOW,MULTI,DESCRIPTION('Pie chart'),HLP('~myPie')
 #! the pie canvas - one IMAGE; its feq auto-uniques on multi-drop and is captured below
   CONTROLS
     IMAGE,AT(,,140,120),USE(?Pie)
@@ -236,7 +236,8 @@ myPieRepaint ROUTINE
   #TAB('&General')
     #BOXED('Pie')
       #PROMPT('&Disable this pie',CHECK),%myPieCtlDisable,DEFAULT(0),AT(10)
-      #PROMPT('&Name (data prefix):',@s64),%myPieCtlName,REQ,DEFAULT('Pie' & %ActiveTemplateInstance)
+      #DISPLAY('This pie''s data is keyed by its Image control. A "Pie Controls"')
+      #DISPLAY('panel links to it by picking that Image (no names to keep in sync).')
     #ENDBOXED
     #BOXED('Look')
       #PROMPT('3D &Depth (0 = flat):',SPIN(@n3,0,60,1)),%myPieCtlDepth,DEFAULT(0)
@@ -273,6 +274,16 @@ myPieRepaint ROUTINE
   #FOR(%Control),WHERE(%ControlInstance=%ActiveTemplateInstance)
     #SET(%myPieCtlImage,%Control)
   #ENDFOR
+#! key this pie's data off its IMAGE field-equate (strip '?' and any ':') so a
+#! Pie Controls panel can derive the SAME prefix just by picking the Image
+  #DECLARE(%myPieCtlName)
+  #DECLARE(%myPieCtlCp)
+  #SET(%myPieCtlName,SUB(%myPieCtlImage,2,250))
+  #SET(%myPieCtlCp,INSTRING(':',%myPieCtlName,1,1))
+  #LOOP,WHILE(%myPieCtlCp)
+    #SET(%myPieCtlName,SUB(%myPieCtlName,1,%myPieCtlCp-1) & '_' & SUB(%myPieCtlName,%myPieCtlCp+1,250))
+    #SET(%myPieCtlCp,INSTRING(':',%myPieCtlName,1,1))
+  #ENDLOOP
 #ENDAT
 #!-----------------------------------------------------------------------------
 #! Per-instance data (DIM'd at gen time from the segment count; prefixed by the
@@ -377,7 +388,7 @@ Repaint:%myPieCtlName ROUTINE
 #!  values; the generated code copies them into <Pie>:Depth / :ShowLeg /
 #!  :ShowPct / :Slices[] (which myPieControl exposes as run-time variables).
 #!#############################################################################
-#CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,DESCRIPTION('Pie controls -> ' & %myPiePanelPie),HLP('~myPie')
+#CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,DESCRIPTION('Pie controls'),HLP('~myPie')
   CONTROLS
     GROUP('Pie controls'),AT(2,2,108,156),BOXED,USE(?myPiePanelGroup)
       PROMPT('3D depth:'),AT(8,14,46,10),USE(?myPiePanelDepthP)
@@ -402,23 +413,34 @@ Repaint:%myPieCtlName ROUTINE
   #TAB('&General')
     #BOXED('Target')
       #PROMPT('&Disable this panel',CHECK),%myPiePanelDisable,DEFAULT(0),AT(10)
-      #PROMPT('&Pie to control (its Name):',@s64),%myPiePanelPie,REQ,DEFAULT('Pie1')
+      #PROMPT('&Pie Image to control:',CONTROL),%myPiePanelImage,REQ
       #PROMPT('&Slice spinners to wire (0-6):',SPIN(@n1,0,6,1)),%myPiePanelSlices,DEFAULT(3)
     #ENDBOXED
-    #DISPLAY('Point this at a myPie - Pie Chart control on the same window by its')
-    #DISPLAY('Name. Wire 0-6 slice spinners; delete the unused Slice rows from the')
-    #DISPLAY('panel in the Window Designer. Changing any input redraws the pie live.')
+    #DISPLAY('PICK the IMAGE control of a myPie - Pie Chart on this window - the')
+    #DISPLAY('panel binds to that pie by its Image. Wire 0-6 slice spinners; delete')
+    #DISPLAY('the unused Slice rows in the Designer. Any change redraws the pie live.')
   #ENDTAB
 #ENDSHEET
 #!-----------------------------------------------------------------------------
 #ATSTART
   #DECLARE(%myPiePanelI)
   #DECLARE(%myPiePanelFirst)
+#! derive the target pie's data prefix from the PICKED Image feq (strip '?' and
+#! any ':') - identical rule to myPieControl, so the names match exactly
+  #DECLARE(%myPiePanelPrefix)
+  #DECLARE(%myPiePanelCp)
+  #SET(%myPiePanelPrefix,SUB(%myPiePanelImage,2,250))
+  #SET(%myPiePanelCp,INSTRING(':',%myPiePanelPrefix,1,1))
+  #LOOP,WHILE(%myPiePanelCp)
+    #SET(%myPiePanelPrefix,SUB(%myPiePanelPrefix,1,%myPiePanelCp-1) & '_' & SUB(%myPiePanelPrefix,%myPiePanelCp+1,250))
+    #SET(%myPiePanelCp,INSTRING(':',%myPiePanelPrefix,1,1))
+  #ENDLOOP
 #ENDAT
 #!-----------------------------------------------------------------------------
 #! Panel-local data (fixed labels - the panel is one-per-window) + a private
 #! "sync" event so we read the pie's values AFTER its OpenWindow has set them.
-#AT(%DataSection),WHERE(%myPiePanelDisable=0)
+#! data is BEFORE the window so its controls can USE these labels (forward refs fail)
+#AT(%DataSectionBeforeWindow),WHERE(%myPiePanelDisable=0)
 myPiePanel:Depth   SIGNED                                    ! 3D depth shown in the panel
 myPiePanel:ShowLeg BYTE                                      ! show-legend checkbox
 myPiePanel:ShowPct BYTE                                      ! show-percentages checkbox
@@ -431,17 +453,17 @@ myPiePanel:Slice6  SIGNED
 myPiePanel:Sync    EQUATE(EVENT:User+199)                    ! deferred "load from the pie" event
 #ENDAT
 #!-----------------------------------------------------------------------------
-#AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2500),WHERE(%myPiePanelDisable=0)
+#AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPiePanelDisable=0)
   CASE EVENT()
   OF EVENT:OpenWindow
     POST(myPiePanel:Sync)                                    ! load after the pie's OpenWindow ran (POST defers it)
   OF myPiePanel:Sync
-    myPiePanel:Depth   = %myPiePanelPie:Depth                ! seed the panel from the pie's current values
-    myPiePanel:ShowLeg = %myPiePanelPie:ShowLeg
-    myPiePanel:ShowPct = %myPiePanelPie:ShowPct
+    myPiePanel:Depth   = %myPiePanelPrefix:Depth                ! seed the panel from the pie's current values
+    myPiePanel:ShowLeg = %myPiePanelPrefix:ShowLeg
+    myPiePanel:ShowPct = %myPiePanelPrefix:ShowPct
 #SET(%myPiePanelI,1)
 #LOOP,WHILE(%myPiePanelI <= %myPiePanelSlices)
-    myPiePanel:Slice%myPiePanelI = %myPiePanelPie:Slices[%myPiePanelI]
+    myPiePanel:Slice%myPiePanelI = %myPiePanelPrefix:Slices[%myPiePanelI]
 #SET(%myPiePanelI,%myPiePanelI+1)
 #ENDLOOP
     DISPLAY()                                                ! refresh the panel controls
@@ -456,15 +478,15 @@ myPiePanel:Sync    EQUATE(EVENT:User+199)                    ! deferred "load fr
     OROF %Control
 #ENDIF
 #ENDFOR
-      %myPiePanelPie:Depth   = myPiePanel:Depth
-      %myPiePanelPie:ShowLeg = myPiePanel:ShowLeg
-      %myPiePanelPie:ShowPct = myPiePanel:ShowPct
+      %myPiePanelPrefix:Depth   = myPiePanel:Depth
+      %myPiePanelPrefix:ShowLeg = myPiePanel:ShowLeg
+      %myPiePanelPrefix:ShowPct = myPiePanel:ShowPct
 #SET(%myPiePanelI,1)
 #LOOP,WHILE(%myPiePanelI <= %myPiePanelSlices)
-      %myPiePanelPie:Slices[%myPiePanelI] = myPiePanel:Slice%myPiePanelI
+      %myPiePanelPrefix:Slices[%myPiePanelI] = myPiePanel:Slice%myPiePanelI
 #SET(%myPiePanelI,%myPiePanelI+1)
 #ENDLOOP
-      POST(Redraw:%myPiePanelPie)                            ! the pie repaints with the new values
+      POST(Redraw:%myPiePanelPrefix)                            ! the pie repaints with the new values
     END
   END
 #ENDAT

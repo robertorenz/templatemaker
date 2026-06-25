@@ -137,13 +137,14 @@ files). **Easiest path: a control template** — drag **myPie - Pie Chart** stra
 drops the IMAGE *and* wires the pie + legend in one go, fully self-contained (no global/procedure extension
 needed). Drop several on one window. Or use the two-extension route for an existing IMAGE control. Four
 registrations in all:
-- **`myPieControl`** (CONTROL) — the drag-on pie. Set a name, 3D depth, background, legend/percentages, and
-  the segments (label / relative **value** / **color**); each control owns its own data and redraws on
-  open/resize. Depth / legend / percentages are **run-time variables** (so a panel can change them live);
-  change any value and `DO Repaint:<Name>`.
+- **`myPieControl`** (CONTROL) — the drag-on pie. Set the 3D depth, background, legend/percentages, and the
+  segments (label / relative **value** / **color**); each control owns its own data (keyed off its **Image
+  control**, so there are no names to keep in sync) and redraws on open/resize. Depth / legend / percentages
+  are **run-time variables** so a panel can change them live.
 - **`myPiePanel`** (CONTROL) — a drag-on **live control panel**: a 3D-depth **spinner**, show-legend and
-  show-percentages **checkboxes**, and up to six **slice-value spinners**. Point it at a pie by its **Name**;
-  changing any input pushes the value into that pie's data and repaints it **live**.
+  show-percentages **checkboxes**, and up to six **slice-value spinners**. Link it by **picking the pie's
+  Image control** (a drop-list — no typed names); changing any input pushes the value into that pie's data
+  and repaints it **live**.
 - **`myPieGlobal`** (APPLICATION) — adds the global helper `myPieDraw(window, imageFeq, slices[], colors[],
   …)` to the program module. Add once, globally (only needed for the procedure-extension route).
 - **`myPie`** (PROCEDURE) — drop on a window procedure; pick a sized **IMAGE control**, set 3D depth /
@@ -564,6 +565,17 @@ controls bind to fixed data labels, and it reads the pie's current values on ope
 (so it runs after the pie's `OpenWindow`). Validated against the real Clarion compiler: the template registers
 (`ClarionCL -tr`) and the generated pie-draw + panel↔pie wiring compiles. Captures the reusable pattern —
 **one control template that live-drives another via its Name + a private redraw event**.
+
+**myPie panel ↔ pie link made robust + two bug fixes (v2.23).** The first cut of the live panel linked to a
+pie by a typed **Name** — fragile (the pie auto-named itself `Pie7` while the panel defaulted to `Pie1`, so
+they didn't connect) and it didn't compile. Reworked: the pie now **keys its data off its Image control's
+field-equate** (no name prompt), and the panel links by **picking that Image** from a drop-list — both derive
+the *same* data prefix from the *same* control (`SUB`/`INSTRING` strip the `?`/`:`), so they always match.
+Two real Clarion bugs fixed in the process: the panel's input controls now declare their USE variables at
+**`%DataSectionBeforeWindow`** (window controls can't forward-reference data declared after the window → it
+was "Unknown identifier"), and the handler moved from `PRIORITY(2500)` to **`PRIORITY(2000)`** (2500 collides
+with ABC's `TakeWindowEvent` scaffolding, mangling the generated `CASE`). Validated against the real Clarion
+compiler: the template registers (`ClarionCL -tr`) and the reworked generated code compiles.
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
