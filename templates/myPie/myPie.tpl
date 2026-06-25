@@ -289,6 +289,9 @@ myPieRepaint ROUTINE
 %myPieCtlName:LegX   SIGNED                                  ! legend left
 %myPieCtlName:LegY   SIGNED                                  ! legend row y
 %myPieCtlName:Pct    SIGNED                                  ! a slice percentage
+%myPieCtlName:Depth  SIGNED                                  ! 3D depth      - live-adjustable (see myPiePanel)
+%myPieCtlName:ShowLeg BYTE                                   ! show legend   - live-adjustable
+%myPieCtlName:ShowPct BYTE                                   ! show percent  - live-adjustable
 Redraw:%myPieCtlName EQUATE(EVENT:User+200+%ActiveTemplateInstance) ! private repaint event (unique per pie)
 #ENDAT
 #!-----------------------------------------------------------------------------
@@ -305,6 +308,9 @@ Repaint:%myPieCtlName ROUTINE
 #AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPieCtlDisable=0 AND ITEMS(%myPieCtlSeg))
   CASE EVENT()
   OF EVENT:OpenWindow
+    %myPieCtlName:Depth   = %myPieCtlDepth                   ! seed the live-adjustable properties from the
+    %myPieCtlName:ShowLeg = %myPieCtlShowLegend             !   design-time prompts (a myPiePanel can change
+    %myPieCtlName:ShowPct = %myPieCtlShowPct                !   them at run time, then POST Redraw:<Name>)
     #FOR(%myPieCtlSeg)
     %myPieCtlName:Slices[%(INSTANCE(%myPieCtlSeg))] = %myPieCtlSegValue                 ! %myPieCtlSegLabel
     %myPieCtlName:Colors[%(INSTANCE(%myPieCtlSeg))] = %myPieCtlSegColor
@@ -315,11 +321,11 @@ Repaint:%myPieCtlName ROUTINE
   OF Redraw:%myPieCtlName
     %myPieCtlName:W = %myPieCtlImage{PROP:Width}
     %myPieCtlName:H = %myPieCtlImage{PROP:Height}
-    #IF(%myPieCtlShowLegend)
-    %myPieCtlName:PieDim = %myPieCtlName:W * 55 / 100         ! pie gets the left 55pct, legend the rest
-    #ELSE
-    %myPieCtlName:PieDim = %myPieCtlName:W
-    #ENDIF
+    IF %myPieCtlName:ShowLeg
+      %myPieCtlName:PieDim = %myPieCtlName:W * 55 / 100       ! pie gets the left 55pct, legend the rest
+    ELSE
+      %myPieCtlName:PieDim = %myPieCtlName:W
+    END
     IF %myPieCtlName:H < %myPieCtlName:PieDim THEN %myPieCtlName:PieDim = %myPieCtlName:H.   ! keep it on-screen
     SETTARGET(%Window,%myPieCtlImage)                        ! the IMAGE is the target: 0,0 = its corner
     BLANK                                                    ! clears ONLY this image (no window-wide wipe)
@@ -329,8 +335,8 @@ Repaint:%myPieCtlName ROUTINE
     END
     SETPENCOLOR(COLOR:Black)                                 ! slice outlines
     %myPieCtlName:Indt = %myPieCtlName:PieDim * 2 / 100      ! small inset so the pie clears the edge
-    PIE(%myPieCtlName:Indt,%myPieCtlName:Indt,%myPieCtlName:PieDim - %myPieCtlName:Indt * 2,%myPieCtlName:PieDim - %myPieCtlName:Indt * 2,%myPieCtlName:Slices,%myPieCtlName:Colors,%myPieCtlDepth)
-    #IF(%myPieCtlShowLegend)
+    PIE(%myPieCtlName:Indt,%myPieCtlName:Indt,%myPieCtlName:PieDim - %myPieCtlName:Indt * 2,%myPieCtlName:PieDim - %myPieCtlName:Indt * 2,%myPieCtlName:Slices,%myPieCtlName:Colors,%myPieCtlName:Depth)
+    IF %myPieCtlName:ShowLeg                                  ! legend (runtime-gated so a panel can toggle it)
     %myPieCtlName:Total = 0
     #FOR(%myPieCtlSeg)
     %myPieCtlName:Total = %myPieCtlName:Total + %myPieCtlName:Slices[%(INSTANCE(%myPieCtlSeg))]
@@ -341,20 +347,125 @@ Repaint:%myPieCtlName ROUTINE
     SETPENCOLOR(%myPieCtlSegColor)
     BOX(%myPieCtlName:LegX,%myPieCtlName:LegY,9,8,%myPieCtlSegColor)             ! color swatch
     SETPENCOLOR(COLOR:Black)
-    #IF(%myPieCtlShowPct)
+    IF %myPieCtlName:ShowPct
     IF %myPieCtlName:Total
     %myPieCtlName:Pct = INT(%myPieCtlName:Slices[%(INSTANCE(%myPieCtlSeg))] * 100 / %myPieCtlName:Total + 0.5)
     ELSE
     %myPieCtlName:Pct = 0
     END
     SHOW(%myPieCtlName:LegX + 14,%myPieCtlName:LegY,'%myPieCtlSegLabel = ' & %myPieCtlName:Pct & '%%')
-    #ELSE
+    ELSE
     SHOW(%myPieCtlName:LegX + 14,%myPieCtlName:LegY,'%myPieCtlSegLabel')
-    #ENDIF
+    END
     %myPieCtlName:LegY = %myPieCtlName:LegY + 13
     #ENDFOR
-    #ENDIF
+    END                                                      ! end IF ShowLeg
     SETTARGET()
+  END
+#ENDAT
+#!#############################################################################
+#!  CONTROL TEMPLATE - myPiePanel  -  a live "control panel" for a pie chart
+#!#############################################################################
+#!  Drops a small panel of inputs (a 3D-depth spinner, show-legend / show-
+#!  percentages checkboxes, and a few slice-value spinners) that drive a pie
+#!  put on the same window by myPieControl. Point it at the pie by its Name;
+#!  whenever an input changes, it pushes the value into that pie's run-time data
+#!  and POSTs the pie's redraw, so the chart updates live.
+#!
+#!  WINDOW (not MULTI): one panel per window, so its own controls can bind to
+#!  fixed data labels (myPiePanel:...). The dropped controls hold their own
+#!  values; the generated code copies them into <Pie>:Depth / :ShowLeg /
+#!  :ShowPct / :Slices[] (which myPieControl exposes as run-time variables).
+#!#############################################################################
+#CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,DESCRIPTION('Pie controls -> ' & %myPiePanelPie),HLP('~myPie')
+  CONTROLS
+    GROUP('Pie controls'),AT(2,2,108,156),BOXED,USE(?myPiePanelGroup)
+      PROMPT('3D depth:'),AT(8,14,46,10),USE(?myPiePanelDepthP)
+      SPIN(@n3),AT(58,12,48,12),RANGE(0,60),STEP(1),USE(myPiePanel:Depth)
+      CHECK(' Show legend'),AT(8,28,98,10),USE(myPiePanel:ShowLeg)
+      CHECK(' Show percentages'),AT(8,40,98,10),USE(myPiePanel:ShowPct)
+      PROMPT('Slice 1:'),AT(8,56,46,10),USE(?myPiePanelS1P)
+      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,54,48,12),USE(myPiePanel:Slice1)
+      PROMPT('Slice 2:'),AT(8,70,46,10),USE(?myPiePanelS2P)
+      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,68,48,12),USE(myPiePanel:Slice2)
+      PROMPT('Slice 3:'),AT(8,84,46,10),USE(?myPiePanelS3P)
+      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,82,48,12),USE(myPiePanel:Slice3)
+      PROMPT('Slice 4:'),AT(8,98,46,10),USE(?myPiePanelS4P)
+      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,96,48,12),USE(myPiePanel:Slice4)
+      PROMPT('Slice 5:'),AT(8,112,46,10),USE(?myPiePanelS5P)
+      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,110,48,12),USE(myPiePanel:Slice5)
+      PROMPT('Slice 6:'),AT(8,126,46,10),USE(?myPiePanelS6P)
+      SPIN(@n7),RANGE(0,9999999),STEP(1),AT(58,124,48,12),USE(myPiePanel:Slice6)
+    END
+  END
+#SHEET
+  #TAB('&General')
+    #BOXED('Target')
+      #PROMPT('&Disable this panel',CHECK),%myPiePanelDisable,DEFAULT(0),AT(10)
+      #PROMPT('&Pie to control (its Name):',@s64),%myPiePanelPie,REQ,DEFAULT('Pie1')
+      #PROMPT('&Slice spinners to wire (0-6):',SPIN(@n1,0,6,1)),%myPiePanelSlices,DEFAULT(3)
+    #ENDBOXED
+    #DISPLAY('Point this at a myPie - Pie Chart control on the same window by its')
+    #DISPLAY('Name. Wire 0-6 slice spinners; delete the unused Slice rows from the')
+    #DISPLAY('panel in the Window Designer. Changing any input redraws the pie live.')
+  #ENDTAB
+#ENDSHEET
+#!-----------------------------------------------------------------------------
+#ATSTART
+  #DECLARE(%myPiePanelI)
+  #DECLARE(%myPiePanelFirst)
+#ENDAT
+#!-----------------------------------------------------------------------------
+#! Panel-local data (fixed labels - the panel is one-per-window) + a private
+#! "sync" event so we read the pie's values AFTER its OpenWindow has set them.
+#AT(%DataSection),WHERE(%myPiePanelDisable=0)
+myPiePanel:Depth   SIGNED                                    ! 3D depth shown in the panel
+myPiePanel:ShowLeg BYTE                                      ! show-legend checkbox
+myPiePanel:ShowPct BYTE                                      ! show-percentages checkbox
+myPiePanel:Slice1  SIGNED                                    ! slice value spinners (wire 0-6)
+myPiePanel:Slice2  SIGNED
+myPiePanel:Slice3  SIGNED
+myPiePanel:Slice4  SIGNED
+myPiePanel:Slice5  SIGNED
+myPiePanel:Slice6  SIGNED
+myPiePanel:Sync    EQUATE(EVENT:User+199)                    ! deferred "load from the pie" event
+#ENDAT
+#!-----------------------------------------------------------------------------
+#AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2500),WHERE(%myPiePanelDisable=0)
+  CASE EVENT()
+  OF EVENT:OpenWindow
+    POST(myPiePanel:Sync)                                    ! load after the pie's OpenWindow ran (POST defers it)
+  OF myPiePanel:Sync
+    myPiePanel:Depth   = %myPiePanelPie:Depth                ! seed the panel from the pie's current values
+    myPiePanel:ShowLeg = %myPiePanelPie:ShowLeg
+    myPiePanel:ShowPct = %myPiePanelPie:ShowPct
+#SET(%myPiePanelI,1)
+#LOOP,WHILE(%myPiePanelI <= %myPiePanelSlices)
+    myPiePanel:Slice%myPiePanelI = %myPiePanelPie:Slices[%myPiePanelI]
+#SET(%myPiePanelI,%myPiePanelI+1)
+#ENDLOOP
+    DISPLAY()                                                ! refresh the panel controls
+  OF EVENT:Accepted                                          ! any panel input changed -> push to the pie + redraw
+    CASE FIELD()
+#SET(%myPiePanelFirst,1)
+#FOR(%Control),WHERE(%ControlInstance=%ActiveTemplateInstance)
+#IF(%myPiePanelFirst)
+    OF %Control
+#SET(%myPiePanelFirst,0)
+#ELSE
+    OROF %Control
+#ENDIF
+#ENDFOR
+      %myPiePanelPie:Depth   = myPiePanel:Depth
+      %myPiePanelPie:ShowLeg = myPiePanel:ShowLeg
+      %myPiePanelPie:ShowPct = myPiePanel:ShowPct
+#SET(%myPiePanelI,1)
+#LOOP,WHILE(%myPiePanelI <= %myPiePanelSlices)
+      %myPiePanelPie:Slices[%myPiePanelI] = myPiePanel:Slice%myPiePanelI
+#SET(%myPiePanelI,%myPiePanelI+1)
+#ENDLOOP
+      POST(Redraw:%myPiePanelPie)                            ! the pie repaints with the new values
+    END
   END
 #ENDAT
 #!-----------------------------------------------------------------------------

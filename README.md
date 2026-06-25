@@ -135,11 +135,15 @@ Global → Extensions, generate, and build. (No source files to copy — everyth
 Renders a pie chart into an IMAGE control using Clarion's built-in `PIE` graphics primitive (no external
 files). **Easiest path: a control template** — drag **myPie - Pie Chart** straight onto a window and it
 drops the IMAGE *and* wires the pie + legend in one go, fully self-contained (no global/procedure extension
-needed). Drop several on one window. Or use the two-extension route for an existing IMAGE control. Three
+needed). Drop several on one window. Or use the two-extension route for an existing IMAGE control. Four
 registrations in all:
 - **`myPieControl`** (CONTROL) — the drag-on pie. Set a name, 3D depth, background, legend/percentages, and
   the segments (label / relative **value** / **color**); each control owns its own data and redraws on
-  open/resize. Change a value at run time and `DO Repaint:<Name>` to repaint.
+  open/resize. Depth / legend / percentages are **run-time variables** (so a panel can change them live);
+  change any value and `DO Repaint:<Name>`.
+- **`myPiePanel`** (CONTROL) — a drag-on **live control panel**: a 3D-depth **spinner**, show-legend and
+  show-percentages **checkboxes**, and up to six **slice-value spinners**. Point it at a pie by its **Name**;
+  changing any input pushes the value into that pie's data and repaints it **live**.
 - **`myPieGlobal`** (APPLICATION) — adds the global helper `myPieDraw(window, imageFeq, slices[], colors[],
   …)` to the program module. Add once, globally (only needed for the procedure-extension route).
 - **`myPie`** (PROCEDURE) — drop on a window procedure; pick a sized **IMAGE control**, set 3D depth /
@@ -549,6 +553,17 @@ repaint/resize) and a `BLANK` clears **only that image** instead of wiping the w
 multiple pies (or other controls) erasing each other. The `myPieDraw` helper gained a leading `WINDOW`
 parameter to match, so **regenerate** any app built against the old one. Validated against the real Clarion
 compiler: the template registers cleanly (`ClarionCL -tr`) and the generated helper code compiles.
+
+**myPie gains a live control-panel control template (v2.22).** A second pie control template, **myPie - Pie
+Controls panel**, drops a ready-made panel of inputs — a 3D-depth **spinner**, show-legend / show-percentages
+**checkboxes**, and up to six **slice-value spinners** — that drive a pie on the same window. Point it at the
+pie by its **Name**; changing any input pushes the value into that pie's data and **POSTs its redraw**, so the
+chart updates live. To make that possible, `myPieControl` now exposes depth / legend / percentages as
+**run-time variables** (they were baked in at generation). The panel is `WINDOW` (one per window) so its
+controls bind to fixed data labels, and it reads the pie's current values on open via a deferred sync event
+(so it runs after the pie's `OpenWindow`). Validated against the real Clarion compiler: the template registers
+(`ClarionCL -tr`) and the generated pie-draw + panel↔pie wiring compiles. Captures the reusable pattern —
+**one control template that live-drives another via its Name + a private redraw event**.
 
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
