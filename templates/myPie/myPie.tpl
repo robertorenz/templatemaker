@@ -428,19 +428,20 @@ Repaint:%myPieCtlKey ROUTINE
 #!  land the controls at this tidy layout inside the 160x212 group (do NOT change
 #!  them back to absolute): depth(8,14) entry(58,12) legend(8,30) pct(8,44)
 #!  list(8,60) Add(8,170) Edit(58,170) Delete(108,170) hint(8,190).
-#!  feq-only controls: a feq CHECK's `{PROP:Value}` is useless (never tracks the
-#!  toggle, and SET doesn't drive the mark) - but `{PROP:Checked}` READS the real
-#!  mark inside the check's own Accepted handler (proven). So on each click we just
-#!  read PROP:Checked into the pie's flag (no flip = no inversion). Depth is an
-#!  ENTRY(@n3) read via PROP:ScreenText (a feq SPIN doesn't retain its value).
+#!  legend/percent are TOGGLE BUTTONS, not checkboxes: a feq CHECK's mark CANNOT be
+#!  set programmatically (proven - PROP:Value/PROP:Checked SET, even with DISPLAY,
+#!  don't move it), so a checkbox could never show the pie's design-time ON/OFF at
+#!  startup - it always started blank. A BUTTON's caption IS settable, so we show
+#!  the state there ('Show legend: ON'/'OFF'), seed it from the pie on open, and
+#!  flip the flag on each click. Depth is an ENTRY(@n3) read via PROP:ScreenText.
 #!#############################################################################
 #CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,MULTI,DESCRIPTION('Pie controls'),HLP('~myPie')
   CONTROLS
     GROUP('Pie controls'),USE(?myPiePanelGroup),AT(,,160,212),BOXED
       PROMPT('3D depth:'),AT(8,14,46,10),USE(?myPiePanelDepthP)
       ENTRY(@n3),AT(50,-2,50,12),USE(?myPiePanelDepth)
-      CHECK(' Show legend'),AT(-50,18,144,10),USE(?myPiePanelShowLeg)
-      CHECK(' Show percentages'),AT(0,16,144,10),USE(?myPiePanelShowPct)
+      BUTTON('Show legend: ON'),AT(-50,18,144,12),USE(?myPiePanelShowLeg)
+      BUTTON('Show percentages: ON'),AT(0,16,144,12),USE(?myPiePanelShowPct)
       LIST,AT(0,16,144,104),USE(?myPiePanelList),VSCROLL,ALRT(MouseLeft2),FROM(''),FORMAT('66L(2)|M~Label~@s64@40R(2)|M~Value~@n-11@40R(2)|M~Color~@n-11@')
       BUTTON('&Add'),AT(0,110,44,14),USE(?myPiePanelAdd)
       BUTTON('&Edit'),AT(50,0,44,14),USE(?myPiePanelEdit)
@@ -546,10 +547,10 @@ myPiePanel:EditW%(%ActiveTemplateInstance)   WINDOW('Edit Slice'),AT(,,170,98),C
     %PanelListFeq{PROP:From} = %myPiePanelPrefix:Q            ! point THIS panel's LIST at the pie's real slice
     POST(myPiePanel:Sync%(%ActiveTemplateInstance))          !   queue (CONTROLS used FROM(''), so rebind here),
   OF myPiePanel:Sync%(%ActiveTemplateInstance)               !   then defer the load to AFTER the pie seeded :Q
-    %PanelDepthFeq{PROP:ScreenText} = %myPiePanelPrefix:Depth  ! seed the depth ENTRY from the pie (ScreenText).
-    %PanelLegFeq{PROP:Checked} = %myPiePanelPrefix:ShowLeg   !   best-effort mark seed (CHECK marks read back via
-    %PanelPctFeq{PROP:Checked} = %myPiePanelPrefix:ShowPct   !   PROP:Checked on click - that's authoritative)
-    DISPLAY()                                                ! refresh the panel controls
+    %PanelDepthFeq{PROP:ScreenText} = %myPiePanelPrefix:Depth  ! seed the panel from the pie's current values:
+    %PanelLegFeq{PROP:Text} = 'Show legend: ' & CHOOSE(%myPiePanelPrefix:ShowLeg=1,'ON','OFF')      ! depth in
+    %PanelPctFeq{PROP:Text} = 'Show percentages: ' & CHOOSE(%myPiePanelPrefix:ShowPct=1,'ON','OFF') ! the ENTRY,
+    DISPLAY()                                                ! the toggle-button captions show the design ON/OFF
   END
 #ENDAT
 #!-----------------------------------------------------------------------------
@@ -564,14 +565,16 @@ myPiePanel:EditW%(%ActiveTemplateInstance)   WINDOW('Edit Slice'),AT(,,170,98),C
       %myPiePanelPrefix:Depth = %PanelDepthFeq{PROP:ScreenText}
       POST(Redraw:%myPiePanelPrefix)
     END
-  OF %PanelLegFeq                                            ! legend CHECK: PROP:Checked reads the REAL mark in
-    IF EVENT() = EVENT:Accepted                              !   the check's own Accepted (PROP:Value never does)
-      %myPiePanelPrefix:ShowLeg = %PanelLegFeq{PROP:Checked} !   - so just read it; checked->shown, no inversion
+  OF %PanelLegFeq                                            ! legend TOGGLE button: flip the pie's flag and
+    IF EVENT() = EVENT:Accepted                              !   show the new state in the caption (a button has
+      %myPiePanelPrefix:ShowLeg = 1 - %myPiePanelPrefix:ShowLeg !  no mark to conflict, and PROP:Text IS settable)
+      %PanelLegFeq{PROP:Text} = 'Show legend: ' & CHOOSE(%myPiePanelPrefix:ShowLeg=1,'ON','OFF')
       POST(Redraw:%myPiePanelPrefix)
     END
-  OF %PanelPctFeq                                            ! percentages CHECK - read PROP:Checked the same way
+  OF %PanelPctFeq                                            ! percentages TOGGLE button - same flip + caption
     IF EVENT() = EVENT:Accepted
-      %myPiePanelPrefix:ShowPct = %PanelPctFeq{PROP:Checked}
+      %myPiePanelPrefix:ShowPct = 1 - %myPiePanelPrefix:ShowPct
+      %PanelPctFeq{PROP:Text} = 'Show percentages: ' & CHOOSE(%myPiePanelPrefix:ShowPct=1,'ON','OFF')
       POST(Redraw:%myPiePanelPrefix)
     END
   OF %PanelAddFeq                                            ! Add -> popup with defaults, then ADD a row

@@ -145,7 +145,7 @@ registrations in all:
   slice is an invisible 0° wedge) and walks the queue for the legend. Depth / legend / percentages are
   **run-time variables** so a panel can change them live.
 - **`myPiePanel`** (CONTROL, **MULTI**) — a drag-on **live control panel**: a 3D-depth field, show-legend and
-  show-percentages **checkboxes**, and an **editable slice list with Add / Edit / Delete**. Link it by
+  show-percentages **toggle buttons**, and an **editable slice list with Add / Edit / Delete**. Link it by
   **picking the pie's Image control** (a drop-list — no typed names). The list shows every slice; **Add**,
   **Edit** (or **double-click** a row), and **Delete** edit them through a small **modal popup** (Label /
   Value / **Color** via the color dialog) — so you are no longer capped at a handful of slices. Every change
