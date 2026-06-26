@@ -1,4 +1,4 @@
-#TEMPLATE(myPie,'myPie - Draw a Pie Chart into a Window - v1.4'),FAMILY('ABC')
+#TEMPLATE(myPie,'myPie - Draw a Pie Chart into a Window - v1.5'),FAMILY('ABC')
 #!-----------------------------------------------------------------------------
 #!  myPie template set
 #!
@@ -419,15 +419,17 @@ Repaint:%myPieCtlKey ROUTINE
 #!#############################################################################
 #CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,DESCRIPTION('Pie controls'),HLP('~myPie')
   CONTROLS
-    GROUP('Pie controls'),AT(2,2,150,210),BOXED,USE(?myPiePanelGroup)
+    GROUP('Pie controls'),AT(2,2,150,212),BOXED,USE(?myPiePanelGroup)
       PROMPT('3D depth:'),AT(8,14,46,10),USE(?myPiePanelDepthP)
       SPIN(@n3),AT(58,12,48,12),RANGE(0,60),STEP(1),USE(myPiePanel:Depth)
       CHECK(' Show legend'),AT(8,28,138,10),USE(myPiePanel:ShowLeg)
       CHECK(' Show percentages'),AT(8,40,138,10),USE(myPiePanel:ShowPct)
-      LIST,AT(8,56,138,134),USE(?myPiePanelList),VSCROLL,FROM(myPiePanel:FromQ), |
-        ALRT(MouseLeft2),ALRT(F2Key),ALRT(InsertKey),ALRT(DeleteKey), |
+      LIST,AT(8,56,138,116),USE(?myPiePanelList),VSCROLL,ALRT(MouseLeft2),FROM(myPiePanel:FromQ), |
         FORMAT('66L(2)|M~Label~@s64@40R(2)|M~Value~@n-11@40R(2)|M~Color~@n-11@')
-      PROMPT('Dbl-click / F2 / Enter a cell to edit. Ins / Del add / remove rows.'),AT(8,193,138,16),USE(?myPiePanelHint)
+      BUTTON('&Add'),AT(8,175,42,14),USE(?myPiePanelAdd)
+      BUTTON('&Edit'),AT(54,175,42,14),USE(?myPiePanelEdit)
+      BUTTON('&Delete'),AT(100,175,46,14),USE(?myPiePanelDelete)
+      PROMPT('Double-click a slice (or Edit) to change it.'),AT(8,193,138,16),USE(?myPiePanelHint)
     END
   END
 #SHEET
@@ -437,11 +439,11 @@ Repaint:%myPieCtlKey ROUTINE
       #PROMPT('&Pie Image to control:',CONTROL),%myPiePanelImage,REQ
     #ENDBOXED
     #DISPLAY('PICK the IMAGE control of a myPie - Pie Chart on this window - the')
-    #DISPLAY('panel binds to that pie by its Image. The slice list is fully')
-    #DISPLAY('editable at run time: double-click (or F2 / Enter) a cell to edit it,')
-    #DISPLAY('press Insert to add a slice, Delete to remove one. The 3D-depth')
-    #DISPLAY('spinner and the legend / percentage checkboxes drive the pie too.')
-    #DISPLAY('Every change redraws the pie live - the slice count is unbounded.')
+    #DISPLAY('panel binds to that pie by its Image. The slice list shows every')
+    #DISPLAY('slice; Add / Edit / Delete (or double-click a row) edit them via a')
+    #DISPLAY('small popup (Label / Value / Color). The 3D-depth spinner and the')
+    #DISPLAY('legend / percentage checkboxes drive the pie too. Every change')
+    #DISPLAY('redraws the pie live - the slice count is unbounded.')
   #ENDTAB
 #ENDSHEET
 #!-----------------------------------------------------------------------------
@@ -462,59 +464,49 @@ Repaint:%myPieCtlKey ROUTINE
 #! "sync" event so we read the pie's values AFTER its OpenWindow has set them.
 #! data is BEFORE the window so its controls can USE these labels (forward refs fail).
 #!
-#! The in-cell edit-in-place (EIP) drives the shipped QEIPManager directly (no
-#! BrowseBox). The queue it edits is the PIE's (%myPiePanelPrefix:Q), already
-#! declared before the window by myPieControl. ,ONCE INCLUDEs pull the EIP +
-#! field-pair classes; reuse the app's existing GlobalErrors (do NOT declare a
-#! second ErrorClass). VALIDATED shape: pievalid standalone build, 0 errors.
+#! Editing is plain, robust Clarion: the LIST just DISPLAYs the pie's slice queue
+#! (%myPiePanelPrefix:Q, declared before the window by myPieControl), and Add /
+#! Edit / Delete buttons drive a small MODAL popup (Label / Value / Color). No
+#! QEIPManager / EditClass (that standalone EIP GPF'd inside a full ABC window).
 #AT(%DataSectionBeforeWindow),WHERE(%myPiePanelDisable=0)
-  INCLUDE('ABQEIP.INC'),ONCE                                 ! QEIPManager (pulls ABEIP + ABWINDOW)
-  INCLUDE('ABUTIL.INC'),ONCE                                 ! FieldPairsClass
-  INCLUDE('ABERROR.INC'),ONCE                                ! ErrorClass (GlobalErrors type)
-  INCLUDE('KEYCODES.CLW'),ONCE                               ! F2Key / InsertKey / DeleteKey / EnterKey
-  INCLUDE('EQUATES.CLW'),ONCE                                ! MouseLeft2 / EVENT: / VCR: / COLOR:
+  INCLUDE('KEYCODES.CLW'),ONCE                               ! MouseLeft2 (double-click to edit)
+  INCLUDE('EQUATES.CLW'),ONCE                                ! EVENT: / COLOR:
 myPiePanel:FromQ   QUEUE,PRE()                              ! placeholder LIST,FROM target - the control
 myPiePanel:FromQF    STRING(1)                              !   structure cannot reference the pie's derived
                    END                                      !   queue label, so we FROM this fixed queue and
 myPiePanel:Depth   SIGNED                                    ! 3D depth shown in the panel
 myPiePanel:ShowLeg BYTE                                      ! show-legend checkbox
 myPiePanel:ShowPct BYTE                                      ! show-percentages checkbox
-myPiePanel:EIP     QEIPManager                              ! drives in-cell editing on the pie's slice queue
-myPiePanel:EIPEQ   EditQueue                                ! the EIP column->editor map. EIP.EQ is a NULL &ref
-                                                            !   until WE assign it (BrowseClass NEWs its own);
-                                                            !   AddControl derefs it with no null-check, so an
-                                                            !   unassigned EQ GPFs on open. Give it real storage.
-myPiePanel:EIPFlds FieldPairsClass                          ! maps each editable column to its queue field
-myPiePanel:EIPVCR  LONG                                     ! VCRRequest backing store (&LONG GPFs if NULL)
-myPiePanel:EIPLbl  EditEntryClass                           ! type-in-cell editor for the Label column
-myPiePanel:EIPVal  EditEntryClass                           ! type-in-cell editor for the Value column
-myPiePanel:EIPClr  EditColorClass                           ! color-dialog editor for the Color column
-myPiePanel:EIPRun  BYTE                                     ! re-entrancy guard (Run re-enters TakeFieldEvent)
-myPiePanel:EIPSet  BYTE                                     ! one-time-setup guard
-myPiePanel:EIPRet  BYTE                                     ! EIP.Run() result
+myPiePanel:Bound   BYTE                                      ! one-time "list bound to the pie's queue" guard
+myPiePanel:EdOK    BYTE                                      ! modal-editor result (1 = OK pressed)
 myPiePanel:Sync    EQUATE(EVENT:User+199)                    ! deferred "load from the pie" event
+#ENDAT
+#!-----------------------------------------------------------------------------
+#! The modal slice editor (its own WINDOW + USE variables). Declared AFTER the
+#! main window - it is opened/closed by hand (OPEN/ACCEPT/CLOSE) in a routine,
+#! not managed by ThisWindow. Its controls USE the Ed* labels just above it.
+#AT(%DataSection),WHERE(%myPiePanelDisable=0)
+myPiePanel:EdLabel STRING(64)                                ! edited slice label
+myPiePanel:EdValue LONG                                      ! edited slice value (relative size)
+myPiePanel:EdColor LONG                                      ! edited slice color
+myPiePanel:EditW   WINDOW('Edit Slice'),AT(,,170,98),CENTER,GRAY,DOUBLE,SYSTEM,MODAL
+                     PROMPT('&Label:'),AT(8,12,34,10),USE(?myPiePanelEdLblP)
+                     ENTRY(@s64),AT(46,10,116,12),USE(myPiePanel:EdLabel)
+                     PROMPT('&Value:'),AT(8,30,34,10),USE(?myPiePanelEdValP)
+                     SPIN(@n7),AT(46,28,70,12),USE(myPiePanel:EdValue),RANGE(0,32767),STEP(1)
+                     PROMPT('&Color:'),AT(8,48,34,10),USE(?myPiePanelEdClrP)
+                     BUTTON('&Pick...'),AT(46,46,54,12),USE(?myPiePanelEdColorBtn)
+                     BUTTON('&OK'),AT(40,76,44,14),USE(?myPiePanelEdOK),DEFAULT
+                     BUTTON('&Cancel'),AT(92,76,44,14),USE(?myPiePanelEdCancel)
+                   END
 #ENDAT
 #!-----------------------------------------------------------------------------
 #AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPiePanelDisable=0)
   CASE EVENT()
   OF EVENT:OpenWindow
-    IF NOT myPiePanel:EIPSet                                 ! one-time EIP wiring, after the window is open
-      myPiePanel:EIPSet = 1
-      ?myPiePanelList{PROP:From} = %myPiePanelPrefix:Q        ! bind the list to the pie's real slice queue
-      myPiePanel:EIPFlds.Init()
-      myPiePanel:EIPFlds.AddPair(%myPiePanelPrefix:QLabel,%myPiePanelPrefix:QLabel)  ! one pair per editable
-      myPiePanel:EIPFlds.AddPair(%myPiePanelPrefix:QValue,%myPiePanelPrefix:QValue)  !   column, in visible
-      myPiePanel:EIPFlds.AddPair(%myPiePanelPrefix:QColor,%myPiePanelPrefix:QColor)  !   column order
-      myPiePanel:EIP.EQ &= myPiePanel:EIPEQ                   ! REQUIRED: AddControl derefs EQ with no null-check
-      myPiePanel:EIP.Q &= %myPiePanelPrefix:Q
-      myPiePanel:EIP.Fields &= myPiePanel:EIPFlds
-      myPiePanel:EIP.ListControl = ?myPiePanelList
-      myPiePanel:EIP.Errors &= GlobalErrors                  ! reuse the app's existing ErrorClass
-      myPiePanel:EIPVCR = VCR:None
-      myPiePanel:EIP.VCRRequest &= myPiePanel:EIPVCR
-      myPiePanel:EIP.AddControl(myPiePanel:EIPLbl,1,0)        ! col 1 Label  - type-in-cell
-      myPiePanel:EIP.AddControl(myPiePanel:EIPVal,2,0)        ! col 2 Value  - type-in-cell
-      myPiePanel:EIP.AddControl(myPiePanel:EIPClr,3,0)        ! col 3 Color  - color dialog
+    IF NOT myPiePanel:Bound                                  ! one-time: point the LIST at the pie's real
+      myPiePanel:Bound = 1                                   !   slice queue (the control structure can only
+      ?myPiePanelList{PROP:From} = %myPiePanelPrefix:Q        !   FROM a fixed placeholder, so rebind here)
     END
     POST(myPiePanel:Sync)                                    ! load after the pie's OpenWindow ran (POST defers it)
   OF myPiePanel:Sync
@@ -525,13 +517,10 @@ myPiePanel:Sync    EQUATE(EVENT:User+199)                    ! deferred "load fr
   END
 #ENDAT
 #!-----------------------------------------------------------------------------
-#! Control changes are FIELD events, so they arrive in TakeFieldEvent (NOT
-#! TakeWindowEvent). The 3D-depth spinner + the two checkboxes push their values
-#! into the pie on change. The slice LIST is the EIP surface: a double-click /
-#! F2 / Enter on it runs the QEIPManager (MODAL - it runs its own ACCEPT loop,
-#! positions the cell editor, PUTs the queue on commit); Ins / Del add / remove a
-#! slice row. A re-entrancy guard is REQUIRED - EIP.Run() re-enters this method.
-#! After any edit/insert/delete, POST the pie's redraw so the chart updates live.
+#! Control changes are FIELD events (TakeFieldEvent). The 3D-depth spinner + the
+#! two checkboxes push their values into the pie on change. Add / Edit / Delete
+#! (and a double-click on the list) edit the slice QUEUE via a modal popup; after
+#! any change POST the pie's redraw so the chart updates live.
 #AT(%WindowManagerMethodCodeSection,'TakeFieldEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPiePanelDisable=0)
   CASE FIELD()
   OF ?myPiePanel:Depth                                       ! the depth spinner + the two checkboxes
@@ -545,37 +534,82 @@ myPiePanel:Sync    EQUATE(EVENT:User+199)                    ! deferred "load fr
       %myPiePanelPrefix:ShowPct = myPiePanel:ShowPct
       POST(Redraw:%myPiePanelPrefix)                            ! the pie repaints with the new values
     END
-  OF ?myPiePanelList                                          ! the editable slice list
-    IF NOT myPiePanel:EIPRun                                  ! guard: EIP.Run re-enters TakeFieldEvent
-      CASE EVENT()
-      OF EVENT:AlertKey
-        CASE KEYCODE()
-        OF MouseLeft2                                         ! double-click / F2 / Enter -> in-cell edit
-        OROF F2Key
-        OROF EnterKey
-          myPiePanel:EIPRun = 1
-          myPiePanel:EIPRet = myPiePanel:EIP.Run(ChangeRecord)
-          myPiePanel:EIPRun = 0
+  OF ?myPiePanelAdd                                           ! Add -> popup with defaults, then ADD a row
+    IF EVENT() = EVENT:Accepted THEN DO myPiePanel:AddRtn.
+  OF ?myPiePanelEdit                                          ! Edit -> popup pre-loaded from the selected row
+    IF EVENT() = EVENT:Accepted THEN DO myPiePanel:EditRtn.
+  OF ?myPiePanelList                                          ! double-click a row -> same as Edit
+    IF EVENT() = EVENT:AlertKey AND KEYCODE() = MouseLeft2 THEN DO myPiePanel:EditRtn.
+  OF ?myPiePanelDelete                                        ! Delete -> remove the selected row
+    IF EVENT() = EVENT:Accepted
+      IF CHOICE(?myPiePanelList)
+        GET(%myPiePanelPrefix:Q,CHOICE(?myPiePanelList))
+        IF NOT ERRORCODE()
+          DELETE(%myPiePanelPrefix:Q)
           DISPLAY(?myPiePanelList)
           POST(Redraw:%myPiePanelPrefix)
-        OF InsertKey                                          ! add a slice below the selection
-          CLEAR(%myPiePanelPrefix:Q)
-          %myPiePanelPrefix:QLabel = 'New'
-          %myPiePanelPrefix:QValue = 1
-          %myPiePanelPrefix:QColor = COLOR:Silver
-          ADD(%myPiePanelPrefix:Q,CHOICE(?myPiePanelList)+1)
-          DISPLAY(?myPiePanelList)
-          POST(Redraw:%myPiePanelPrefix)
-        OF DeleteKey                                          ! remove the selected slice
-          GET(%myPiePanelPrefix:Q,CHOICE(?myPiePanelList))
-          IF NOT ERRORCODE()
-            DELETE(%myPiePanelPrefix:Q)
-            DISPLAY(?myPiePanelList)
-            POST(Redraw:%myPiePanelPrefix)
-          END
         END
       END
     END
+  END
+#ENDAT
+#!-----------------------------------------------------------------------------
+#! The slice-edit routines. DlgRtn opens the modal popup and sets EdOK; AddRtn /
+#! EditRtn pre-load the Ed* fields, run the popup, and on OK write the queue +
+#! redraw. The popup is a hand-opened modal (OPEN/ACCEPT/CLOSE) - plain, robust
+#! Clarion, no EIP classes.
+#AT(%ProcedureRoutines),WHERE(%myPiePanelDisable=0)
+myPiePanel:DlgRtn ROUTINE
+  myPiePanel:EdOK = 0
+  OPEN(myPiePanel:EditW)
+  ACCEPT
+    CASE EVENT()
+    OF EVENT:CloseWindow
+      BREAK
+    OF EVENT:Accepted
+      CASE ACCEPTED()
+      OF ?myPiePanelEdColorBtn
+        IF COLORDIALOG('Slice Color',myPiePanel:EdColor) THEN DISPLAY.
+      OF ?myPiePanelEdOK
+        myPiePanel:EdOK = 1
+        BREAK
+      OF ?myPiePanelEdCancel
+        BREAK
+      END
+    END
+  END
+  CLOSE(myPiePanel:EditW)
+
+myPiePanel:AddRtn ROUTINE
+  myPiePanel:EdLabel = 'New'
+  myPiePanel:EdValue = 1
+  myPiePanel:EdColor = COLOR:Silver
+  DO myPiePanel:DlgRtn
+  IF myPiePanel:EdOK
+    CLEAR(%myPiePanelPrefix:Q)
+    %myPiePanelPrefix:QLabel = myPiePanel:EdLabel
+    %myPiePanelPrefix:QValue = myPiePanel:EdValue
+    %myPiePanelPrefix:QColor = myPiePanel:EdColor
+    ADD(%myPiePanelPrefix:Q,CHOICE(?myPiePanelList)+1)        ! add below the selection
+    DISPLAY(?myPiePanelList)
+    POST(Redraw:%myPiePanelPrefix)
+  END
+
+myPiePanel:EditRtn ROUTINE
+  IF NOT CHOICE(?myPiePanelList) THEN EXIT.
+  GET(%myPiePanelPrefix:Q,CHOICE(?myPiePanelList))
+  IF ERRORCODE() THEN EXIT.
+  myPiePanel:EdLabel = %myPiePanelPrefix:QLabel
+  myPiePanel:EdValue = %myPiePanelPrefix:QValue
+  myPiePanel:EdColor = %myPiePanelPrefix:QColor
+  DO myPiePanel:DlgRtn
+  IF myPiePanel:EdOK
+    %myPiePanelPrefix:QLabel = myPiePanel:EdLabel
+    %myPiePanelPrefix:QValue = myPiePanel:EdValue
+    %myPiePanelPrefix:QColor = myPiePanel:EdColor
+    PUT(%myPiePanelPrefix:Q)
+    DISPLAY(?myPiePanelList)
+    POST(Redraw:%myPiePanelPrefix)
   END
 #ENDAT
 #!-----------------------------------------------------------------------------

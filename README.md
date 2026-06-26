@@ -145,11 +145,12 @@ registrations in all:
   slice is an invisible 0° wedge) and walks the queue for the legend. Depth / legend / percentages are
   **run-time variables** so a panel can change them live.
 - **`myPiePanel`** (CONTROL) — a drag-on **live control panel**: a 3D-depth **spinner**, show-legend and
-  show-percentages **checkboxes**, and an **editable slice list with true in-cell edit-in-place**. Link it by
-  **picking the pie's Image control** (a drop-list — no typed names). **Double-click / F2 / Enter** a cell to
-  edit it (Label and Value type in place, Color opens the color dialog); **Insert** adds a slice, **Delete**
-  removes one — so you are no longer capped at a handful of slices. Editing drives the shipped **`QEIPManager`**
-  directly (no BrowseBox) over the pie's slice queue, and every change repaints the pie **live**.
+  show-percentages **checkboxes**, and an **editable slice list with Add / Edit / Delete**. Link it by
+  **picking the pie's Image control** (a drop-list — no typed names). The list shows every slice; **Add**,
+  **Edit** (or **double-click** a row), and **Delete** edit them through a small **modal popup** (Label /
+  Value / **Color** via the color dialog) — so you are no longer capped at a handful of slices. Every change
+  repaints the pie **live**. (Editing is plain queue + modal Clarion — no `QEIPManager`/EIP classes, which
+  proved unstable as a standalone in-cell editor inside a full ABC window.)
 - **`myPieGlobal`** (APPLICATION) — adds the global helper `myPieDraw(window, imageFeq, slices[], colors[],
   …)` to the program module. Add once, globally (only needed for the procedure-extension route).
 - **`myPie`** (PROCEDURE) — drop on a window procedure; pick a sized **IMAGE control**, set 3D depth /
