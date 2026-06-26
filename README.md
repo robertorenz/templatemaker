@@ -144,13 +144,15 @@ registrations in all:
   time, not fixed at generation. The redraw rebuilds the `PIE()` arrays (fixed `DIM(64)` buffers; a 0-value
   slice is an invisible 0° wedge) and walks the queue for the legend. Depth / legend / percentages are
   **run-time variables** so a panel can change them live.
-- **`myPiePanel`** (CONTROL) — a drag-on **live control panel**: a 3D-depth **spinner**, show-legend and
+- **`myPiePanel`** (CONTROL, **MULTI**) — a drag-on **live control panel**: a 3D-depth field, show-legend and
   show-percentages **checkboxes**, and an **editable slice list with Add / Edit / Delete**. Link it by
   **picking the pie's Image control** (a drop-list — no typed names). The list shows every slice; **Add**,
   **Edit** (or **double-click** a row), and **Delete** edit them through a small **modal popup** (Label /
   Value / **Color** via the color dialog) — so you are no longer capped at a handful of slices. Every change
-  repaints the pie **live**. (Editing is plain queue + modal Clarion — no `QEIPManager`/EIP classes, which
-  proved unstable as a standalone in-cell editor inside a full ABC window.)
+  repaints the pie **live**. **Drop one panel per pie** on the same window — it's multi-instance: the on-window
+  controls are field-equates (auto-uniqued, captured in `#ATSTART`) and the per-instance data (the modal +
+  its fields) is keyed by `%ActiveTemplateInstance`, so panels never collide. (Editing is plain queue + modal
+  Clarion — no `QEIPManager`/EIP classes, which proved unstable as a standalone in-cell editor.)
 - **`myPieGlobal`** (APPLICATION) — adds the global helper `myPieDraw(window, imageFeq, slices[], colors[],
   …)` to the program module. Add once, globally (only needed for the procedure-extension route).
 - **`myPie`** (PROCEDURE) — drop on a window procedure; pick a sized **IMAGE control**, set 3D depth /

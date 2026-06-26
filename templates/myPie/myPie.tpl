@@ -412,25 +412,33 @@ Repaint:%myPieCtlKey ROUTINE
 #!  whenever an input changes, it pushes the value into that pie's run-time data
 #!  and POSTs the pie's redraw, so the chart updates live.
 #!
-#!  WINDOW (not MULTI): one panel per window, so its own controls can bind to
-#!  fixed data labels (myPiePanel:...). The dropped controls hold their own
-#!  values; the generated code copies them into <Pie>:Depth / :ShowLeg /
-#!  :ShowPct / :Slices[] (which myPieControl exposes as run-time variables).
+#!  WINDOW,MULTI: MANY panels per window, one per pie. The dropped controls all
+#!  USE FIELD-EQUATES (no data variables) so AppGen auto-uniques each instance's
+#!  feqs on drop and there are NO duplicate-label collisions. PROVEN FACT: a
+#!  #CONTROL...CONTROLS block does NOT substitute %symbols in USE() (USE must be a
+#!  literal feq label), so the on-window controls cannot be %-uniqued by us - we
+#!  rely on AppGen's own feq auto-uniquing of multi-instance controls, and capture
+#!  each instance's real feq in #ATSTART (the shipped SVUSortOrder.tpw idiom) to
+#!  use in the generated handler code. The MODAL editor window (declared in
+#!  #AT(%DataSection), which DOES substitute %symbols) and its USE vars ARE made
+#!  instance-unique with %(%ActiveTemplateInstance).
 #!  LAYOUT: in a CONTROLS block each control's AT(x,y) is RELATIVE TO THE PREVIOUS
 #!  control (cumulative), NOT absolute - like the shipped FormVCRButtons / abfuzzy
 #!  templates. Absolute coords make the drop SCATTER. The x,y below are deltas that
 #!  land the controls at this tidy layout inside the 160x212 group (do NOT change
-#!  them back to absolute): depth(8,14) spin(58,12) legend(8,30) pct(8,44)
+#!  them back to absolute): depth(8,14) entry(58,12) legend(8,30) pct(8,44)
 #!  list(8,60) Add(8,170) Edit(58,170) Delete(108,170) hint(8,190).
+#!  The depth control is an ENTRY(@n3) not a SPIN: a feq-only-USE SPIN does NOT
+#!  retain a programmatically-set value (proven), an ENTRY does via PROP:ScreenText.
 #!#############################################################################
-#CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,DESCRIPTION('Pie controls'),HLP('~myPie')
+#CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,MULTI,DESCRIPTION('Pie controls'),HLP('~myPie')
   CONTROLS
     GROUP('Pie controls'),USE(?myPiePanelGroup),AT(,,160,212),BOXED
       PROMPT('3D depth:'),AT(8,14,46,10),USE(?myPiePanelDepthP)
-      SPIN(@n3),AT(50,-2,50,12),RANGE(0,60),STEP(1),USE(myPiePanel:Depth)
-      CHECK(' Show legend'),AT(-50,18,144,10),USE(myPiePanel:ShowLeg)
-      CHECK(' Show percentages'),AT(0,14,144,10),USE(myPiePanel:ShowPct)
-      LIST,AT(0,16,144,104),USE(?myPiePanelList),VSCROLL,ALRT(MouseLeft2),FROM(myPiePanel:FromQ),FORMAT('66L(2)|M~Label~@s64@40R(2)|M~Value~@n-11@40R(2)|M~Color~@n-11@')
+      ENTRY(@n3),AT(50,-2,50,12),USE(?myPiePanelDepth)
+      CHECK(' Show legend'),AT(-50,18,144,10),USE(?myPiePanelShowLeg)
+      CHECK(' Show percentages'),AT(0,14,144,10),USE(?myPiePanelShowPct)
+      LIST,AT(0,16,144,104),USE(?myPiePanelList),VSCROLL,ALRT(MouseLeft2),FROM(''),FORMAT('66L(2)|M~Label~@s64@40R(2)|M~Value~@n-11@40R(2)|M~Color~@n-11@')
       BUTTON('&Add'),AT(0,110,44,14),USE(?myPiePanelAdd)
       BUTTON('&Edit'),AT(50,0,44,14),USE(?myPiePanelEdit)
       BUTTON('&Delete'),AT(50,0,44,14),USE(?myPiePanelDelete)
@@ -463,61 +471,81 @@ Repaint:%myPieCtlKey ROUTINE
     #SET(%myPiePanelPrefix,SUB(%myPiePanelPrefix,1,%myPiePanelCp-1) & '_' & SUB(%myPiePanelPrefix,%myPiePanelCp+1,250))
     #SET(%myPiePanelCp,INSTRING(':',%myPiePanelPrefix,1,1))
   #ENDLOOP
+#! capture THIS instance's auto-uniqued control field-equates (shipped
+#! SVUSortOrder.tpw idiom: match %ControlOriginal under this instance). The
+#! generated handler code below uses these captured feq symbols so every panel
+#! refers to ITS OWN controls - no fixed feq label is ever emitted.
+  #DECLARE(%PanelDepthFeq)
+  #DECLARE(%PanelLegFeq)
+  #DECLARE(%PanelPctFeq)
+  #DECLARE(%PanelListFeq)
+  #DECLARE(%PanelAddFeq)
+  #DECLARE(%PanelEditFeq)
+  #DECLARE(%PanelDeleteFeq)
+  #FOR(%Control),WHERE(%ControlInstance=%ActiveTemplateInstance)
+    #IF(%ControlOriginal='?myPiePanelDepth')
+      #SET(%PanelDepthFeq,%Control)
+    #ENDIF
+    #IF(%ControlOriginal='?myPiePanelShowLeg')
+      #SET(%PanelLegFeq,%Control)
+    #ENDIF
+    #IF(%ControlOriginal='?myPiePanelShowPct')
+      #SET(%PanelPctFeq,%Control)
+    #ENDIF
+    #IF(%ControlOriginal='?myPiePanelList')
+      #SET(%PanelListFeq,%Control)
+    #ENDIF
+    #IF(%ControlOriginal='?myPiePanelAdd')
+      #SET(%PanelAddFeq,%Control)
+    #ENDIF
+    #IF(%ControlOriginal='?myPiePanelEdit')
+      #SET(%PanelEditFeq,%Control)
+    #ENDIF
+    #IF(%ControlOriginal='?myPiePanelDelete')
+      #SET(%PanelDeleteFeq,%Control)
+    #ENDIF
+  #ENDFOR
 #ENDAT
 #!-----------------------------------------------------------------------------
-#! Panel-local data (fixed labels - the panel is one-per-window) + a private
-#! "sync" event so we read the pie's values AFTER its OpenWindow has set them.
-#! data is BEFORE the window so its controls can USE these labels (forward refs fail).
+#! MULTI panel: NO fixed data labels (a second drop would redeclare them ->
+#! "duplicate label"). The on-window controls are all field-equates (captured in
+#! #ATSTART), and the ONLY per-instance data is the deferred "sync" EQUATE and the
+#! MODAL editor + its USE vars - both made instance-unique with
+#! %(%ActiveTemplateInstance). #AT(%DataSection) DOES substitute %symbols (proven),
+#! so %(%ActiveTemplateInstance) gives each panel its own labels.
 #!
-#! Editing is plain, robust Clarion: the LIST just DISPLAYs the pie's slice queue
-#! (%myPiePanelPrefix:Q, declared before the window by myPieControl), and Add /
-#! Edit / Delete buttons drive a small MODAL popup (Label / Value / Color). No
-#! QEIPManager / EditClass (that standalone EIP GPF'd inside a full ABC window).
-#AT(%DataSectionBeforeWindow),WHERE(%myPiePanelDisable=0)
+#! Sync base = EVENT:User+150+instance: stays clear of the pie's
+#! Redraw = EVENT:User+200+instance, and of EVENT:User+101..199 used by the
+#! procedure-extension myPie. The INCLUDEs are ,ONCE so many drops are safe.
+#AT(%DataSection),WHERE(%myPiePanelDisable=0)
   INCLUDE('KEYCODES.CLW'),ONCE                               ! MouseLeft2 (double-click to edit)
   INCLUDE('EQUATES.CLW'),ONCE                                ! EVENT: / COLOR:
-myPiePanel:FromQ   QUEUE,PRE()                              ! placeholder LIST,FROM target - the control
-myPiePanel:FromQF    STRING(1)                              !   structure cannot reference the pie's derived
-                   END                                      !   queue label, so we FROM this fixed queue and
-myPiePanel:Depth   SIGNED                                    ! 3D depth shown in the panel
-myPiePanel:ShowLeg BYTE                                      ! show-legend checkbox
-myPiePanel:ShowPct BYTE                                      ! show-percentages checkbox
-myPiePanel:Bound   BYTE                                      ! one-time "list bound to the pie's queue" guard
-myPiePanel:EdOK    BYTE                                      ! modal-editor result (1 = OK pressed)
-myPiePanel:Sync    EQUATE(EVENT:User+199)                    ! deferred "load from the pie" event
-#ENDAT
-#!-----------------------------------------------------------------------------
-#! The modal slice editor (its own WINDOW + USE variables). Declared AFTER the
-#! main window - it is opened/closed by hand (OPEN/ACCEPT/CLOSE) in a routine,
-#! not managed by ThisWindow. Its controls USE the Ed* labels just above it.
-#AT(%DataSection),WHERE(%myPiePanelDisable=0)
-myPiePanel:EdLabel STRING(64)                                ! edited slice label
-myPiePanel:EdValue LONG                                      ! edited slice value (relative size)
-myPiePanel:EdColor LONG                                      ! edited slice color
-myPiePanel:EditW   WINDOW('Edit Slice'),AT(,,170,98),CENTER,GRAY,DOUBLE,SYSTEM,MODAL
-                     PROMPT('&Label:'),AT(8,12,34,10),USE(?myPiePanelEdLblP)
-                     ENTRY(@s64),AT(46,10,116,12),USE(myPiePanel:EdLabel)
-                     PROMPT('&Value:'),AT(8,30,34,10),USE(?myPiePanelEdValP)
-                     SPIN(@n7),AT(46,28,70,12),USE(myPiePanel:EdValue),RANGE(0,32767),STEP(1)
-                     PROMPT('&Color:'),AT(8,48,34,10),USE(?myPiePanelEdClrP)
-                     BUTTON('&Pick...'),AT(46,46,54,12),USE(?myPiePanelEdColorBtn)
-                     BUTTON('&OK'),AT(40,76,44,14),USE(?myPiePanelEdOK),DEFAULT
-                     BUTTON('&Cancel'),AT(92,76,44,14),USE(?myPiePanelEdCancel)
+myPiePanel:Sync%(%ActiveTemplateInstance)   EQUATE(EVENT:User+150+%ActiveTemplateInstance) ! deferred "load from the pie" (unique per panel)
+myPiePanel:EdLabel%(%ActiveTemplateInstance) STRING(64)      ! edited slice label   (instance-unique)
+myPiePanel:EdValue%(%ActiveTemplateInstance) LONG            ! edited slice value   (instance-unique)
+myPiePanel:EdColor%(%ActiveTemplateInstance) LONG            ! edited slice color   (instance-unique)
+myPiePanel:EdOK%(%ActiveTemplateInstance)    BYTE            ! modal result 1=OK    (instance-unique)
+myPiePanel:EditW%(%ActiveTemplateInstance)   WINDOW('Edit Slice'),AT(,,170,98),CENTER,GRAY,DOUBLE,SYSTEM,MODAL
+                     PROMPT('&Label:'),AT(8,12,34,10),USE(?myPiePanelEdLblP%(%ActiveTemplateInstance))
+                     ENTRY(@s64),AT(46,10,116,12),USE(myPiePanel:EdLabel%(%ActiveTemplateInstance))
+                     PROMPT('&Value:'),AT(8,30,34,10),USE(?myPiePanelEdValP%(%ActiveTemplateInstance))
+                     SPIN(@n7),AT(46,28,70,12),USE(myPiePanel:EdValue%(%ActiveTemplateInstance)),RANGE(0,32767),STEP(1)
+                     PROMPT('&Color:'),AT(8,48,34,10),USE(?myPiePanelEdClrP%(%ActiveTemplateInstance))
+                     BUTTON('&Pick...'),AT(46,46,54,12),USE(?myPiePanelEdColorBtn%(%ActiveTemplateInstance))
+                     BUTTON('&OK'),AT(40,76,44,14),USE(?myPiePanelEdOK%(%ActiveTemplateInstance)),DEFAULT
+                     BUTTON('&Cancel'),AT(92,76,44,14),USE(?myPiePanelEdCancel%(%ActiveTemplateInstance))
                    END
 #ENDAT
 #!-----------------------------------------------------------------------------
 #AT(%WindowManagerMethodCodeSection,'TakeWindowEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPiePanelDisable=0)
   CASE EVENT()
   OF EVENT:OpenWindow
-    IF NOT myPiePanel:Bound                                  ! one-time: point the LIST at the pie's real
-      myPiePanel:Bound = 1                                   !   slice queue (the control structure can only
-      ?myPiePanelList{PROP:From} = %myPiePanelPrefix:Q        !   FROM a fixed placeholder, so rebind here)
-    END
-    POST(myPiePanel:Sync)                                    ! load after the pie's OpenWindow ran (POST defers it)
-  OF myPiePanel:Sync
-    myPiePanel:Depth   = %myPiePanelPrefix:Depth                ! seed the panel from the pie's current values
-    myPiePanel:ShowLeg = %myPiePanelPrefix:ShowLeg
-    myPiePanel:ShowPct = %myPiePanelPrefix:ShowPct
+    %PanelListFeq{PROP:From} = %myPiePanelPrefix:Q            ! point THIS panel's LIST at the pie's real slice
+    POST(myPiePanel:Sync%(%ActiveTemplateInstance))          !   queue (CONTROLS used FROM(''), so rebind here),
+  OF myPiePanel:Sync%(%ActiveTemplateInstance)               !   then defer the load to AFTER the pie seeded :Q
+    %PanelDepthFeq{PROP:ScreenText} = %myPiePanelPrefix:Depth  ! seed the panel controls (feqs) from the pie's
+    %PanelLegFeq{PROP:Value}        = %myPiePanelPrefix:ShowLeg !   current values - ENTRY via ScreenText,
+    %PanelPctFeq{PROP:Value}        = %myPiePanelPrefix:ShowPct !   CHECKs via PROP:Value
     DISPLAY()                                                ! refresh the panel controls
   END
 #ENDAT
@@ -528,30 +556,30 @@ myPiePanel:EditW   WINDOW('Edit Slice'),AT(,,170,98),CENTER,GRAY,DOUBLE,SYSTEM,M
 #! any change POST the pie's redraw so the chart updates live.
 #AT(%WindowManagerMethodCodeSection,'TakeFieldEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPiePanelDisable=0)
   CASE FIELD()
-  OF ?myPiePanel:Depth                                       ! the depth spinner + the two checkboxes
-  OROF ?myPiePanel:ShowLeg
-  OROF ?myPiePanel:ShowPct
+  OF %PanelDepthFeq                                          ! the depth ENTRY + the two checkboxes (this
+  OROF %PanelLegFeq                                          !   instance's captured feqs)
+  OROF %PanelPctFeq
     CASE EVENT()
     OF EVENT:Accepted
-    OROF EVENT:NewSelection                                  ! a spin step also fires NewSelection
-      %myPiePanelPrefix:Depth   = myPiePanel:Depth
-      %myPiePanelPrefix:ShowLeg = myPiePanel:ShowLeg
-      %myPiePanelPrefix:ShowPct = myPiePanel:ShowPct
+    OROF EVENT:NewSelection                                  ! a click also fires NewSelection
+      %myPiePanelPrefix:Depth   = %PanelDepthFeq{PROP:ScreenText}  ! ENTRY -> read ScreenText
+      %myPiePanelPrefix:ShowLeg = %PanelLegFeq{PROP:Value}         ! CHECKs -> read PROP:Value
+      %myPiePanelPrefix:ShowPct = %PanelPctFeq{PROP:Value}
       POST(Redraw:%myPiePanelPrefix)                            ! the pie repaints with the new values
     END
-  OF ?myPiePanelAdd                                           ! Add -> popup with defaults, then ADD a row
-    IF EVENT() = EVENT:Accepted THEN DO myPiePanel:AddRtn.
-  OF ?myPiePanelEdit                                          ! Edit -> popup pre-loaded from the selected row
-    IF EVENT() = EVENT:Accepted THEN DO myPiePanel:EditRtn.
-  OF ?myPiePanelList                                          ! double-click a row -> same as Edit
-    IF EVENT() = EVENT:AlertKey AND KEYCODE() = MouseLeft2 THEN DO myPiePanel:EditRtn.
-  OF ?myPiePanelDelete                                        ! Delete -> remove the selected row
+  OF %PanelAddFeq                                            ! Add -> popup with defaults, then ADD a row
+    IF EVENT() = EVENT:Accepted THEN DO myPiePanel:AddRtn%(%ActiveTemplateInstance).
+  OF %PanelEditFeq                                           ! Edit -> popup pre-loaded from the selected row
+    IF EVENT() = EVENT:Accepted THEN DO myPiePanel:EditRtn%(%ActiveTemplateInstance).
+  OF %PanelListFeq                                           ! double-click a row -> same as Edit
+    IF EVENT() = EVENT:AlertKey AND KEYCODE() = MouseLeft2 THEN DO myPiePanel:EditRtn%(%ActiveTemplateInstance).
+  OF %PanelDeleteFeq                                         ! Delete -> remove the selected row
     IF EVENT() = EVENT:Accepted
-      IF CHOICE(?myPiePanelList)
-        GET(%myPiePanelPrefix:Q,CHOICE(?myPiePanelList))
+      IF CHOICE(%PanelListFeq)
+        GET(%myPiePanelPrefix:Q,CHOICE(%PanelListFeq))
         IF NOT ERRORCODE()
           DELETE(%myPiePanelPrefix:Q)
-          DISPLAY(?myPiePanelList)
+          DISPLAY(%PanelListFeq)
           POST(Redraw:%myPiePanelPrefix)
         END
       END
@@ -563,57 +591,61 @@ myPiePanel:EditW   WINDOW('Edit Slice'),AT(,,170,98),CENTER,GRAY,DOUBLE,SYSTEM,M
 #! EditRtn pre-load the Ed* fields, run the popup, and on OK write the queue +
 #! redraw. The popup is a hand-opened modal (OPEN/ACCEPT/CLOSE) - plain, robust
 #! Clarion, no EIP classes.
+#! Per-instance routines: names carry %ActiveTemplateInstance, the modal window +
+#! Ed* vars are the instance-unique labels declared in #AT(%DataSection), and the
+#! LIST / queue are this panel's captured feq + the pie's derived prefix. Two
+#! panels' routines never collide.
 #AT(%ProcedureRoutines),WHERE(%myPiePanelDisable=0)
-myPiePanel:DlgRtn ROUTINE
-  myPiePanel:EdOK = 0
-  OPEN(myPiePanel:EditW)
+myPiePanel:DlgRtn%(%ActiveTemplateInstance) ROUTINE
+  myPiePanel:EdOK%(%ActiveTemplateInstance) = 0
+  OPEN(myPiePanel:EditW%(%ActiveTemplateInstance))
   ACCEPT
     CASE EVENT()
     OF EVENT:CloseWindow
       BREAK
     OF EVENT:Accepted
       CASE ACCEPTED()
-      OF ?myPiePanelEdColorBtn
-        IF COLORDIALOG('Slice Color',myPiePanel:EdColor) THEN DISPLAY.
-      OF ?myPiePanelEdOK
-        myPiePanel:EdOK = 1
+      OF ?myPiePanelEdColorBtn%(%ActiveTemplateInstance)
+        IF COLORDIALOG('Slice Color',myPiePanel:EdColor%(%ActiveTemplateInstance)) THEN DISPLAY.
+      OF ?myPiePanelEdOK%(%ActiveTemplateInstance)
+        myPiePanel:EdOK%(%ActiveTemplateInstance) = 1
         BREAK
-      OF ?myPiePanelEdCancel
+      OF ?myPiePanelEdCancel%(%ActiveTemplateInstance)
         BREAK
       END
     END
   END
-  CLOSE(myPiePanel:EditW)
+  CLOSE(myPiePanel:EditW%(%ActiveTemplateInstance))
 
-myPiePanel:AddRtn ROUTINE
-  myPiePanel:EdLabel = 'New'
-  myPiePanel:EdValue = 1
-  myPiePanel:EdColor = COLOR:Silver
-  DO myPiePanel:DlgRtn
-  IF myPiePanel:EdOK
+myPiePanel:AddRtn%(%ActiveTemplateInstance) ROUTINE
+  myPiePanel:EdLabel%(%ActiveTemplateInstance) = 'New'
+  myPiePanel:EdValue%(%ActiveTemplateInstance) = 1
+  myPiePanel:EdColor%(%ActiveTemplateInstance) = COLOR:Silver
+  DO myPiePanel:DlgRtn%(%ActiveTemplateInstance)
+  IF myPiePanel:EdOK%(%ActiveTemplateInstance)
     CLEAR(%myPiePanelPrefix:Q)
-    %myPiePanelPrefix:QLabel = myPiePanel:EdLabel
-    %myPiePanelPrefix:QValue = myPiePanel:EdValue
-    %myPiePanelPrefix:QColor = myPiePanel:EdColor
-    ADD(%myPiePanelPrefix:Q,CHOICE(?myPiePanelList)+1)        ! add below the selection
-    DISPLAY(?myPiePanelList)
+    %myPiePanelPrefix:QLabel = myPiePanel:EdLabel%(%ActiveTemplateInstance)
+    %myPiePanelPrefix:QValue = myPiePanel:EdValue%(%ActiveTemplateInstance)
+    %myPiePanelPrefix:QColor = myPiePanel:EdColor%(%ActiveTemplateInstance)
+    ADD(%myPiePanelPrefix:Q,CHOICE(%PanelListFeq)+1)         ! add below the selection
+    DISPLAY(%PanelListFeq)
     POST(Redraw:%myPiePanelPrefix)
   END
 
-myPiePanel:EditRtn ROUTINE
-  IF NOT CHOICE(?myPiePanelList) THEN EXIT.
-  GET(%myPiePanelPrefix:Q,CHOICE(?myPiePanelList))
+myPiePanel:EditRtn%(%ActiveTemplateInstance) ROUTINE
+  IF NOT CHOICE(%PanelListFeq) THEN EXIT.
+  GET(%myPiePanelPrefix:Q,CHOICE(%PanelListFeq))
   IF ERRORCODE() THEN EXIT.
-  myPiePanel:EdLabel = %myPiePanelPrefix:QLabel
-  myPiePanel:EdValue = %myPiePanelPrefix:QValue
-  myPiePanel:EdColor = %myPiePanelPrefix:QColor
-  DO myPiePanel:DlgRtn
-  IF myPiePanel:EdOK
-    %myPiePanelPrefix:QLabel = myPiePanel:EdLabel
-    %myPiePanelPrefix:QValue = myPiePanel:EdValue
-    %myPiePanelPrefix:QColor = myPiePanel:EdColor
+  myPiePanel:EdLabel%(%ActiveTemplateInstance) = %myPiePanelPrefix:QLabel
+  myPiePanel:EdValue%(%ActiveTemplateInstance) = %myPiePanelPrefix:QValue
+  myPiePanel:EdColor%(%ActiveTemplateInstance) = %myPiePanelPrefix:QColor
+  DO myPiePanel:DlgRtn%(%ActiveTemplateInstance)
+  IF myPiePanel:EdOK%(%ActiveTemplateInstance)
+    %myPiePanelPrefix:QLabel = myPiePanel:EdLabel%(%ActiveTemplateInstance)
+    %myPiePanelPrefix:QValue = myPiePanel:EdValue%(%ActiveTemplateInstance)
+    %myPiePanelPrefix:QColor = myPiePanel:EdColor%(%ActiveTemplateInstance)
     PUT(%myPiePanelPrefix:Q)
-    DISPLAY(?myPiePanelList)
+    DISPLAY(%PanelListFeq)
     POST(Redraw:%myPiePanelPrefix)
   END
 #ENDAT
