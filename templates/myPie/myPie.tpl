@@ -416,19 +416,25 @@ Repaint:%myPieCtlKey ROUTINE
 #!  fixed data labels (myPiePanel:...). The dropped controls hold their own
 #!  values; the generated code copies them into <Pie>:Depth / :ShowLeg /
 #!  :ShowPct / :Slices[] (which myPieControl exposes as run-time variables).
+#!  LAYOUT: in a CONTROLS block each control's AT(x,y) is RELATIVE TO THE PREVIOUS
+#!  control (cumulative), NOT absolute - like the shipped FormVCRButtons / abfuzzy
+#!  templates. Absolute coords make the drop SCATTER. The x,y below are deltas that
+#!  land the controls at this tidy layout inside the 160x212 group (do NOT change
+#!  them back to absolute): depth(8,14) spin(58,12) legend(8,30) pct(8,44)
+#!  list(8,60) Add(8,170) Edit(58,170) Delete(108,170) hint(8,190).
 #!#############################################################################
 #CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,DESCRIPTION('Pie controls'),HLP('~myPie')
   CONTROLS
     GROUP('Pie controls'),USE(?myPiePanelGroup),AT(,,160,212),BOXED
       PROMPT('3D depth:'),AT(8,14,46,10),USE(?myPiePanelDepthP)
-      SPIN(@n3),AT(58,12,50,12),RANGE(0,60),STEP(1),USE(myPiePanel:Depth)
-      CHECK(' Show legend'),AT(8,30,144,10),USE(myPiePanel:ShowLeg)
-      CHECK(' Show percentages'),AT(8,44,144,10),USE(myPiePanel:ShowPct)
-      LIST,AT(8,60,144,104),USE(?myPiePanelList),VSCROLL,ALRT(MouseLeft2),FROM(myPiePanel:FromQ),FORMAT('66L(2)|M~Label~@s64@40R(2)|M~Value~@n-11@40R(2)|M~Color~@n-11@')
-      BUTTON('&Add'),AT(8,170,44,14),USE(?myPiePanelAdd)
-      BUTTON('&Edit'),AT(58,170,44,14),USE(?myPiePanelEdit)
-      BUTTON('&Delete'),AT(108,170,44,14),USE(?myPiePanelDelete)
-      PROMPT('Double-click a slice, or use the buttons.'),AT(8,190,144,16),USE(?myPiePanelHint)
+      SPIN(@n3),AT(50,-2,50,12),RANGE(0,60),STEP(1),USE(myPiePanel:Depth)
+      CHECK(' Show legend'),AT(-50,18,144,10),USE(myPiePanel:ShowLeg)
+      CHECK(' Show percentages'),AT(0,14,144,10),USE(myPiePanel:ShowPct)
+      LIST,AT(0,16,144,104),USE(?myPiePanelList),VSCROLL,ALRT(MouseLeft2),FROM(myPiePanel:FromQ),FORMAT('66L(2)|M~Label~@s64@40R(2)|M~Value~@n-11@40R(2)|M~Color~@n-11@')
+      BUTTON('&Add'),AT(0,110,44,14),USE(?myPiePanelAdd)
+      BUTTON('&Edit'),AT(50,0,44,14),USE(?myPiePanelEdit)
+      BUTTON('&Delete'),AT(50,0,44,14),USE(?myPiePanelDelete)
+      PROMPT('Double-click a slice, or use the buttons.'),AT(-100,20,144,16),USE(?myPiePanelHint)
     END
   END
 #SHEET
