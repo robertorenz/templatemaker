@@ -428,16 +428,19 @@ Repaint:%myPieCtlKey ROUTINE
 #!  land the controls at this tidy layout inside the 160x212 group (do NOT change
 #!  them back to absolute): depth(8,14) entry(58,12) legend(8,30) pct(8,44)
 #!  list(8,60) Add(8,170) Edit(58,170) Delete(108,170) hint(8,190).
-#!  The depth control is an ENTRY(@n3) not a SPIN: a feq-only-USE SPIN does NOT
-#!  retain a programmatically-set value (proven), an ENTRY does via PROP:ScreenText.
+#!  The depth control is an ENTRY(@n3) not a SPIN, and legend/percent are TOGGLE
+#!  BUTTONS not CHECKs: a feq-only control can't report its own value (proven - a
+#!  feq CHECK fires Accepted but {PROP:Value} never tracks the toggle; an ENTRY
+#!  reads via PROP:ScreenText; a button just fires Accepted and we flip the pie's
+#!  flag ourselves, showing the state in the button caption via PROP:Text).
 #!#############################################################################
 #CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,MULTI,DESCRIPTION('Pie controls'),HLP('~myPie')
   CONTROLS
     GROUP('Pie controls'),USE(?myPiePanelGroup),AT(,,160,212),BOXED
       PROMPT('3D depth:'),AT(8,14,46,10),USE(?myPiePanelDepthP)
       ENTRY(@n3),AT(50,-2,50,12),USE(?myPiePanelDepth)
-      CHECK(' Show legend'),AT(-50,18,144,10),USE(?myPiePanelShowLeg)
-      CHECK(' Show percentages'),AT(0,14,144,10),USE(?myPiePanelShowPct)
+      BUTTON('Show legend: ON'),AT(-50,18,144,12),USE(?myPiePanelShowLeg)
+      BUTTON('Show percentages: ON'),AT(0,16,144,12),USE(?myPiePanelShowPct)
       LIST,AT(0,16,144,104),USE(?myPiePanelList),VSCROLL,ALRT(MouseLeft2),FROM(''),FORMAT('66L(2)|M~Label~@s64@40R(2)|M~Value~@n-11@40R(2)|M~Color~@n-11@')
       BUTTON('&Add'),AT(0,110,44,14),USE(?myPiePanelAdd)
       BUTTON('&Edit'),AT(50,0,44,14),USE(?myPiePanelEdit)
@@ -543,10 +546,10 @@ myPiePanel:EditW%(%ActiveTemplateInstance)   WINDOW('Edit Slice'),AT(,,170,98),C
     %PanelListFeq{PROP:From} = %myPiePanelPrefix:Q            ! point THIS panel's LIST at the pie's real slice
     POST(myPiePanel:Sync%(%ActiveTemplateInstance))          !   queue (CONTROLS used FROM(''), so rebind here),
   OF myPiePanel:Sync%(%ActiveTemplateInstance)               !   then defer the load to AFTER the pie seeded :Q
-    %PanelDepthFeq{PROP:ScreenText} = %myPiePanelPrefix:Depth  ! seed the panel controls (feqs) from the pie's
-    %PanelLegFeq{PROP:Value}        = %myPiePanelPrefix:ShowLeg !   current values - ENTRY via ScreenText,
-    %PanelPctFeq{PROP:Value}        = %myPiePanelPrefix:ShowPct !   CHECKs via PROP:Value
-    DISPLAY()                                                ! refresh the panel controls
+    %PanelDepthFeq{PROP:ScreenText} = %myPiePanelPrefix:Depth  ! seed the panel controls from the pie's current
+    %PanelLegFeq{PROP:Text} = 'Show legend: ' & CHOOSE(%myPiePanelPrefix:ShowLeg=1,'ON','OFF')      ! values:
+    %PanelPctFeq{PROP:Text} = 'Show percentages: ' & CHOOSE(%myPiePanelPrefix:ShowPct=1,'ON','OFF') !  ENTRY via
+    DISPLAY()                                                ! ScreenText, the toggle buttons via their caption
   END
 #ENDAT
 #!-----------------------------------------------------------------------------
@@ -556,16 +559,22 @@ myPiePanel:EditW%(%ActiveTemplateInstance)   WINDOW('Edit Slice'),AT(,,170,98),C
 #! any change POST the pie's redraw so the chart updates live.
 #AT(%WindowManagerMethodCodeSection,'TakeFieldEvent','(),BYTE'),PRIORITY(2000),WHERE(%myPiePanelDisable=0)
   CASE FIELD()
-  OF %PanelDepthFeq                                          ! the depth ENTRY + the two checkboxes (this
-  OROF %PanelLegFeq                                          !   instance's captured feqs)
-  OROF %PanelPctFeq
-    CASE EVENT()
-    OF EVENT:Accepted
-    OROF EVENT:NewSelection                                  ! a click also fires NewSelection
-      %myPiePanelPrefix:Depth   = %PanelDepthFeq{PROP:ScreenText}  ! ENTRY -> read ScreenText
-      %myPiePanelPrefix:ShowLeg = %PanelLegFeq{PROP:Value}         ! CHECKs -> read PROP:Value
-      %myPiePanelPrefix:ShowPct = %PanelPctFeq{PROP:Value}
-      POST(Redraw:%myPiePanelPrefix)                            ! the pie repaints with the new values
+  OF %PanelDepthFeq                                          ! depth ENTRY -> read the typed value (this
+    IF EVENT() = EVENT:Accepted                              !   instance's captured feq)
+      %myPiePanelPrefix:Depth = %PanelDepthFeq{PROP:ScreenText}
+      POST(Redraw:%myPiePanelPrefix)
+    END
+  OF %PanelLegFeq                                            ! legend TOGGLE button -> flip the pie's flag and
+    IF EVENT() = EVENT:Accepted                              !   show the new state in the caption (a feq CHECK
+      %myPiePanelPrefix:ShowLeg = 1 - %myPiePanelPrefix:ShowLeg !  can't report its value, so we own the state)
+      %PanelLegFeq{PROP:Text} = 'Show legend: ' & CHOOSE(%myPiePanelPrefix:ShowLeg=1,'ON','OFF')
+      POST(Redraw:%myPiePanelPrefix)
+    END
+  OF %PanelPctFeq                                            ! percentages TOGGLE button
+    IF EVENT() = EVENT:Accepted
+      %myPiePanelPrefix:ShowPct = 1 - %myPiePanelPrefix:ShowPct
+      %PanelPctFeq{PROP:Text} = 'Show percentages: ' & CHOOSE(%myPiePanelPrefix:ShowPct=1,'ON','OFF')
+      POST(Redraw:%myPiePanelPrefix)
     END
   OF %PanelAddFeq                                            ! Add -> popup with defaults, then ADD a row
     IF EVENT() = EVENT:Accepted THEN DO myPiePanel:AddRtn%(%ActiveTemplateInstance).
