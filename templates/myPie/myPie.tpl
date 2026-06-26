@@ -428,12 +428,11 @@ Repaint:%myPieCtlKey ROUTINE
 #!  land the controls at this tidy layout inside the 160x212 group (do NOT change
 #!  them back to absolute): depth(8,14) entry(58,12) legend(8,30) pct(8,44)
 #!  list(8,60) Add(8,170) Edit(58,170) Delete(108,170) hint(8,190).
-#!  feq-only controls: a feq CHECK fires Accepted on click but {PROP:Value} can't
-#!  be READ back (proven - the toggle never updates it). BUT setting {PROP:Value}
-#!  DOES drive the check mark. So we never read the checks: on each click we flip
-#!  the pie's flag ourselves and re-assert the mark with {PROP:Value} = flag (the
-#!  open-sync seeds it the same way). Depth is an ENTRY(@n3) read via PROP:ScreenText
-#!  (a feq SPIN doesn't retain its value).
+#!  feq-only controls: a feq CHECK's `{PROP:Value}` is useless (never tracks the
+#!  toggle, and SET doesn't drive the mark) - but `{PROP:Checked}` READS the real
+#!  mark inside the check's own Accepted handler (proven). So on each click we just
+#!  read PROP:Checked into the pie's flag (no flip = no inversion). Depth is an
+#!  ENTRY(@n3) read via PROP:ScreenText (a feq SPIN doesn't retain its value).
 #!#############################################################################
 #CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,MULTI,DESCRIPTION('Pie controls'),HLP('~myPie')
   CONTROLS
@@ -547,9 +546,9 @@ myPiePanel:EditW%(%ActiveTemplateInstance)   WINDOW('Edit Slice'),AT(,,170,98),C
     %PanelListFeq{PROP:From} = %myPiePanelPrefix:Q            ! point THIS panel's LIST at the pie's real slice
     POST(myPiePanel:Sync%(%ActiveTemplateInstance))          !   queue (CONTROLS used FROM(''), so rebind here),
   OF myPiePanel:Sync%(%ActiveTemplateInstance)               !   then defer the load to AFTER the pie seeded :Q
-    %PanelDepthFeq{PROP:ScreenText} = %myPiePanelPrefix:Depth  ! seed the panel controls from the pie's current
-    %PanelLegFeq{PROP:Value} = %myPiePanelPrefix:ShowLeg     !   values: ENTRY via ScreenText, the CHECK marks
-    %PanelPctFeq{PROP:Value} = %myPiePanelPrefix:ShowPct     !   driven from the pie's flags (SET works)
+    %PanelDepthFeq{PROP:ScreenText} = %myPiePanelPrefix:Depth  ! seed the depth ENTRY from the pie (ScreenText).
+    %PanelLegFeq{PROP:Checked} = %myPiePanelPrefix:ShowLeg   !   best-effort mark seed (CHECK marks read back via
+    %PanelPctFeq{PROP:Checked} = %myPiePanelPrefix:ShowPct   !   PROP:Checked on click - that's authoritative)
     DISPLAY()                                                ! refresh the panel controls
   END
 #ENDAT
@@ -565,16 +564,14 @@ myPiePanel:EditW%(%ActiveTemplateInstance)   WINDOW('Edit Slice'),AT(,,170,98),C
       %myPiePanelPrefix:Depth = %PanelDepthFeq{PROP:ScreenText}
       POST(Redraw:%myPiePanelPrefix)
     END
-  OF %PanelLegFeq                                            ! legend CHECK: a feq check can't be READ, so on
-    IF EVENT() = EVENT:Accepted                              !   each click flip the pie's flag and re-assert
-      %myPiePanelPrefix:ShowLeg = 1 - %myPiePanelPrefix:ShowLeg !  the mark from it (SET drives the mark; only
-      %PanelLegFeq{PROP:Value} = %myPiePanelPrefix:ShowLeg   !   read-after-click is unreliable) so they agree
+  OF %PanelLegFeq                                            ! legend CHECK: PROP:Checked reads the REAL mark in
+    IF EVENT() = EVENT:Accepted                              !   the check's own Accepted (PROP:Value never does)
+      %myPiePanelPrefix:ShowLeg = %PanelLegFeq{PROP:Checked} !   - so just read it; checked->shown, no inversion
       POST(Redraw:%myPiePanelPrefix)
     END
-  OF %PanelPctFeq                                            ! percentages CHECK - same flip + re-assert
+  OF %PanelPctFeq                                            ! percentages CHECK - read PROP:Checked the same way
     IF EVENT() = EVENT:Accepted
-      %myPiePanelPrefix:ShowPct = 1 - %myPiePanelPrefix:ShowPct
-      %PanelPctFeq{PROP:Value} = %myPiePanelPrefix:ShowPct
+      %myPiePanelPrefix:ShowPct = %PanelPctFeq{PROP:Checked}
       POST(Redraw:%myPiePanelPrefix)
     END
   OF %PanelAddFeq                                            ! Add -> popup with defaults, then ADD a row
