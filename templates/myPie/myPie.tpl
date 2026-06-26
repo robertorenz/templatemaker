@@ -419,17 +419,16 @@ Repaint:%myPieCtlKey ROUTINE
 #!#############################################################################
 #CONTROL(myPiePanel,'myPie - Pie Controls panel (drag onto a window)'),WINDOW,DESCRIPTION('Pie controls'),HLP('~myPie')
   CONTROLS
-    GROUP('Pie controls'),AT(2,2,150,212),BOXED,USE(?myPiePanelGroup)
+    GROUP('Pie controls'),USE(?myPiePanelGroup),AT(,,160,212),BOXED
       PROMPT('3D depth:'),AT(8,14,46,10),USE(?myPiePanelDepthP)
-      SPIN(@n3),AT(58,12,48,12),RANGE(0,60),STEP(1),USE(myPiePanel:Depth)
-      CHECK(' Show legend'),AT(8,28,138,10),USE(myPiePanel:ShowLeg)
-      CHECK(' Show percentages'),AT(8,40,138,10),USE(myPiePanel:ShowPct)
-      LIST,AT(8,56,138,116),USE(?myPiePanelList),VSCROLL,ALRT(MouseLeft2),FROM(myPiePanel:FromQ), |
-        FORMAT('66L(2)|M~Label~@s64@40R(2)|M~Value~@n-11@40R(2)|M~Color~@n-11@')
-      BUTTON('&Add'),AT(8,175,42,14),USE(?myPiePanelAdd)
-      BUTTON('&Edit'),AT(54,175,42,14),USE(?myPiePanelEdit)
-      BUTTON('&Delete'),AT(100,175,46,14),USE(?myPiePanelDelete)
-      PROMPT('Double-click a slice (or Edit) to change it.'),AT(8,193,138,16),USE(?myPiePanelHint)
+      SPIN(@n3),AT(58,12,50,12),RANGE(0,60),STEP(1),USE(myPiePanel:Depth)
+      CHECK(' Show legend'),AT(8,30,144,10),USE(myPiePanel:ShowLeg)
+      CHECK(' Show percentages'),AT(8,44,144,10),USE(myPiePanel:ShowPct)
+      LIST,AT(8,60,144,104),USE(?myPiePanelList),VSCROLL,ALRT(MouseLeft2),FROM(myPiePanel:FromQ),FORMAT('66L(2)|M~Label~@s64@40R(2)|M~Value~@n-11@40R(2)|M~Color~@n-11@')
+      BUTTON('&Add'),AT(8,170,44,14),USE(?myPiePanelAdd)
+      BUTTON('&Edit'),AT(58,170,44,14),USE(?myPiePanelEdit)
+      BUTTON('&Delete'),AT(108,170,44,14),USE(?myPiePanelDelete)
+      PROMPT('Double-click a slice, or use the buttons.'),AT(8,190,144,16),USE(?myPiePanelHint)
     END
   END
 #SHEET
