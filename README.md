@@ -405,6 +405,8 @@ planet orbits are placed with the class's own `Vec3` maths, a Fibonacci sphere, 
 **Vec3/Mat4 self-test**) lives in [`examples/my3D/`](examples/my3D/) and builds with the shipped
 `My3DDemo.cwproj`. Copy `WebGL2Class.inc` + `WebGL2Class.clw` (**ANSI, CRLF**) to the redirection path, and
 ship **`my3D.engine.js`** beside the compiled `.exe` (it is read at run time and inlined into each page).
+Full programmer's documentation — every method, property and prompt — is in
+[`docs/my3D-template.html`](docs/my3D-template.html).
 
 ## Install
 

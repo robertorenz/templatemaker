@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>my3D — Programmer's Documentation</title>
+<style>
+  :root{
+    --blue:#0A66C2; --blue-d:#084d93; --navy:#0E1A2B; --navy-2:#16263c;
+    --ink:#22303f; --muted:#6b7785; --line:#e3e8ef; --bg:#f5f7fa;
+    --card:#ffffff; --green:#1e7c5a; --amber:#9a6a12; --amber-bg:#fff7e8;
+    --green-bg:#eef8f3; --blue-bg:#eef4fc; --red-bg:#fcecec; --red:#b23a2e;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:15px/1.65 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg)}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:flex;min-height:100vh}
+  nav{width:280px;flex:0 0 280px;background:linear-gradient(180deg,var(--navy),var(--navy-2));
+    color:#cdd8e6;position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 0}
+  nav .brand{padding:0 22px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+  nav .brand h1{font-size:16px;margin:0;color:#fff} nav .brand span{font-size:12px;color:#8aa0bb}
+  nav a{display:block;color:#b9c7d8;padding:6px 22px;font-size:13.5px;border-left:3px solid transparent}
+  nav a:hover{background:rgba(255,255,255,.05);color:#fff;text-decoration:none}
+  nav a.h2{padding-left:34px;font-size:13px;color:#9fb2c8}
+  nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#6e85a1;
+    padding:14px 22px 4px;font-weight:700}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(120deg,#0c2a4d,var(--blue));color:#fff;padding:46px 52px 38px}
+  header.hero h1{margin:0 0 6px;font-size:30px;letter-spacing:-.3px}
+  header.hero p{margin:0;font-size:15.5px;color:#dbe8f8;max-width:780px}
+  header.hero .pill{display:inline-block;margin-top:16px;background:rgba(255,255,255,.16);
+    padding:4px 12px;border-radius:20px;font-size:12.5px}
+  .body{padding:14px 52px 80px;max-width:940px}
+  section{padding:22px 0;border-bottom:1px solid var(--line)} section:last-child{border-bottom:none}
+  h2{font-size:21px;margin:14px 0 10px;color:var(--navy);scroll-margin-top:14px}
+  h3{font-size:16px;margin:20px 0 6px;color:var(--blue-d)}
+  p{margin:9px 0} ul,ol{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  code,kbd,pre{font-family:"Cascadia Code",Consolas,monospace}
+  code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:13px;color:#1d3b5e}
+  kbd{background:#1d2a3a;color:#e7eef7;padding:2px 7px;border-radius:5px;font-size:12px;
+    border:1px solid #324558;box-shadow:0 1px 0 #0b1420}
+  pre{background:#0f1d2e;color:#dbe6f2;padding:16px 18px;border-radius:10px;overflow:auto;
+    font-size:13px;line-height:1.55;margin:12px 0}
+  pre .c{color:#7fa6c9} pre .k{color:#79c0ff} pre .s{color:#7ee0b8} pre .t{color:#ffd591}
+  .callout{border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;border:1px solid}
+  .tip{background:var(--green-bg);border-color:#bfe3d3;color:#155}
+  .note{background:var(--blue-bg);border-color:#c5dcf6;color:#13456f}
+  .warn{background:var(--amber-bg);border-color:#ecd9a6;color:#6f5210}
+  .danger{background:var(--red-bg);border-color:#e6b8b2;color:#7c241b}
+  .callout b{display:block;margin-bottom:2px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f0f4f9;color:var(--navy);font-weight:600}
+  tr:hover td{background:#fafcff}
+  .lead{font-size:16px;color:#3a4756}
+  footer{padding:24px 52px;color:var(--muted);font-size:13px}
+  .top{font-size:12px;color:var(--muted);float:right}
+  .filetree{font-family:"Cascadia Code",Consolas,monospace;font-size:13px;background:#fff;
+    border:1px solid var(--line);border-radius:10px;padding:14px 18px;line-height:1.7;color:#37485a}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+  .gcard{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fff}
+  .gcard h4{margin:0 0 4px;font-size:14px;color:var(--blue-d)}
+  .gcard p{margin:0;font-size:12.5px;color:var(--muted)}
+  code.sig{display:block;background:#eef1f5;padding:6px 10px;border-radius:6px;margin:3px 0;
+    color:#13325a;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><h1>my3D</h1><span>Programmer's Documentation · v1.0</span></div>
+    <a href="#over">Overview</a>
+    <div class="grp">Using it</div>
+    <a href="#install" class="h2">Install &amp; register</a>
+    <a href="#control" class="h2">Drag-on control template</a>
+    <a href="#prompts" class="h2">Prompt reference</a>
+    <a href="#quick" class="h2">Quick start (code)</a>
+    <a href="#model" class="h2">Scene model &amp; axes</a>
+    <div class="grp">Class API</div>
+    <a href="#api-life" class="h2">Lifecycle</a>
+    <a href="#api-page" class="h2">Page, canvas, background</a>
+    <a href="#api-cam" class="h2">Camera</a>
+    <a href="#api-light" class="h2">Lighting</a>
+    <a href="#api-mat" class="h2">Material state</a>
+    <a href="#api-mesh" class="h2">Mesh primitives</a>
+    <a href="#api-xform" class="h2">Transforms</a>
+    <a href="#api-vec" class="h2">Vec3 maths</a>
+    <a href="#api-mat4" class="h2">Mat4 maths</a>
+    <a href="#api-out" class="h2">Output</a>
+    <a href="#props" class="h2">Properties</a>
+    <div class="grp">More</div>
+    <a href="#example" class="h2">Example app</a>
+    <a href="#how" class="h2">How it works</a>
+    <a href="#scope" class="h2">Scope &amp; limits</a>
+    <a href="#files" class="h2">Files</a>
+  </nav>
+  <main>
+    <header class="hero">
+      <h1>my3D — real WebGL2 3D scenes, driven from Clarion</h1>
+      <p>Build and display hardware-accelerated 3D scenes from a Clarion app with a rich object-oriented
+         API — cameras, lights, materials, 20+ mesh primitives, fog, a grid and axes, and genuine
+         Vec3/Mat4 maths — and <b>no JavaScript</b>. One call writes a self-contained <code>.html</code>
+         page and opens it in the browser.</p>
+      <span class="pill">Pure Clarion · no DLL · no COM · no package</span>
+    </header>
+    <div class="body">
+
+    <section id="over">
+      <h2>Overview <a class="top" href="#">top ↑</a></h2>
+      <p class="lead">my3D is one ANSI class, <code>WebGL2Class</code>, plus a template set that wires it into
+        AppGen. You describe a 3D scene by calling methods (add a sphere here, a point light there, set the
+        camera); <code>Show()</code> serialises that scene to a <b>single self-contained HTML file</b> — the
+        scene data <i>plus</i> the verified <code>my3D.engine.js</code> WebGL2 renderer, inlined — and opens
+        it in the default browser. In the page you <b>drag to orbit</b>, <b>mouse-wheel to zoom</b> and press
+        <kbd>R</kbd> to reset the camera.</p>
+      <div class="grid">
+        <div class="gcard"><h4>Cameras</h4><p>Position, look-at target, FOV, near/far clip, and an
+          auto-orbit turntable.</p></div>
+        <div class="gcard"><h4>Lighting</h4><p>Ambient + a directional key light + up to 8 coloured point
+          lights, with distance attenuation.</p></div>
+        <div class="gcard"><h4>Materials</h4><p>Colour, metalness, roughness, opacity, emissive glow, and a
+          wireframe mode — Phong-shaded.</p></div>
+        <div class="gcard"><h4>20+ primitives</h4><p>Box, sphere, cylinder, cone, plane, torus, torus-knot,
+          and the five Platonic solids.</p></div>
+        <div class="gcard"><h4>Transforms</h4><p>Per-mesh position, rotation, scale, and a per-frame
+          auto-spin.</p></div>
+        <div class="gcard"><h4>Vec3 / Mat4</h4><p>Real 3D vector and 4×4 matrix maths that run in Clarion —
+          compute positions yourself.</p></div>
+      </div>
+      <div class="callout note"><b>What it is — and isn't</b>
+        my3D is a <i>scene builder + WebGL2 viewer</i>. It is not a game engine and does not embed a browser
+        control: it writes a page and hands it to the default browser. That keeps it 100&nbsp;% pure Clarion
+        and makes every generated page a standalone artefact you can share or archive.</div>
+    </section>
+
+    <section id="install">
+      <h2>Install &amp; register <a class="top" href="#">top ↑</a></h2>
+      <p>Copy these files onto your Clarion redirection path (the app folder, or
+        <code>\clarion12\libsrc\win</code>), stored as <b>ANSI, CRLF</b>:</p>
+      <div class="filetree">WebGL2Class.inc   <span style="color:#8a97a6">— class header (INCLUDE this)</span>
+WebGL2Class.clw   <span style="color:#8a97a6">— class implementation (compiled into the app)</span>
+my3D.engine.js    <span style="color:#8a97a6">— the WebGL2 renderer (read at RUN time)</span></div>
+      <div class="callout warn"><b>Ship my3D.engine.js next to your .EXE</b>
+        The engine is read <i>at run time</i> by <code>SaveHtml()</code>/<code>Show()</code> and inlined into
+        every page the app writes — so each generated <code>.html</code> is self-contained. The class looks
+        for it in the current directory and the app folder (the <code>EngineFile</code> property overrides
+        the name/path). If it is not found, the page instead references
+        <code>&lt;script src="my3D.engine.js"&gt;</code>, which still works as long as the JS sits beside the
+        HTML.</div>
+      <p>Register <code>my3D.tpl</code> in the Clarion IDE (<b>Setup ▸ Template Registry ▸ Register</b>), then
+        either add the <b>my3D - Global</b> extension once at the application level, or just drop the control
+        template (it self-includes the class).</p>
+    </section>
+
+    <section id="control">
+      <h2>Drag-on control template <a class="top" href="#">top ↑</a></h2>
+      <p>The fastest path. On any window, drop <b>my3D - 3D Scene Viewer button</b>. It places a
+        <code>BUTTON('View 3D Scene...')</code> and wires a fully-configured scene to it: the scene is built
+        when the window opens, and shown when the button is pressed (or automatically on open, if you tick
+        that). It is a <code>MULTI</code> control template, so several independent viewers per window are
+        fine, and it self-includes the class — the global extension is optional.</p>
+      <pre><span class="c">! The control template generates (essentially) this for you:</span>
+Scene1  WebGL2Class                          <span class="c">! in the window's data</span>
+
+  <span class="c">! at EVENT:OpenWindow — build the scene from your prompts</span>
+  Scene1.SetCamera(7, 6, 11)
+  Scene1.AddPointLight(4,3,4, 1,0.4,0.2, 1.2, 18)
+  Scene1.AddSphere(0.85, 28)
+  <span class="c">! ... grid, fog, every mesh in the MULTI list ...</span>
+
+  <span class="c">! at EVENT:Accepted on the button — show it</span>
+  Scene1.Show()</pre>
+    </section>
+
+    <section id="prompts">
+      <h2>Prompt reference (control template) <a class="top" href="#">top ↑</a></h2>
+      <table>
+        <tr><th>Tab</th><th>Prompt</th><th>Drives</th></tr>
+        <tr><td>General</td><td>Object name</td><td>The <code>WebGL2Class</code> instance label.</td></tr>
+        <tr><td>General</td><td>Page title</td><td>Browser tab title + on-screen HUD heading.</td></tr>
+        <tr><td>General</td><td>Open automatically on open</td><td>Calls <code>Show()</code> at
+          <code>EVENT:OpenWindow</code> as well as on the button.</td></tr>
+        <tr><td>General</td><td>Width / Height / Antialias</td><td><code>SetCanvas</code> /
+          <code>SetAntialias</code>.</td></tr>
+        <tr><td>Camera</td><td>Camera X/Y/Z, Target X/Y/Z</td><td><code>SetCamera</code> /
+          <code>LookAt</code>.</td></tr>
+        <tr><td>Camera</td><td>Field of view, Orbit, Orbit speed</td><td><code>SetFOV</code> /
+          <code>OrbitCamera</code>.</td></tr>
+        <tr><td>Scene</td><td>Top / Bottom colour</td><td><code>SetBackgroundGradientCl</code> (Clarion
+          colours).</td></tr>
+        <tr><td>Scene</td><td>Grid on / size / divisions / colour</td><td><code>ShowGridCl</code>.</td></tr>
+        <tr><td>Scene</td><td>Axes on / size</td><td><code>ShowAxes</code>.</td></tr>
+        <tr><td>Scene</td><td>Fog on / colour / near / far</td><td><code>SetFogCl</code>.</td></tr>
+        <tr><td>Scene</td><td>Wireframe (all meshes)</td><td><code>SetWireframe</code>.</td></tr>
+        <tr><td>Lighting</td><td>Ambient colour</td><td><code>SetAmbientCl</code>.</td></tr>
+        <tr><td>Lighting</td><td>Direction X/Y/Z, key colour, intensity</td><td><code>SetDirLightCl</code>.</td></tr>
+        <tr><td>Lighting</td><td><b>Point lights</b> (MULTI)</td><td>One <code>AddPointLightCl</code> per
+          row — X, Y, Z, colour, intensity, range.</td></tr>
+        <tr><td>Meshes</td><td><b>Meshes</b> (MULTI)</td><td>One mesh per row — shape, params 1-4, position,
+          uniform scale, colour, metalness, roughness, spin Y, emissive colour.</td></tr>
+      </table>
+      <div class="callout tip"><b>Colours are normal Clarion COLOR values</b>
+        Every colour prompt is a standard Clarion colour picker. The class converts each 0xBBGGRR value to
+        0..1 RGB internally (that is what the <code>…Cl</code> methods do).</div>
+    </section>
+
+    <section id="quick">
+      <h2>Quick start (driving the class directly) <a class="top" href="#">top ↑</a></h2>
+      <p>In a hand-coded program, or from any embed once the class is included:</p>
+      <pre><span class="k">INCLUDE</span>(<span class="s">'WebGL2Class.INC'</span>),ONCE
+
+Scene   WebGL2Class                          <span class="c">! one object = one 3D scene</span>
+M       LONG
+
+  <span class="k">CODE</span>
+  Scene.SetCanvas(1000, 640)
+  Scene.SetCamera(7, 6, 11);  Scene.LookAt(0, 0.5, 0)
+  Scene.SetDirLight(-1,-2,-1.3, 1,0.97,0.9, 1.1)
+  Scene.AddPointLight(4,3,4, 1,0.4,0.2, 1.2, 18)      <span class="c">! a warm point light</span>
+
+  Scene.SetColor(0.20,0.55,0.95)             <span class="c">! "current material" applies to the next Add*</span>
+  Scene.SetMaterial(0.25, 0.35)              <span class="c">! metalness, roughness</span>
+  Scene.SetSpin(0, 0.6, 0)                   <span class="c">! gentle Y spin</span>
+  M = Scene.AddCube(1.4)
+  Scene.SetPos(M, -2, 0.8, 0)
+
+  Scene.SetColor(0.20,0.85,0.85);  Scene.SetMaterial(0.7, 0.2)
+  Scene.SetPos(Scene.AddTorusKnot(0.7,0.2,2,3), 2, 0.9, 0)
+
+  Scene.Show()                               <span class="c">! writes my3D_preview.html and launches the browser</span></pre>
+      <div class="callout note"><b>The "current material" model</b>
+        Colour, metalness, roughness, opacity, emissive and spin are <i>state</i> on the object. Set them,
+        then call an <code>Add…</code> — the new mesh captures the current values. Change them and add
+        again. <code>SetColorCl()</code> takes a Clarion <code>COLOR</code> instead of three reals.</div>
+    </section>
+
+    <section id="model">
+      <h2>Scene model &amp; axes <a class="top" href="#">top ↑</a></h2>
+      <ul>
+        <li><b>Coordinate system:</b> right-handed. <b>+X</b> right, <b>+Y</b> up, <b>+Z</b> toward the
+          camera. The ground plane and grid lie on Y&nbsp;=&nbsp;0; the red/green/blue axis helper marks
+          +X/+Y/+Z.</li>
+        <li><b>Units</b> are arbitrary world units — keep meshes roughly in the −10..10 range and the camera
+          a similar distance out.</li>
+        <li><b>Rotations</b> (<code>SetRot</code>, spin) are in <b>radians</b>. Use
+          <code>Deg2Rad()</code> if you think in degrees.</li>
+        <li><b>Mesh indices</b> are 1-based, in creation order. Every <code>Add…</code> returns the new
+          index; <code>MeshCount()</code> returns the last one. Capacity is 256 meshes, 8 point lights.</li>
+      </ul>
+    </section>
+
+    <section id="api-life">
+      <h2>API · Lifecycle <a class="top" href="#">top ↑</a></h2>
+      <code class="sig">Construct()                         ! sets professional defaults, empty scene</code>
+      <code class="sig">Reset()                             ! back to defaults AND empty the scene</code>
+      <code class="sig">ClearScene()                        ! drop all meshes + point lights, keep settings</code>
+      <p>Call <code>Reset()</code> at the start of each scene build (the fixtures and the control template
+        both do). <code>ClearScene()</code> keeps your camera/lights/look and just clears geometry.</p>
+    </section>
+
+    <section id="api-page">
+      <h2>API · Page, canvas &amp; background <a class="top" href="#">top ↑</a></h2>
+      <code class="sig">SetTitle(STRING title)</code>
+      <code class="sig">SetCanvas(LONG w, LONG h)</code>
+      <code class="sig">SetAntialias(BYTE on)</code>
+      <code class="sig">SetBackground(REAL r, REAL g, REAL b)               ! solid, 0..1</code>
+      <code class="sig">SetBackgroundGradient(REAL tR,tG,tB, REAL bR,bG,bB)  ! top, bottom</code>
+      <code class="sig">SetFog(BYTE on, REAL r,g,b, REAL near, REAL far)</code>
+      <code class="sig">SetSolidBackgroundCl(LONG color)                    ! Clarion-COLOR forms</code>
+      <code class="sig">SetBackgroundGradientCl(LONG topColor, LONG botColor)</code>
+      <code class="sig">SetFogCl(BYTE on, LONG color, REAL near, REAL far)</code>
+    </section>
+
+    <section id="api-cam">
+      <h2>API · Camera <a class="top" href="#">top ↑</a></h2>
+      <code class="sig">SetCamera(REAL x, REAL y, REAL z)        ! eye position</code>
+      <code class="sig">LookAt(REAL x, REAL y, REAL z)           ! target the camera points at</code>
+      <code class="sig">SetFOV(REAL degrees)                     ! vertical field of view</code>
+      <code class="sig">SetClip(REAL near, REAL far)             ! near/far planes</code>
+      <code class="sig">OrbitCamera(BYTE on, REAL speed)         ! auto turntable, radians/sec</code>
+    </section>
+
+    <section id="api-light">
+      <h2>API · Lighting <a class="top" href="#">top ↑</a></h2>
+      <code class="sig">SetAmbient(REAL r, REAL g, REAL b)</code>
+      <code class="sig">SetDirLight(REAL dx,dy,dz, REAL r,g,b, REAL intensity)   ! key light</code>
+      <code class="sig">AddPointLight(REAL x,y,z, REAL r,g,b, REAL intensity, REAL range),LONG</code>
+      <code class="sig">SetAmbientCl(LONG color)</code>
+      <code class="sig">SetDirLightCl(REAL dx,dy,dz, LONG color, REAL intensity)</code>
+      <code class="sig">AddPointLightCl(REAL x,y,z, LONG color, REAL intensity, REAL range),LONG</code>
+      <code class="sig">ClearLights()</code>
+      <p>Point lights attenuate to zero at <code>range</code>. Up to <b>8</b> are supported (the shader's
+        limit); further <code>AddPointLight</code> calls are ignored and return 0.</p>
+    </section>
+
+    <section id="api-mat">
+      <h2>API · Material state (applies to the next Add…) <a class="top" href="#">top ↑</a></h2>
+      <code class="sig">SetColor(REAL r, REAL g, REAL b)        SetColorCl(LONG color)</code>
+      <code class="sig">SetMaterial(REAL metalness, REAL roughness)   ! both 0..1</code>
+      <code class="sig">SetOpacity(REAL opacity)                ! 1 = opaque, &lt;1 = blended</code>
+      <code class="sig">SetEmissive(REAL r,g,b)                 SetEmissiveCl(LONG color)  ! glow</code>
+      <code class="sig">SetSpin(REAL sx, REAL sy, REAL sz)      ! per-frame auto-rotation, rad/s</code>
+      <code class="sig">ResetMaterial()                         ! back to neutral grey, no spin</code>
+    </section>
+
+    <section id="api-mesh">
+      <h2>API · Mesh primitives <a class="top" href="#">top ↑</a></h2>
+      <p>Each returns the new 1-based mesh index. The geometry parameters:</p>
+      <table>
+        <tr><th>Method</th><th>Parameters</th></tr>
+        <tr><td><code>AddCube(size)</code></td><td>edge length</td></tr>
+        <tr><td><code>AddBox(w, h, d)</code></td><td>width, height, depth</td></tr>
+        <tr><td><code>AddSphere(radius, segments)</code></td><td>radius, longitudinal segments (≈24)</td></tr>
+        <tr><td><code>AddCylinder(rTop, rBot, height, seg)</code></td><td>top &amp; bottom radius, height, sides</td></tr>
+        <tr><td><code>AddCone(radius, height, seg)</code></td><td>base radius, height, sides</td></tr>
+        <tr><td><code>AddPlane(w, d)</code></td><td>width × depth, lies on Y=0</td></tr>
+        <tr><td><code>AddTorus(R, tube, radSeg, tubeSeg)</code></td><td>ring radius, tube radius, segments</td></tr>
+        <tr><td><code>AddTorusKnot(R, tube, p, q)</code></td><td>radius, tube, winding p &amp; q (try 2,3)</td></tr>
+        <tr><td><code>AddTetra(r) · AddOcta(r)</code></td><td>circumscribed radius (Platonic solids)</td></tr>
+        <tr><td><code>AddIcosa(r) · AddDodeca(r)</code></td><td>circumscribed radius (Platonic solids)</td></tr>
+        <tr><td><code>AddMesh(type, p1,p2,p3,p4,p5,p6),LONG</code></td><td>generic; <code>type</code> is one
+          of <code>'box','sphere','cylinder','cone','plane','torus','torusknot','tetra','octa','icosa','dodeca'</code></td></tr>
+      </table>
+    </section>
+
+    <section id="api-xform">
+      <h2>API · Per-mesh transforms <a class="top" href="#">top ↑</a></h2>
+      <code class="sig">SetPos(LONG idx, REAL x, REAL y, REAL z)</code>
+      <code class="sig">SetRot(LONG idx, REAL x, REAL y, REAL z)         ! radians</code>
+      <code class="sig">SetScale(LONG idx, REAL sx, REAL sy, REAL sz)</code>
+      <code class="sig">SetUniformScale(LONG idx, REAL s)</code>
+      <code class="sig">SetMeshColor(LONG idx, REAL r, REAL g, REAL b)</code>
+      <code class="sig">SpinMesh(LONG idx, REAL sx, REAL sy, REAL sz)    ! per-frame, rad/s</code>
+      <code class="sig">MeshCount(),LONG                                 ! index of the last mesh</code>
+      <p>All index methods are no-ops if <code>idx</code> is out of range, so
+        <code>SetPos(Scene.AddCube(1), …)</code> is always safe.</p>
+    </section>
+
+    <section id="api-vec">
+      <h2>API · Vec3 maths (run in Clarion) <a class="top" href="#">top ↑</a></h2>
+      <p>Scalar results are returned; vector results land in the public fields <code>Rx</code>,
+        <code>Ry</code>, <code>Rz</code>.</p>
+      <code class="sig">Vec3Length(x,y,z),REAL          Vec3Distance(x1,y1,z1, x2,y2,z2),REAL</code>
+      <code class="sig">Vec3Dot(ax,ay,az, bx,by,bz),REAL</code>
+      <code class="sig">Vec3Add(...)  Vec3Sub(...)  Vec3Scale(x,y,z, s)   ! -> Rx,Ry,Rz</code>
+      <code class="sig">Vec3Cross(ax,ay,az, bx,by,bz)                     ! -> Rx,Ry,Rz</code>
+      <code class="sig">Vec3Normalize(x,y,z)   Vec3Lerp(ax..bz, t)        ! -> Rx,Ry,Rz</code>
+      <pre><span class="c">! place a planet on its orbit using the class's own maths</span>
+Scene.Vec3Scale(COS(a), 0, SIN(a), radius)
+Scene.SetPos(Scene.AddSphere(0.4, 24), Scene.Rx, Scene.Ry, Scene.Rz)</pre>
+    </section>
+
+    <section id="api-mat4">
+      <h2>API · Mat4 maths <a class="top" href="#">top ↑</a></h2>
+      <p>Results land in the public array <code>Mat[1..16]</code> (column-major, like WebGL).</p>
+      <code class="sig">Mat4Identity()   Mat4Translate(x,y,z)   Mat4Scale(x,y,z)</code>
+      <code class="sig">Mat4RotateX(rad)   Mat4RotateY(rad)   Mat4RotateZ(rad)</code>
+      <code class="sig">Mat4Perspective(fovDeg, aspect, near, far)</code>
+      <code class="sig">Mat4Multiply(a1..a16)            ! SELF.Mat := SELF.Mat × {a1..a16}</code>
+      <code class="sig">Deg2Rad(deg),REAL    Rad2Deg(rad),REAL</code>
+    </section>
+
+    <section id="api-out">
+      <h2>API · Output <a class="top" href="#">top ↑</a></h2>
+      <code class="sig">SaveHtml(STRING filename),BYTE   ! write the page; 1 = ok</code>
+      <code class="sig">Show(),BYTE                      ! save to my3D_preview.html and launch the browser</code>
+      <code class="sig">ShowFile(STRING filename),BYTE   ! save to your path and launch it</code>
+      <p>After any of these, <code>LastFile</code> holds the absolute path written. <code>Show()</code> uses
+        the current directory; <code>ShowFile()</code> lets you choose. The browser is launched with
+        <code>RUN('rundll32.exe url.dll,FileProtocolHandler ' &amp; path)</code>.</p>
+    </section>
+
+    <section id="props">
+      <h2>Properties <a class="top" href="#">top ↑</a></h2>
+      <p>Everything the setters touch is also a public field you can read or poke directly:</p>
+      <table>
+        <tr><th>Group</th><th>Fields</th></tr>
+        <tr><td>Page</td><td><code>Title</code>, <code>CanvasW</code>, <code>CanvasH</code>,
+          <code>Antialias</code>, <code>EngineFile</code>, <code>LastFile</code></td></tr>
+        <tr><td>Background / fog</td><td><code>BgGradient</code>, <code>BgR/G/B</code>,
+          <code>BgTopR/G/B</code>, <code>FogOn</code>, <code>FogR/G/B</code>, <code>FogNear</code>,
+          <code>FogFar</code></td></tr>
+        <tr><td>Camera</td><td><code>CamX/Y/Z</code>, <code>TgtX/Y/Z</code>, <code>Fov</code>,
+          <code>ClipNear</code>, <code>ClipFar</code>, <code>Orbit</code>, <code>OrbitSpeed</code></td></tr>
+        <tr><td>Lights</td><td><code>AmbR/G/B</code>, <code>DirX/Y/Z</code>, <code>DirR/G/B</code>,
+          <code>DirInt</code>, <code>NLight</code></td></tr>
+        <tr><td>Chrome</td><td><code>GridOn</code>, <code>GridSize</code>, <code>GridDiv</code>,
+          <code>GridR/G/B</code>, <code>AxesOn</code>, <code>AxesSize</code>, <code>Wireframe</code></td></tr>
+        <tr><td>Maths results</td><td><code>Rx</code>, <code>Ry</code>, <code>Rz</code>,
+          <code>Mat[1..16]</code></td></tr>
+      </table>
+    </section>
+
+    <section id="example">
+      <h2>Example app — 20 fixtures <a class="top" href="#">top ↑</a></h2>
+      <p><a href="../examples/my3D/">examples/my3D/</a> ships <code>My3DDemo</code> — a hand-coded
+        (non-ABC) program with a wall of buttons, each building a different scene, plus a <b>Vec3/Mat4
+        self-test</b>. Build it with the included <code>My3DDemo.cwproj</code>.</p>
+      <table>
+        <tr><th>Fixture</th><th>Demonstrates</th></tr>
+        <tr><td>Spinning cube · Primitive gallery</td><td>the minimal case; every primitive + fog + lights</td></tr>
+        <tr><td>Platonic solids · Torus knot</td><td>the five solids; a (2,3) knot under point lights</td></tr>
+        <tr><td>Sphere grid · All-primitive grid</td><td>a 7×7 lattice; one of each primitive in a row</td></tr>
+        <tr><td>Color wheel · Tower · Helix</td><td>procedural placement with <code>COS/SIN</code></td></tr>
+        <tr><td>Random field (120)</td><td>capacity + <code>RANDOM</code> + fog</td></tr>
+        <tr><td>Material showcase</td><td>a 6×6 metalness × roughness matrix</td></tr>
+        <tr><td>Point-light trio · Fog field · Glass</td><td>coloured lights; fog depth; opacity blending</td></tr>
+        <tr><td>Wireframe world · Emissive neon · Sunset</td><td>wireframe; glow; gradient background</td></tr>
+        <tr><td>Solar system · Fibonacci sphere</td><td>positions placed with the class's own <code>Vec3</code> maths</td></tr>
+        <tr><td>Mega scene · Vec3/Mat4 self-test</td><td>everything at once; the maths verified in Clarion</td></tr>
+      </table>
+    </section>
+
+    <section id="how">
+      <h2>How it works <a class="top" href="#">top ↑</a></h2>
+      <ol>
+        <li>Your method calls fill arrays in the object (meshes, lights) and scalar fields (camera, fog…).</li>
+        <li><code>SaveHtml()</code> streams an HTML page via the ASCII file driver: the head/canvas, then a
+          <code>window.SCENE = {…}</code> block built from those fields, then the contents of
+          <code>my3D.engine.js</code> inlined verbatim.</li>
+        <li>The engine — a compact data-driven WebGL2 renderer (mat4/vec3, GLSL shaders, primitive geometry
+          builders, Phong shading with the directional + point lights + fog, an orbit camera and a
+          <code>requestAnimationFrame</code> loop) — reads <code>window.SCENE</code> and draws it.</li>
+        <li><code>Show()</code> then launches the page in the default browser.</li>
+      </ol>
+      <div class="callout note"><b>Numbers &amp; colours</b>
+        The class emits compact, locale-safe JS numbers (no grouping commas, signs preserved) and converts
+        Clarion 0xBBGGRR colours to 0..1 RGB. Geometry is generated in the engine, so the Clarion side only
+        ships a small scene description regardless of mesh complexity.</div>
+    </section>
+
+    <section id="scope">
+      <h2>Scope &amp; limitations <a class="top" href="#">top ↑</a></h2>
+      <ul>
+        <li>Needs a <b>WebGL2-capable browser</b> (every current Edge/Chrome/Firefox). The page reports a
+          clear error if WebGL2 is unavailable.</li>
+        <li>It <b>opens a separate browser window</b>; it does not render inside the Clarion window. (That
+          keeps it DLL-free and the output shareable.)</li>
+        <li>No texture images, shadows, or model-file import — this is primitive geometry with solid/Phong
+          materials. The gradient background renders as its dominant clear colour behind the fog.</li>
+        <li>Caps: <b>256 meshes</b>, <b>8 point lights</b> per scene.</li>
+      </ul>
+    </section>
+
+    <section id="files">
+      <h2>Files <a class="top" href="#">top ↑</a></h2>
+      <div class="filetree">templates/my3D/
+  my3D.tpl            <span style="color:#8a97a6">— global extension + viewer control template</span>
+  WebGL2Class.inc     <span style="color:#8a97a6">— class header</span>
+  WebGL2Class.clw     <span style="color:#8a97a6">— class implementation</span>
+  my3D.engine.js      <span style="color:#8a97a6">— the WebGL2 renderer (ship beside the .exe)</span>
+examples/my3D/
+  My3DDemo.clw        <span style="color:#8a97a6">— 20-fixture proof-of-concept program</span>
+  My3DDemo.cwproj     <span style="color:#8a97a6">— build it with 32-bit MSBuild or the IDE</span>
+  README.md           <span style="color:#8a97a6">— fixture list &amp; build notes</span></div>
+      <p>Verified end-to-end against the real Clarion 12 compiler: the class compiles, generates valid pages,
+        and the output renders in WebGL2.</p>
+    </section>
+
+    <footer>my3D · Programmer's Documentation · part of the Clarion Template Maker collection.</footer>
+    </div>
+  </main>
+</div>
+</body>
+</html>
