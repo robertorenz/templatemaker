@@ -5,6 +5,16 @@ run/
 **/bin/
 **/obj/
 
+# Clarion build output + generated preview pages in the examples
+examples/**/*.exe
+examples/**/*.lib
+examples/**/*.dll
+examples/**/*.sln
+examples/**/*.sln.cache
+examples/**/*.obj
+examples/**/map/
+examples/**/my3D_preview.html
+
 # Third-party AJE template assets (not redistributed)
 templates/AJEBackupAPP.tpl
 templates/AJE*.png
