@@ -1,9 +1,39 @@
-# my3D — WebGL2 proof-of-concept app
+# my3D — WebGL2 examples
 
-`My3DDemo` is a hand-coded (non-ABC) Clarion 12 program that exercises **`WebGL2Class`** — the 3D scene
-manager shipped by the `my3D` template — with **20 fixture scenes**. Each button builds a different scene
-from the class API and opens it in your default browser as a live, hardware-accelerated **WebGL2** page
-(drag to orbit, mouse-wheel to zoom, **R** to reset the camera).
+Two hand-coded (non-ABC) Clarion 12 programs that exercise **`WebGL2Class`** — the 3D scene manager
+shipped by the `my3D` template. Each button builds a scene from the class API and opens it in your default
+browser as a live, hardware-accelerated **WebGL2** page (drag to orbit, mouse-wheel to zoom, **R** to reset
+the camera).
+
+* **`My3DModels`** — a gallery of **10 real-world objects modelled from primitives** (see below).
+* **`My3DDemo`** — **20 fixture scenes** that stress every feature of the class.
+
+## `My3DModels` — model gallery
+
+Ten recognisable objects, each assembled **only** from boxes, spheres, cylinders and cones — so the source
+doubles as a cookbook for composing primitives. Build it with `My3DModels.cwproj`.
+
+| Model | Built from |
+|-------|------------|
+| **Car** | body + skirt + cabin boxes, tinted-glass box, 4 cylinder tyres (rolled 90°) + hubcaps, glowing headlight spheres |
+| **Airplane** | cylinder fuselage + cone nose (both turned onto +X), box wings/tail/fin, a squashed-sphere canopy, two engine pods |
+| **Rocket** | cylinder body, cone nose, glowing window, 4 box fins around the base, a downward-pointing emissive flame cone |
+| **Wind turbine** | tapered cylinder tower, box nacelle, sphere hub, 3 box blades at 120° |
+| **Robot** | box torso/head, cylinder arms & legs, box feet, sphere hands, glowing eyes + chest light, antenna |
+| **Table & chairs** | box tabletop on 4 cylinder legs, ringed by 4 chairs (seat + back + pedestal), backs turned to face the table |
+| **House** | box walls, a **4-sided cone roof turned 45°** (a square pyramid), door, glowing windows, chimney |
+| **Building foundation** | concrete slab, perimeter stem walls, a 3×3 grid of footing pads with rebar columns |
+| **Skyscraper** | a tapered stack of glass-blue floor boxes topped with a cylinder antenna |
+| **Park** | alternating pine trees (stacked cones) and round trees (clustered spheres) on cylinder trunks |
+
+Each model is one `ROUTINE` — open [`My3DModels.clw`](My3DModels.clw) to see exactly how it is composed.
+The orientation tricks worth stealing: a wheel is a cylinder rotated `1.5708` about X; a fuselage is a
+cylinder rotated about Z; a square pyramid is `AddCone(r, h, 4)` turned `0.7854` about Y; a downward flame is
+a cone rotated `3.14159` about X.
+
+## `My3DDemo` — feature fixtures
+
+`My3DDemo` exercises every feature of the class with **20 fixture scenes**.
 
 ## Fixtures
 

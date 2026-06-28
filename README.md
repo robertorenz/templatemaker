@@ -399,11 +399,13 @@ Scene  WebGL2Class                              ! one object = one 3D scene
   Scene.Show()                                   ! writes .html and launches the browser
 ```
 
-A complete **proof-of-concept app with 20 fixture scenes** (spinning primitives, a 7×7 sphere grid, the
-Platonic solids, a 120-cube random field, a material matrix, point-light and fog demos, a solar system whose
-planet orbits are placed with the class's own `Vec3` maths, a Fibonacci sphere, a "mega" scene, and a
-**Vec3/Mat4 self-test**) lives in [`examples/my3D/`](examples/my3D/) and builds with the shipped
-`My3DDemo.cwproj`. Copy `WebGL2Class.inc` + `WebGL2Class.clw` (**ANSI, CRLF**) to the redirection path, and
+Two example programs live in [`examples/my3D/`](examples/my3D/): **`My3DModels`** — a gallery of **10
+real-world objects modelled from primitives** (a car, an airplane, a rocket, a wind turbine, a robot, a
+table &amp; chairs, a house, a building foundation, a skyscraper and a park of trees) — and **`My3DDemo`**, a
+**proof-of-concept app with 20 fixture scenes** (spinning primitives, a 7×7 sphere grid, the Platonic
+solids, a 120-cube random field, a material matrix, point-light and fog demos, a solar system whose planet
+orbits are placed with the class's own `Vec3` maths, a Fibonacci sphere, a "mega" scene, and a
+**Vec3/Mat4 self-test**). Both build with their shipped `.cwproj`. Copy `WebGL2Class.inc` + `WebGL2Class.clw` (**ANSI, CRLF**) to the redirection path, and
 ship **`my3D.engine.js`** beside the compiled `.exe` (it is read at run time and inlined into each page).
 Full programmer's documentation — every method, property and prompt — is in
 [`docs/my3D-template.html`](docs/my3D-template.html).
