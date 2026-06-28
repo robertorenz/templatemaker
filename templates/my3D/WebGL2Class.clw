@@ -325,6 +325,260 @@ WebGL2Class.AddDodeca PROCEDURE(REAL pR)
   CODE
   RETURN SELF.AddMesh('dodeca', pR, 0, 0, 0, 0, 0)
 
+!=== composite models =======================================================
+!  Each builds a model from primitives at the origin (scale 1), then PlaceModel
+!  offsets + scales those meshes to where the caller wants them. ResetMaterial
+!  first so no inherited colour/spin/opacity leaks into the model.
+WebGL2Class.PlaceModel PROCEDURE(LONG pStart,REAL pOX,REAL pOY,REAL pOZ,REAL pScale)
+i  LONG
+  CODE
+  LOOP i = pStart TO SELF.NMesh
+    SELF.MPosX[i] = pOX + pScale * SELF.MPosX[i]
+    SELF.MPosY[i] = pOY + pScale * SELF.MPosY[i]
+    SELF.MPosZ[i] = pOZ + pScale * SELF.MPosZ[i]
+    SELF.MSclX[i] = SELF.MSclX[i] * pScale
+    SELF.MSclY[i] = SELF.MSclY[i] * pScale
+    SELF.MSclZ[i] = SELF.MSclZ[i] * pScale
+  END
+
+WebGL2Class.AddCar PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale)
+start LONG
+M     LONG
+i     LONG
+xx    REAL
+zz    REAL
+  CODE
+  start = SELF.NMesh + 1; SELF.ResetMaterial()
+  SELF.SetColor(0.80,0.12,0.12); SELF.SetMaterial(0.5,0.3)
+  M=SELF.AddBox(4.2,0.8,1.9);  SELF.SetPos(M,0,0.95,0)
+  M=SELF.AddBox(4.4,0.45,1.7); SELF.SetPos(M,0,0.62,0)
+  M=SELF.AddBox(2.1,0.8,1.65); SELF.SetPos(M,-0.3,1.65,0)
+  SELF.SetColor(0.12,0.16,0.22); SELF.SetMaterial(0.3,0.1); SELF.SetOpacity(0.75)
+  M=SELF.AddBox(2.0,0.65,1.55); SELF.SetPos(M,-0.3,1.66,0); SELF.SetOpacity(1)
+  SELF.SetColor(0.07,0.07,0.08); SELF.SetMaterial(0.1,0.85)
+  LOOP i=0 TO 3
+    xx=CHOOSE(i<2,1.35,-1.35); zz=CHOOSE(i%2=0,1.0,-1.0)
+    M=SELF.AddCylinder(0.55,0.55,0.4,28); SELF.SetPos(M,xx,0.55,zz); SELF.SetRot(M,1.5708,0,0)
+  END
+  SELF.SetColor(0.75,0.76,0.80); SELF.SetMaterial(0.85,0.2)
+  LOOP i=0 TO 3
+    xx=CHOOSE(i<2,1.35,-1.35); zz=CHOOSE(i%2=0,1.0,-1.0)
+    M=SELF.AddCylinder(0.22,0.22,0.42,20); SELF.SetPos(M,xx,0.55,zz); SELF.SetRot(M,1.5708,0,0)
+  END
+  SELF.SetColor(1,0.95,0.7); SELF.SetEmissive(0.9,0.82,0.45)
+  M=SELF.AddSphere(0.17,14); SELF.SetPos(M,2.13,0.95,0.6)
+  M=SELF.AddSphere(0.17,14); SELF.SetPos(M,2.13,0.95,-0.6)
+  SELF.PlaceModel(start, pX, pY, pZ, pScale); RETURN start
+
+WebGL2Class.AddAirplane PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale)
+start LONG
+M     LONG
+  CODE
+  start = SELF.NMesh + 1; SELF.ResetMaterial()
+  SELF.SetColor(0.85,0.87,0.90); SELF.SetMaterial(0.6,0.3)
+  M=SELF.AddCylinder(0.5,0.5,5,24); SELF.SetPos(M,0,2.2,0); SELF.SetRot(M,0,0,1.5708)
+  SELF.SetColor(0.80,0.20,0.20)
+  M=SELF.AddCone(0.5,1.0,24); SELF.SetPos(M,2.95,2.2,0); SELF.SetRot(M,0,0,-1.5708)
+  SELF.SetColor(0.30,0.45,0.85); SELF.SetMaterial(0.4,0.4)
+  M=SELF.AddBox(1.5,0.14,5.4); SELF.SetPos(M,0.1,2.1,0)
+  M=SELF.AddBox(0.8,0.1,2.2);  SELF.SetPos(M,-2.2,2.2,0)
+  SELF.SetColor(0.80,0.20,0.20)
+  M=SELF.AddBox(0.7,0.9,0.14); SELF.SetPos(M,-2.2,2.65,0)
+  SELF.SetColor(0.12,0.16,0.22); SELF.SetMaterial(0.3,0.1); SELF.SetOpacity(0.8)
+  M=SELF.AddSphere(0.42,18); SELF.SetPos(M,1.4,2.5,0); SELF.SetScale(M,1.2,0.7,0.9); SELF.SetOpacity(1)
+  SELF.SetColor(0.2,0.2,0.22); SELF.SetMaterial(0.5,0.4)
+  M=SELF.AddCylinder(0.26,0.26,1.2,16); SELF.SetPos(M,0.3,1.75,1.7);  SELF.SetRot(M,0,0,1.5708)
+  M=SELF.AddCylinder(0.26,0.26,1.2,16); SELF.SetPos(M,0.3,1.75,-1.7); SELF.SetRot(M,0,0,1.5708)
+  SELF.PlaceModel(start, pX, pY, pZ, pScale); RETURN start
+
+WebGL2Class.AddRocket PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale)
+start LONG
+M     LONG
+i     LONG
+a     REAL
+  CODE
+  start = SELF.NMesh + 1; SELF.ResetMaterial()
+  SELF.SetColor(0.92,0.92,0.95); SELF.SetMaterial(0.5,0.3)
+  M=SELF.AddCylinder(0.7,0.7,4.5,28); SELF.SetPos(M,0,3.0,0)
+  SELF.SetColor(0.85,0.20,0.20)
+  M=SELF.AddCone(0.7,1.6,28); SELF.SetPos(M,0,6.05,0)
+  SELF.SetColor(0.30,0.55,0.85); SELF.SetEmissive(0.15,0.3,0.5)
+  M=SELF.AddSphere(0.28,18); SELF.SetPos(M,0,4.3,0.62); SELF.SetEmissive(0,0,0)
+  SELF.SetColor(0.85,0.20,0.20); SELF.SetMaterial(0.4,0.4)
+  LOOP i=0 TO 3
+    a=i*1.5708
+    M=SELF.AddBox(0.12,1.2,0.9); SELF.SetPos(M,0.7*SIN(a),1.2,0.7*COS(a)); SELF.SetRot(M,0,a,0)
+  END
+  SELF.SetColor(1.0,0.6,0.1); SELF.SetEmissive(1.0,0.45,0.05)
+  M=SELF.AddCone(0.55,1.4,20); SELF.SetPos(M,0,0.2,0); SELF.SetRot(M,3.14159,0,0)
+  SELF.PlaceModel(start, pX, pY, pZ, pScale); RETURN start
+
+WebGL2Class.AddWindTurbine PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale)
+start LONG
+M     LONG
+i     LONG
+a     REAL
+  CODE
+  start = SELF.NMesh + 1; SELF.ResetMaterial()
+  SELF.SetColor(0.90,0.92,0.95); SELF.SetMaterial(0.3,0.4)
+  M=SELF.AddCylinder(0.18,0.40,6.5,28); SELF.SetPos(M,0,3.25,0)
+  M=SELF.AddBox(1.4,0.6,0.7); SELF.SetPos(M,0,6.6,0.1)
+  SELF.SetColor(0.85,0.87,0.9)
+  M=SELF.AddSphere(0.3,18); SELF.SetPos(M,0,6.6,0.55)
+  SELF.SetColor(0.95,0.96,0.98); SELF.SetMaterial(0.2,0.5)
+  LOOP i=0 TO 2
+    a=i*2.0944
+    M=SELF.AddBox(0.18,3.4,0.55); SELF.SetPos(M,-1.7*SIN(a),6.6+1.7*COS(a),0.6); SELF.SetRot(M,0,0,a)
+  END
+  SELF.PlaceModel(start, pX, pY, pZ, pScale); RETURN start
+
+WebGL2Class.AddRobot PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale)
+start LONG
+M     LONG
+  CODE
+  start = SELF.NMesh + 1; SELF.ResetMaterial()
+  SELF.SetColor(0.45,0.48,0.52); SELF.SetMaterial(0.7,0.3)
+  M=SELF.AddCylinder(0.22,0.22,1.4,16); SELF.SetPos(M,-0.45,0.7,0)
+  M=SELF.AddCylinder(0.22,0.22,1.4,16); SELF.SetPos(M,0.45,0.7,0)
+  SELF.SetColor(0.25,0.27,0.30); SELF.SetMaterial(0.4,0.5)
+  M=SELF.AddBox(0.5,0.25,0.8); SELF.SetPos(M,-0.45,0.12,0.1)
+  M=SELF.AddBox(0.5,0.25,0.8); SELF.SetPos(M,0.45,0.12,0.1)
+  SELF.SetColor(0.25,0.45,0.75); SELF.SetMaterial(0.6,0.3)
+  M=SELF.AddBox(1.6,1.8,0.9); SELF.SetPos(M,0,2.3,0)
+  SELF.SetColor(0.3,0.9,0.5); SELF.SetEmissive(0.2,0.7,0.35)
+  M=SELF.AddSphere(0.18,16); SELF.SetPos(M,0,2.5,0.5); SELF.SetEmissive(0,0,0)
+  SELF.SetColor(0.45,0.48,0.52); SELF.SetMaterial(0.7,0.3)
+  M=SELF.AddCylinder(0.18,0.18,1.6,16); SELF.SetPos(M,-1.0,2.3,0)
+  M=SELF.AddCylinder(0.18,0.18,1.6,16); SELF.SetPos(M,1.0,2.3,0)
+  SELF.SetColor(0.85,0.7,0.2); SELF.SetMaterial(0.5,0.4)
+  M=SELF.AddSphere(0.22,16); SELF.SetPos(M,-1.0,1.45,0)
+  M=SELF.AddSphere(0.22,16); SELF.SetPos(M,1.0,1.45,0)
+  SELF.SetColor(0.55,0.58,0.62); SELF.SetMaterial(0.7,0.3)
+  M=SELF.AddBox(0.9,0.8,0.8); SELF.SetPos(M,0,3.6,0)
+  SELF.SetColor(0.9,0.95,1.0); SELF.SetEmissive(0.6,0.7,0.9)
+  M=SELF.AddSphere(0.12,14); SELF.SetPos(M,-0.22,3.65,0.42)
+  M=SELF.AddSphere(0.12,14); SELF.SetPos(M,0.22,3.65,0.42); SELF.SetEmissive(0,0,0)
+  SELF.SetColor(0.5,0.5,0.55); SELF.SetMaterial(0.6,0.3)
+  M=SELF.AddCylinder(0.04,0.04,0.5,8); SELF.SetPos(M,0,4.25,0)
+  SELF.SetColor(0.9,0.2,0.2); SELF.SetEmissive(0.7,0.1,0.1)
+  M=SELF.AddSphere(0.1,12); SELF.SetPos(M,0,4.55,0); SELF.SetEmissive(0,0,0)
+  SELF.PlaceModel(start, pX, pY, pZ, pScale); RETURN start
+
+WebGL2Class.AddTableSet PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale)
+start LONG
+M     LONG
+i     LONG
+xx    REAL
+zz    REAL
+a     REAL
+  CODE
+  start = SELF.NMesh + 1; SELF.ResetMaterial()
+  SELF.SetColor(0.55,0.36,0.20); SELF.SetMaterial(0.2,0.5)
+  M=SELF.AddBox(3.0,0.16,1.6); SELF.SetPos(M,0,1.5,0)
+  SELF.SetColor(0.40,0.26,0.14)
+  LOOP i=0 TO 3
+    xx=CHOOSE(i<2,-1.35,1.35); zz=CHOOSE(i%2=0,-0.65,0.65)
+    M=SELF.AddCylinder(0.09,0.09,1.5,10); SELF.SetPos(M,xx,0.75,zz)
+  END
+  LOOP i=0 TO 3
+    a=i*1.5708; xx=2.3*SIN(a); zz=2.3*COS(a)
+    SELF.SetColor(0.45,0.30,0.18); SELF.SetMaterial(0.2,0.6)
+    M=SELF.AddBox(0.9,0.12,0.9); SELF.SetPos(M,xx,0.9,zz)
+    M=SELF.AddBox(0.9,0.9,0.12); SELF.SetPos(M,xx+0.39*SIN(a),1.35,zz+0.39*COS(a)); SELF.SetRot(M,0,a,0)
+    M=SELF.AddCylinder(0.07,0.07,0.9,8); SELF.SetPos(M,xx,0.45,zz)
+  END
+  SELF.PlaceModel(start, pX, pY, pZ, pScale); RETURN start
+
+WebGL2Class.AddHouse PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale)
+start LONG
+M     LONG
+  CODE
+  start = SELF.NMesh + 1; SELF.ResetMaterial()
+  SELF.SetColor(0.90,0.85,0.72); SELF.SetMaterial(0.1,0.7)
+  M=SELF.AddBox(5,2.6,4); SELF.SetPos(M,0,1.3,0)
+  SELF.SetColor(0.55,0.18,0.14); SELF.SetMaterial(0.1,0.6)
+  M=SELF.AddCone(3.6,1.8,4); SELF.SetPos(M,0,3.5,0); SELF.SetRot(M,0,0.7854,0)
+  SELF.SetColor(0.45,0.28,0.15)
+  M=SELF.AddBox(0.9,1.6,0.12); SELF.SetPos(M,0,0.8,2.02)
+  SELF.SetColor(0.55,0.75,0.95); SELF.SetEmissive(0.25,0.40,0.55); SELF.SetMaterial(0.3,0.2)
+  M=SELF.AddBox(0.9,0.9,0.12);  SELF.SetPos(M,-1.6,1.5,2.02)
+  M=SELF.AddBox(0.9,0.9,0.12);  SELF.SetPos(M,1.6,1.5,2.02)
+  M=SELF.AddBox(0.12,0.9,0.9);  SELF.SetPos(M,-2.52,1.5,0)
+  M=SELF.AddBox(0.12,0.9,0.9);  SELF.SetPos(M,2.52,1.5,0)
+  SELF.SetEmissive(0,0,0)
+  SELF.SetColor(0.5,0.4,0.35); SELF.SetMaterial(0.1,0.8)
+  M=SELF.AddBox(0.5,1.4,0.5); SELF.SetPos(M,1.4,3.6,-0.6)
+  SELF.PlaceModel(start, pX, pY, pZ, pScale); RETURN start
+
+WebGL2Class.AddFoundation PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale)
+start LONG
+M     LONG
+i     LONG
+j     LONG
+xx    REAL
+zz    REAL
+  CODE
+  start = SELF.NMesh + 1; SELF.ResetMaterial()
+  SELF.SetColor(0.62,0.62,0.64); SELF.SetMaterial(0.05,0.85)
+  M=SELF.AddBox(10,0.3,8); SELF.SetPos(M,0,0.15,0)
+  SELF.SetColor(0.55,0.55,0.57)
+  M=SELF.AddBox(10,1.0,0.4); SELF.SetPos(M,0,0.7,3.8)
+  M=SELF.AddBox(10,1.0,0.4); SELF.SetPos(M,0,0.7,-3.8)
+  M=SELF.AddBox(0.4,1.0,7.2); SELF.SetPos(M,4.8,0.7,0)
+  M=SELF.AddBox(0.4,1.0,7.2); SELF.SetPos(M,-4.8,0.7,0)
+  LOOP i=0 TO 2
+    LOOP j=0 TO 2
+      xx=(i-1)*4.0; zz=(j-1)*3.0
+      SELF.SetColor(0.58,0.58,0.60); SELF.SetMaterial(0.05,0.85)
+      M=SELF.AddBox(1.0,0.5,1.0); SELF.SetPos(M,xx,0.25,zz)
+      SELF.SetColor(0.70,0.30,0.12); SELF.SetMaterial(0.5,0.5)
+      M=SELF.AddCylinder(0.06,0.06,1.8,8); SELF.SetPos(M,xx,1.2,zz)
+    END
+  END
+  SELF.PlaceModel(start, pX, pY, pZ, pScale); RETURN start
+
+WebGL2Class.AddSkyscraper PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale)
+start LONG
+M     LONG
+i     LONG
+a     REAL
+  CODE
+  start = SELF.NMesh + 1; SELF.ResetMaterial()
+  SELF.SetMaterial(0.6,0.25)
+  LOOP i=0 TO 16
+    a=3.0-i*0.14
+    SELF.SetColor(0.35-i*0.01,0.55,0.75)
+    M=SELF.AddBox(a,0.8,a); SELF.SetPos(M,0,0.4+i*0.8,0)
+  END
+  SELF.SetColor(0.8,0.8,0.82); SELF.SetMaterial(0.7,0.3)
+  M=SELF.AddCylinder(0.05,0.05,2,8); SELF.SetPos(M,0,14.0,0)
+  SELF.PlaceModel(start, pX, pY, pZ, pScale); RETURN start
+
+WebGL2Class.AddTrees PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale)
+start LONG
+M     LONG
+i     LONG
+xx    REAL
+  CODE
+  start = SELF.NMesh + 1; SELF.ResetMaterial()
+  LOOP i=0 TO 4
+    xx=(i-2)*3.0
+    SELF.SetColor(0.42,0.28,0.15); SELF.SetMaterial(0.1,0.8)
+    M=SELF.AddCylinder(0.22,0.30,1.4,12); SELF.SetPos(M,xx,0.7,0)
+    IF i%2 = 0
+      SELF.SetColor(0.16,0.45,0.22); SELF.SetMaterial(0,0.7)
+      M=SELF.AddCone(1.1,1.4,16); SELF.SetPos(M,xx,1.9,0)
+      M=SELF.AddCone(0.9,1.2,16); SELF.SetPos(M,xx,2.6,0)
+      M=SELF.AddCone(0.7,1.0,16); SELF.SetPos(M,xx,3.3,0)
+    ELSE
+      SELF.SetColor(0.22,0.55,0.25); SELF.SetMaterial(0,0.7)
+      M=SELF.AddSphere(1.0,18); SELF.SetPos(M,xx,2.3,0)
+      M=SELF.AddSphere(0.8,18); SELF.SetPos(M,xx-0.5,2.0,0.4)
+      M=SELF.AddSphere(0.8,18); SELF.SetPos(M,xx+0.5,2.1,-0.3)
+    END
+  END
+  SELF.PlaceModel(start, pX, pY, pZ, pScale); RETURN start
+
 !=== per-mesh transforms ====================================================
 WebGL2Class.SetPos PROCEDURE(LONG pIdx,REAL pX,REAL pY,REAL pZ)
   CODE

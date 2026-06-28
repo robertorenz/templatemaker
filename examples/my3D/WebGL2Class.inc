@@ -212,6 +212,19 @@ AddTetra          PROCEDURE(REAL pR),LONG,PROC
 AddOcta           PROCEDURE(REAL pR),LONG,PROC
 AddIcosa          PROCEDURE(REAL pR),LONG,PROC
 AddDodeca         PROCEDURE(REAL pR),LONG,PROC
+! ---- composite models: many primitives assembled at an origin + uniform -----
+!      scale. Each returns the 1-based index of the model's FIRST mesh. The
+!      pX,pY,pZ origin is the ground point the model sits on.
+AddCar            PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale),LONG,PROC
+AddAirplane       PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale),LONG,PROC
+AddRocket         PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale),LONG,PROC
+AddWindTurbine    PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale),LONG,PROC
+AddRobot          PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale),LONG,PROC
+AddTableSet       PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale),LONG,PROC
+AddHouse          PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale),LONG,PROC
+AddFoundation     PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale),LONG,PROC
+AddSkyscraper     PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale),LONG,PROC
+AddTrees          PROCEDURE(REAL pX,REAL pY,REAL pZ,REAL pScale),LONG,PROC
 ! ---- per-mesh transforms (1-based index; no-op if out of range) ------------
 SetPos            PROCEDURE(LONG pIdx,REAL pX,REAL pY,REAL pZ)
 SetRot            PROCEDURE(LONG pIdx,REAL pX,REAL pY,REAL pZ)
@@ -246,6 +259,7 @@ SaveHtml          PROCEDURE(STRING pFilename),BYTE,PROC      ! write the scene +
 Show              PROCEDURE(),BYTE,PROC                      ! save to a temp .html and launch the default browser
 ShowFile          PROCEDURE(STRING pFilename),BYTE,PROC      ! save to pFilename and launch it
 ! ---- internal --------------------------------------------------------------
+PlaceModel        PROCEDURE(LONG pStart,REAL pOX,REAL pOY,REAL pOZ,REAL pScale) ! offset+scale meshes pStart..end
 ClToRGB           PROCEDURE(LONG pClarionColor,*REAL pR,*REAL pG,*REAL pB) ! 0xBBGGRR -> 0..1 rgb
 NumStr            PROCEDURE(REAL pV),STRING                  ! compact JS number text
 ColStr            PROCEDURE(REAL pR,REAL pG,REAL pB),STRING  ! "[r,g,b]"

@@ -31,6 +31,11 @@ The orientation tricks worth stealing: a wheel is a cylinder rotated `1.5708` ab
 cylinder rotated about Z; a square pyramid is `AddCone(r, h, 4)` turned `0.7854` about Y; a downward flame is
 a cone rotated `3.14159` about X.
 
+These same models are also built into the class as one-call **special meshes** —
+`Scene.AddCar(x, y, z, scale)`, `Scene.AddHouse(...)`, etc. — which is what the `my3D` template emits when
+you pick a **(model)** entry from its Shape dropdown. The **Town** button builds a whole town that way (one
+call per object); see `Mdl_Town` in [`My3DModels.clw`](My3DModels.clw).
+
 ## `My3DDemo` — feature fixtures
 
 `My3DDemo` exercises every feature of the class with **20 fixture scenes**.

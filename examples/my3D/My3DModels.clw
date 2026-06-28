@@ -43,6 +43,7 @@ Window WINDOW('my3D - 3D Model Gallery'),AT(,,360,250),CENTER,SYSTEM,GRAY,FONT('
          BUTTON('&Foundation'),AT(272,52,72,16),USE(?bFoundation)
          BUTTON('&Skyscraper'),AT(192,72,72,16),USE(?bTower)
          BUTTON('&Park (trees)'),AT(272,72,72,16),USE(?bPark)
+         BUTTON('&Town - place every model with one call each'),AT(192,92,152,16),USE(?bTown)
        END
        GROUP('Last output'),AT(8,140,344,72),BOXED,USE(?G3)
          PROMPT('File:'),AT(16,154),USE(?lblFile)
@@ -71,6 +72,7 @@ Window WINDOW('my3D - 3D Model Gallery'),AT(,,360,250),CENTER,SYSTEM,GRAY,FONT('
     OF ?bFoundation; DO Mdl_Foundation
     OF ?bTower;      DO Mdl_Skyscraper
     OF ?bPark;       DO Mdl_Park
+    OF ?bTown;       DO Mdl_Town
     OF ?bReopen
       IF Scene.LastFile
         RUN('rundll32.exe url.dll,FileProtocolHandler ' & CLIP(Scene.LastFile))
@@ -340,4 +342,28 @@ Mdl_Park ROUTINE
       M = Scene.AddSphere(0.8,18); Scene.SetPos(M, XX+0.5, 2.1, -0.3)
     END
   END
+  DO ShowIt
+
+!============================================================================
+!  TOWN  -  every model placed in one scene with a single call each. This is
+!  exactly what the my3D template emits when you pick a "(model)" shape: one
+!  AddXxx(x, y, z, scale) per object - the composite "special meshes".
+!============================================================================
+Mdl_Town ROUTINE
+  Scene.Reset(); Scene.SetTitle('Town - every model as a one-call special mesh')
+  Scene.SetCamera(22, 15, 24); Scene.LookAt(0, 1.5, 0)
+  Scene.SetColor(0.18,0.30,0.20); Scene.SetMaterial(0, 0.9); M = Scene.AddPlane(90, 90)
+  Scene.AddHouse(-11, 0,  6, 0.9)
+  Scene.AddHouse( -2, 0,  9, 0.8)
+  Scene.AddCar(  -10, 0, 12, 0.9)
+  Scene.AddTrees(  4, 0, 11, 0.5)
+  Scene.AddFoundation(10, 0, 5, 0.7)
+  Scene.AddSkyscraper( 9, 0, -8, 0.7)
+  Scene.AddSkyscraper(14, 0, -3, 0.55)
+  Scene.AddRobot(  0, 0,  2, 0.7)
+  Scene.AddTableSet(-4, 0, 2, 0.6)
+  Scene.AddRocket(-13, 0, -6, 0.8)
+  Scene.AddWindTurbine(-6, 0, -11, 0.8)
+  Scene.AddWindTurbine( 1, 0, -13, 0.7)
+  Scene.AddAirplane( 3, 6, -2, 0.7)
   DO ShowIt

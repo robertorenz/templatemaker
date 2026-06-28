@@ -199,7 +199,9 @@ Scene1  WebGL2Class                          <span class="c">! in the window's d
         <tr><td>Lighting</td><td><b>Point lights</b> (MULTI)</td><td>One <code>AddPointLightCl</code> per
           row — X, Y, Z, colour, intensity, range.</td></tr>
         <tr><td>Meshes</td><td><b>Meshes</b> (MULTI)</td><td>One mesh per row — shape, params 1-4, position,
-          uniform scale, colour, metalness, roughness, spin Y, emissive colour.</td></tr>
+          uniform scale, colour, metalness, roughness, spin Y, emissive colour. The Shape dropdown also
+          lists the ten <b>(model)</b> composites (Car, House, …); for those only Position &amp; Uniform
+          scale apply.</td></tr>
       </table>
       <div class="callout tip"><b>Colours are normal Clarion COLOR values</b>
         Every colour prompt is a standard Clarion colour picker. The class converts each 0xBBGGRR value to
@@ -323,6 +325,28 @@ M       LONG
         <tr><td><code>AddMesh(type, p1,p2,p3,p4,p5,p6),LONG</code></td><td>generic; <code>type</code> is one
           of <code>'box','sphere','cylinder','cone','plane','torus','torusknot','tetra','octa','icosa','dodeca'</code></td></tr>
       </table>
+
+      <h3>Composite models — the "special meshes"</h3>
+      <p>Ten ready-made objects, each assembled from many primitives, added with a single call. The first
+        three parameters are the <b>ground origin</b> the model sits on; the fourth is a <b>uniform
+        scale</b>. Each returns the index of the model's first mesh. In the control template these appear in
+        the <b>Shape</b> dropdown as <code>Car (model)</code>, <code>House (model)</code>, … — pick one and
+        set its Position and Uniform&nbsp;scale (the colour/material prompts don't apply, since each model
+        carries its own palette).</p>
+      <code class="sig">AddCar(x,y,z,scale)        AddAirplane(x,y,z,scale)    AddRocket(x,y,z,scale)</code>
+      <code class="sig">AddWindTurbine(x,y,z,scale)  AddRobot(x,y,z,scale)     AddTableSet(x,y,z,scale)</code>
+      <code class="sig">AddHouse(x,y,z,scale)      AddFoundation(x,y,z,scale)  AddSkyscraper(x,y,z,scale)</code>
+      <code class="sig">AddTrees(x,y,z,scale)</code>
+      <pre><span class="c">! build a little town - one call per object</span>
+Scene.AddHouse(-6, 0, 4, 0.9)
+Scene.AddCar(-5, 0, 8, 0.9)
+Scene.AddSkyscraper(7, 0, -6, 0.7)
+Scene.AddAirplane(2, 6, -2, 0.7)    <span class="c">! y=6 -> flying overhead</span></pre>
+      <div class="callout tip"><b>Roll your own</b>
+        These models are just method bodies that call the primitive <code>Add…</code> functions and then
+        <code>PlaceModel</code> to offset+scale the batch. <a href="../examples/my3D/My3DModels.clw">
+        <code>My3DModels.clw</code></a> shows each one built from scratch — copy the pattern to compose your
+        own composite meshes.</div>
     </section>
 
     <section id="api-xform">
