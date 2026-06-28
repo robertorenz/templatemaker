@@ -366,6 +366,46 @@ In an AppGen app, add the **myPdfSign - Global signed-PDF reader** extension onc
 `IF PdfSig.ReadFile(...) ... END` body into any embed (e.g. a button's **Accepted** embed). Parsing a PDF
 already in memory? Use `PdfSig.Read(buffer, length)` instead of `ReadFile`.
 
+### `templates/my3D/` — real WebGL2 3D scenes driven from Clarion
+A **3D scene manager** that lets a Clarion app build and display **hardware-accelerated WebGL2** scenes with
+**no JavaScript**. One ANSI class, **`WebGL2Class`**, exposes a rich object-oriented 3D API — **camera**
+(`SetCamera`/`LookAt`/`SetFOV`/`OrbitCamera`), **lighting** (ambient, a directional key light, and up to 8
+coloured **point lights**), **materials** (colour, metalness, roughness, opacity, emissive glow, wireframe),
+**20+ mesh primitives** (`AddCube`, `AddSphere`, `AddCylinder`, `AddCone`, `AddPlane`, `AddTorus`,
+`AddTorusKnot`, and the five Platonic solids `AddTetra`/`AddOcta`/`AddIcosa`/`AddDodeca`), **per-mesh
+transforms** (`SetPos`/`SetRot`/`SetScale`/`SpinMesh`), plus **fog**, a ground **grid** and **axes**. It also
+ships genuine **3D maths that run in Clarion** — a `Vec3` set (`Vec3Length`/`Distance`/`Dot`/`Cross`/
+`Normalize`/`Lerp`) and a `Mat4` set (`Mat4Identity`/`Translate`/`Scale`/`RotateX/Y/Z`/`Perspective`/
+`Multiply`) — so positions can be computed Clarion-side. `Show()` writes a **single self-contained `.html`**
+(the scene data **plus** the verified `my3D.engine.js` renderer, inlined) and opens it in the default
+browser; **drag to orbit, wheel to zoom, R to reset**. Pure Clarion: no DLL, no COM, no package — file IO via
+the ASCII driver, launch via `rundll32 …FileProtocolHandler`.
+
+Add the control template **my3D - 3D Scene Viewer button** to any window and configure the whole scene from
+the AppGen prompts (canvas, camera, background, grid/axes/fog, lights, and a **MULTI** list of meshes), or
+drive the class directly:
+
+```clarion
+Scene  WebGL2Class                              ! one object = one 3D scene
+
+  CODE
+  Scene.SetCamera(7, 6, 11);  Scene.LookAt(0, 0.5, 0)
+  Scene.SetDirLight(-1,-2,-1.3, 1,0.97,0.9, 1.1)
+  Scene.AddPointLight(4,3,4, 1,0.4,0.2, 1.2, 18) ! a warm point light
+  Scene.SetColor(0.20,0.55,0.95);  Scene.SetSpin(0,0.6,0)
+  Scene.AddCube(1.4)                             ! a spinning blue cube
+  Scene.SetColor(0.2,0.85,0.85);  Scene.SetMaterial(0.7,0.2)
+  Scene.SetPos(Scene.AddTorusKnot(0.7,0.2,2,3), 3, 0.9, 0)
+  Scene.Show()                                   ! writes .html and launches the browser
+```
+
+A complete **proof-of-concept app with 20 fixture scenes** (spinning primitives, a 7×7 sphere grid, the
+Platonic solids, a 120-cube random field, a material matrix, point-light and fog demos, a solar system whose
+planet orbits are placed with the class's own `Vec3` maths, a Fibonacci sphere, a "mega" scene, and a
+**Vec3/Mat4 self-test**) lives in [`examples/my3D/`](examples/my3D/) and builds with the shipped
+`My3DDemo.cwproj`. Copy `WebGL2Class.inc` + `WebGL2Class.clw` (**ANSI, CRLF**) to the redirection path, and
+ship **`my3D.engine.js`** beside the compiled `.exe` (it is read at run time and inlined into each page).
+
 ## Install
 
 Copy the two folders into your Claude Code config (`~/.claude` on macOS/Linux,
