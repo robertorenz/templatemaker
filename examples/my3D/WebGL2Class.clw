@@ -6,12 +6,28 @@
 ! ============================================================================
   MEMBER
 
-  MAP
+  MAP                                                        ! Win32 used to dock a borderless Edge window
+    MODULE('Win32')                                          ! (all user32/kernel32 - linked by every Clarion app)
+      wgFindWindowEx (ULONG,ULONG,*CSTRING,*CSTRING),ULONG,PASCAL,RAW,NAME('FindWindowExA')
+      wgSetParent    (ULONG,ULONG),ULONG,PASCAL,NAME('SetParent')
+      wgSetWindowLong(ULONG,SIGNED,LONG),LONG,PASCAL,NAME('SetWindowLongA')
+      wgMoveWindow   (ULONG,SIGNED,SIGNED,SIGNED,SIGNED,SIGNED),SIGNED,PASCAL,NAME('MoveWindow')
+      wgGetClientRect(ULONG,*LONG),SIGNED,PASCAL,RAW,NAME('GetClientRect')
+      wgIsWindow     (ULONG),SIGNED,PASCAL,NAME('IsWindow')
+      wgGetActiveWin (),ULONG,PASCAL,NAME('GetActiveWindow')
+      wgGetForeWin   (),ULONG,PASCAL,NAME('GetForegroundWindow')
+      wgPostMessage  (ULONG,ULONG,ULONG,LONG),SIGNED,PASCAL,NAME('PostMessageA')
+      wgSleep        (ULONG),PASCAL,NAME('Sleep')
+    END
   END
 
   INCLUDE('WebGL2Class.INC'),ONCE
 
 WebGL2:PI         EQUATE(3.14159265358979)
+WG2:GWL_STYLE     EQUATE(-16)                                ! Win32 constants for the docked-Edge embed
+WG2:WS_CHILD      EQUATE(40000000h)
+WG2:WS_VISIBLE    EQUATE(10000000h)
+WG2:WM_CLOSE      EQUATE(0010h)
 
 ! --- module-scope ASCII files (THREAD'd) used for streaming text IO ---------
 OutF FILE,DRIVER('ASCII'),NAME(''),PRE(OutF),CREATE,THREAD
@@ -30,6 +46,10 @@ Line     STRING(902)
 WebGL2Class.Construct PROCEDURE()
   CODE
   SELF.EngineFile = 'my3D.engine.js'
+  SELF.EdgeExe = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+  IF ~EXISTS(SELF.EdgeExe)
+    SELF.EdgeExe = 'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
+  END
   SELF.Reset()
 
 WebGL2Class.Reset PROCEDURE()
@@ -823,6 +843,93 @@ full  CSTRING(300)
   SELF.LastFile = full
   RUN('rundll32.exe url.dll,FileProtocolHandler ' & full)
   RETURN 1
+
+!=== embedded display (a docked, borderless Edge window) =====================
+!  Renders real WebGL2 INSIDE a Clarion window with zero extra dependencies:
+!  it launches a separate-process "msedge --app" window (off-screen), finds it
+!  by its unique page title, then re-parents it into the host with SetParent.
+!  Edge runs in its own process, so its message pump never re-enters Clarion.
+WebGL2Class.ResolveHost PROCEDURE(ULONG pHwnd)
+h  ULONG
+  CODE
+  h = pHwnd
+  IF ~wgIsWindow(h) THEN h = wgGetActiveWin().                ! Clarion's {PROP:Handle} isn't always a real HWND
+  IF ~wgIsWindow(h) THEN h = wgGetForeWin().
+  RETURN h
+
+WebGL2Class.ShowEmbedded PROCEDURE(ULONG pHostHwnd)
+path  CSTRING(300)
+url   CSTRING(330)
+title CSTRING(140)
+cls   CSTRING(20)
+cmd   CSTRING(700)
+tries LONG
+  CODE
+  SELF.HostHwnd = SELF.ResolveHost(pHostHwnd)
+  IF ~SELF.HostHwnd THEN RETURN 0.
+  ! a unique page title so we can find exactly this Edge window
+  SELF.Title = CLIP(SELF.Title) & ' #' & RANDOM(100000, 999999)
+  path = SELF.TempHtmlPath()
+  IF ~SELF.SaveHtml(path) THEN RETURN 0.
+  SELF.LastFile = path
+  SELF.DisplayMode = WebGL2:Embedded
+  url = SELF.FileUrl(path)
+  ! launch a borderless Edge app window, off-screen, in its own profile
+  cmd = '"' & CLIP(SELF.EdgeExe) & '" --app=' & CLIP(url) |
+      & ' --window-size=' & SELF.CanvasW & ',' & SELF.CanvasH |
+      & ' --window-position=-32000,-32000 --new-window' |
+      & ' --no-first-run --no-default-browser-check --disable-sync' |
+      & ' --disable-features=msImplicitSignin,msEdgeWelcomePage,msEdgeIdentityFre' |
+      & ' --user-data-dir="' & CLIP(SELF.TempHtmlPath()) & '.edge"'
+  RUN(cmd)                                                    ! async - returns immediately
+  title = CLIP(SELF.Title)
+  cls   = 'Chrome_WidgetWin_1'
+  SELF.EdgeHwnd = 0
+  LOOP tries = 1 TO 80                                        ! wait up to ~4s for the window to appear
+    SELF.EdgeHwnd = wgFindWindowEx(0, 0, cls, title)
+    IF SELF.EdgeHwnd THEN BREAK.
+    wgSleep(50)
+  END
+  IF ~SELF.EdgeHwnd THEN RETURN 0.
+  wgSetWindowLong(SELF.EdgeHwnd, WG2:GWL_STYLE, BOR(WG2:WS_CHILD, WG2:WS_VISIBLE))
+  wgSetParent(SELF.EdgeHwnd, SELF.HostHwnd)
+  SELF.EmbedFit()
+  RETURN 1
+
+WebGL2Class.EmbedFit PROCEDURE()
+rc  LONG,DIM(4)
+  CODE
+  IF ~SELF.EdgeHwnd OR ~SELF.HostHwnd THEN RETURN 0.
+  wgGetClientRect(SELF.HostHwnd, rc[1])                       ! rc = left,top,right,bottom
+  wgMoveWindow(SELF.EdgeHwnd, 0, 0, rc[3], rc[4], 1)
+  RETURN 1
+
+WebGL2Class.EmbedSetBounds PROCEDURE(LONG pX,LONG pY,LONG pW,LONG pH)
+  CODE
+  IF ~SELF.EdgeHwnd THEN RETURN 0.
+  wgMoveWindow(SELF.EdgeHwnd, pX, pY, pW, pH, 1)
+  RETURN 1
+
+WebGL2Class.EmbedReady PROCEDURE()
+  CODE
+  RETURN CHOOSE(SELF.EdgeHwnd <> 0, 1, 0)
+
+WebGL2Class.EmbedClose PROCEDURE()
+  CODE
+  IF SELF.EdgeHwnd
+    wgPostMessage(SELF.EdgeHwnd, WG2:WM_CLOSE, 0, 0)          ! ask the docked Edge window to close
+    SELF.EdgeHwnd = 0
+  END
+
+WebGL2Class.FileUrl PROCEDURE(STRING pPath)
+s  CSTRING(320)
+i  LONG
+  CODE
+  s = CLIP(pPath)
+  LOOP i = 1 TO LEN(s)
+    IF s[i : i] = '\' THEN s[i : i] = '/'.                   ! file URLs use forward slashes
+  END
+  RETURN 'file:///' & s
 
 !=== internal ===============================================================
 WebGL2Class.WriteLine PROCEDURE(STRING pLine)

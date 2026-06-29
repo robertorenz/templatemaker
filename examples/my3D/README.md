@@ -7,6 +7,17 @@ the camera).
 
 * **`My3DModels`** — a gallery of **10 real-world objects modelled from primitives** (see below).
 * **`My3DDemo`** — **20 fixture scenes** that stress every feature of the class.
+* **`My3DEmbedded`** — the scene rendered **inside a Clarion window** (docked Edge / real WebGL2).
+
+## `My3DEmbedded` — WebGL2 inside a Clarion window
+
+`ShowEmbedded()` renders the scene **in the Clarion window itself** instead of a browser. It launches a
+borderless Edge `--app` window off-screen and re-parents it into the host window with the Win32
+`SetParent`; because Edge runs in its **own process**, its Chromium message pump can't re-enter Clarion's
+event loop, so it's stable — and it needs **no DLL and no import lib**, only `user32` (which every Clarion
+app links), Microsoft Edge (Windows 10/11), and `my3D.engine.js` beside the `.exe`. Dock on
+`EVENT:OpenWindow`, refit on `EVENT:Sized`, and `EmbedClose()` on `EVENT:CloseWindow`. Build with
+`My3DEmbedded.cwproj`.
 
 ## `My3DModels` — model gallery
 

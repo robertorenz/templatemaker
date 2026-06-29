@@ -28,6 +28,9 @@
 WebGL2:MaxMesh    EQUATE(256)                                ! scene mesh capacity
 WebGL2:MaxLight   EQUATE(8)                                  ! point-light capacity (matches the shader)
 
+WebGL2:External   EQUATE(0)                                  ! DisplayMode: open the default browser
+WebGL2:Embedded   EQUATE(1)                                  ! DisplayMode: render inside a Clarion window (WebView2)
+
 ! mesh type ids (also accepted as the strings used by the engine)
 WebGL2:Box        EQUATE(1)
 WebGL2:Sphere     EQUATE(2)
@@ -49,6 +52,10 @@ CanvasH           LONG
 Antialias         BYTE
 EngineFile        CSTRING(260)                               ! my3D.engine.js (found on the redirection path)
 LastFile          CSTRING(260)                               ! the .html written by the last Save/Show
+DisplayMode       BYTE                                       ! WebGL2:External (default) or WebGL2:Embedded
+EdgeExe           CSTRING(260)                               ! path to msedge.exe (set in Construct; override if needed)
+HostHwnd          LONG                                       ! the Clarion window the view is docked into
+EdgeHwnd          LONG                                       ! the docked Edge child window (0 until shown)
 ! ---- background ----
 BgGradient        BYTE                                       ! 1 = vertical gradient, 0 = solid
 BgR               REAL                                       ! solid / gradient bottom
@@ -258,6 +265,16 @@ Rad2Deg           PROCEDURE(REAL pRad),REAL
 SaveHtml          PROCEDURE(STRING pFilename),BYTE,PROC      ! write the scene + engine to an .html file; 1 = ok
 Show              PROCEDURE(),BYTE,PROC                      ! save to a temp .html and launch the default browser
 ShowFile          PROCEDURE(STRING pFilename),BYTE,PROC      ! save to pFilename and launch it
+! ---- embedded display (a borderless Edge window docked into a Clarion window)
+!      Pure Win32 (user32) - no DLL, no extra dependency. Renders real WebGL2 by
+!      re-parenting a separate-process "msedge --app" window, so Chromium can't
+!      re-enter Clarion's event loop. Pass the host window's handle (0 = use the
+!      active Clarion window).
+ShowEmbedded      PROCEDURE(ULONG pHostHwnd),BYTE,PROC       ! write the page + dock an Edge view into pHostHwnd
+EmbedFit          PROCEDURE(),BYTE,PROC                      ! re-fit the view to the host (call on EVENT:Sized)
+EmbedSetBounds    PROCEDURE(LONG pX,LONG pY,LONG pW,LONG pH),BYTE,PROC ! place the view at a pixel rect in the host
+EmbedReady        PROCEDURE(),BYTE                           ! 1 once the docked view exists
+EmbedClose        PROCEDURE()                                ! close the docked view (call on window close)
 ! ---- internal --------------------------------------------------------------
 PlaceModel        PROCEDURE(LONG pStart,REAL pOX,REAL pOY,REAL pOZ,REAL pScale) ! offset+scale meshes pStart..end
 ClToRGB           PROCEDURE(LONG pClarionColor,*REAL pR,*REAL pG,*REAL pB) ! 0xBBGGRR -> 0..1 rgb
@@ -266,6 +283,8 @@ ColStr            PROCEDURE(REAL pR,REAL pG,REAL pB),STRING  ! "[r,g,b]"
 JsEsc             PROCEDURE(STRING pText),STRING             ! escape ' \ for a JS single-quoted string
 FindEngine        PROCEDURE(),STRING                         ! locate my3D.engine.js on the redirection path
 TempHtmlPath      PROCEDURE(),STRING                         ! a writable scratch .html path
+FileUrl           PROCEDURE(STRING pPath),STRING             ! a local path -> file:/// URL
+ResolveHost       PROCEDURE(ULONG pHwnd),LONG                ! a valid host HWND (falls back to the active window)
 WriteLine         PROCEDURE(STRING pLine)                    ! internal: append one line to the open output file
 EmitScene         PROCEDURE                                  ! internal: write the window.SCENE = {...} block
                   END

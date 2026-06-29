@@ -54,7 +54,13 @@ INCLUDE('WebGL2Class.INC'),ONCE
       #PROMPT('&Disable this viewer',CHECK),%my3DDisable,DEFAULT(0),AT(10)
       #PROMPT('&Object name:',@s64),%my3DObject,REQ,DEFAULT('Scene' & %ActiveTemplateInstance)
       #PROMPT('&Page title:',@s64),%my3DTitle,DEFAULT('my3D / WebGL2 Scene')
+      #PROMPT('&Show in:',DROP('External browser[0]|Embedded - docked Edge, fills this window[1]')),%my3DDisplayMode,DEFAULT('0')
       #PROMPT('Open the scene &automatically when the window opens',CHECK),%my3DAutoOpen,DEFAULT(0),AT(10)
+      #BOXED('')
+        #DISPLAY('Embedded docks a borderless Edge window (real WebGL2) into THIS window -')
+        #DISPLAY('it fills the whole window, so use it on a window dedicated to the 3D view.')
+        #DISPLAY('Needs Microsoft Edge (Win10/11) and my3D.engine.js beside the .exe.')
+      #ENDBOXED
     #ENDBOXED
     #BOXED('Canvas')
       #PROMPT('&Width (px):',SPIN(@n5,320,4000,10)),%my3DW,DEFAULT(1000)
@@ -215,12 +221,26 @@ INCLUDE('WebGL2Class.INC'),ONCE
 #ENDCASE
 #ENDFOR
 #IF(%my3DAutoOpen)
-    %my3DObject.Show()
+#IF(%my3DDisplayMode = '1')
+    %my3DObject.ShowEmbedded(0{PROP:Handle})              ! dock the 3D into this window
+#ELSE
+    %my3DObject.Show()                                    ! open in the default browser
+#ENDIF
 #ENDIF
   OF EVENT:Accepted
     IF FIELD() = %my3DButtonFeq
+#IF(%my3DDisplayMode = '1')
+      %my3DObject.ShowEmbedded(0{PROP:Handle})
+#ELSE
       %my3DObject.Show()
+#ENDIF
     END
+#IF(%my3DDisplayMode = '1')
+  OF EVENT:Sized
+    %my3DObject.EmbedFit()                                ! keep the docked view filling the window
+  OF EVENT:CloseWindow
+    %my3DObject.EmbedClose()                              ! close the docked Edge window with this one
+#ENDIF
   END
 #ENDAT
 #!-----------------------------------------------------------------------------

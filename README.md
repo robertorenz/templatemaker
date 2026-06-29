@@ -378,7 +378,10 @@ ships genuine **3D maths that run in Clarion** — a `Vec3` set (`Vec3Length`/`D
 `Normalize`/`Lerp`) and a `Mat4` set (`Mat4Identity`/`Translate`/`Scale`/`RotateX/Y/Z`/`Perspective`/
 `Multiply`) — so positions can be computed Clarion-side. `Show()` writes a **single self-contained `.html`**
 (the scene data **plus** the verified `my3D.engine.js` renderer, inlined) and opens it in the default
-browser; **drag to orbit, wheel to zoom, R to reset**. Pure Clarion: no DLL, no COM, no package — file IO via
+browser; **drag to orbit, wheel to zoom, R to reset**. It can also render **inside a Clarion window** —
+`ShowEmbedded()` docks a borderless Edge window (real WebGL2, its own process so it can't destabilise
+Clarion) into your window with the Win32 `SetParent`; the control template's **Show in** dropdown picks
+External browser or Embedded. Pure Clarion: no DLL, no COM, no package — file IO via
 the ASCII driver, launch via `rundll32 …FileProtocolHandler`.
 
 Add the control template **my3D - 3D Scene Viewer button** to any window and configure the whole scene from

@@ -394,6 +394,32 @@ Scene.SetPos(Scene.AddSphere(0.4, 24), Scene.Rx, Scene.Ry, Scene.Rz)</pre>
       <p>After any of these, <code>LastFile</code> holds the absolute path written. <code>Show()</code> uses
         the current directory; <code>ShowFile()</code> lets you choose. The browser is launched with
         <code>RUN('rundll32.exe url.dll,FileProtocolHandler ' &amp; path)</code>.</p>
+
+      <h3>Embedded display — dock the 3D inside a Clarion window</h3>
+      <p>Instead of opening a browser, <code>ShowEmbedded</code> renders the scene <b>inside</b> a Clarion
+        window. It launches a borderless Edge <code>--app</code> window off-screen and re-parents it into
+        the host with the Win32 <code>SetParent</code>. Edge runs in its <b>own process</b>, so Chromium's
+        message pump never re-enters Clarion's event loop — it's stable, and needs <b>no DLL, no import
+        lib</b>, just <code>user32</code> (which every Clarion app already links) plus Microsoft Edge
+        (Windows 10/11) and <code>my3D.engine.js</code> beside the <code>.exe</code>.</p>
+      <code class="sig">ShowEmbedded(ULONG hostHwnd),BYTE   ! dock into hostHwnd (0 = the active Clarion window)</code>
+      <code class="sig">EmbedFit(),BYTE                     ! re-fit the view to the host (call on EVENT:Sized)</code>
+      <code class="sig">EmbedSetBounds(x,y,w,h),BYTE        ! place the view at an explicit pixel rect</code>
+      <code class="sig">EmbedReady(),BYTE   EmbedClose()    ! is it docked yet / close it (call on EVENT:CloseWindow)</code>
+      <pre><span class="c">! a window whose whole client area is the 3D view</span>
+  ACCEPT
+    CASE EVENT()
+    OF EVENT:OpenWindow ;  Scene.ShowEmbedded(0{PROP:Handle})   <span class="c">! dock once the window is sized</span>
+    OF EVENT:Sized      ;  Scene.EmbedFit()
+    OF EVENT:CloseWindow;  Scene.EmbedClose()
+    END
+  END</pre>
+      <div class="callout note"><b>Pick it in the template</b>
+        The control template's <b>Show in</b> dropdown offers <i>External browser</i> (default) or
+        <i>Embedded</i>; choosing Embedded wires the calls above for you. The docked view fills the host
+        window, so use it on a window dedicated to the 3D. Edge shows a slim app title-bar at the top of the
+        docked view. Set the <code>EdgeExe</code> property if Edge isn't at the default path. Working example:
+        <a href="../examples/my3D/My3DEmbedded.clw"><code>examples/my3D/My3DEmbedded.clw</code></a>.</div>
     </section>
 
     <section id="props">
@@ -460,8 +486,8 @@ Scene.SetPos(Scene.AddSphere(0.4, 24), Scene.Rx, Scene.Ry, Scene.Rz)</pre>
       <ul>
         <li>Needs a <b>WebGL2-capable browser</b> (every current Edge/Chrome/Firefox). The page reports a
           clear error if WebGL2 is unavailable.</li>
-        <li>It <b>opens a separate browser window</b>; it does not render inside the Clarion window. (That
-          keeps it DLL-free and the output shareable.)</li>
+        <li><b>External</b> mode opens a separate browser window (zero dependencies, output shareable).
+          <b>Embedded</b> mode docks the 3D inside a Clarion window (needs Microsoft Edge; see above).</li>
         <li>No texture images, shadows, or model-file import — this is primitive geometry with solid/Phong
           materials. The gradient background renders as its dominant clear colour behind the fog.</li>
         <li>Caps: <b>256 meshes</b>, <b>8 point lights</b> per scene.</li>
