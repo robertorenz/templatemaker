@@ -24,3 +24,7 @@ templates/ajebackup.zip
 # Edge user-data-dir leftovers from my3D embedded-browser testing
 examples/**/*.edge/
 *.edge/
+
+# transient render-test result files
+examples/**/_*.ini
+*_result.ini

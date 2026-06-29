@@ -9,9 +9,10 @@
   END
 
 G    GaugePlusClass
-out  CSTRING(260)
+dir  CSTRING(200)
   CODE
-  out = 'C:\dev\clarion12\templatemaker\examples\myGaugePlus\gaugeplus_out.png'
+  dir = 'C:\dev\clarion12\templatemaker\examples\myGaugePlus\'
+  ! ---- 270 speedometer ----
   G.SetRange(0, 220)
   G.Preset(GaugeP:Arc270)
   G.MajorTicks = 11
@@ -24,7 +25,24 @@ out  CSTRING(260)
   G.SetValue(146)
   IF G.Cv.BeginCanvas(300, 300)
     G.Render(300, 300)
-    G.Cv.SavePng(out)
+    G.Cv.SavePng(CLIP(dir) & 'gaugeplus_out.png')
     G.Cv.EndCanvas()
   END
-  PUTINI('r','err', G.Cv.LastError(), 'C:\dev\clarion12\templatemaker\examples\myGaugePlus\gaugeplus_result.ini')
+  ! ---- 180 semicircle (the half-disc face fix) ----
+  G.SetRange(0, 100)
+  G.Preset(GaugeP:Arc180)
+  G.MajorTicks = 10
+  G.MinorTicks = 4
+  G.ClearZones()
+  G.AddZone(0,  60, 02CA02Ch)
+  G.AddZone(60, 85, 020C0F0h)
+  G.AddZone(85,100, 02020E0h)
+  G.Title = ''
+  G.Units = ''
+  G.SetValue(45)
+  IF G.Cv.BeginCanvas(300, 300)
+    G.Render(300, 300)
+    G.Cv.SavePng(CLIP(dir) & 'gaugeplus_180.png')
+    G.Cv.EndCanvas()
+  END
+  PUTINI('r','err', G.Cv.LastError(), CLIP(dir) & 'gaugeplus_result.ini')

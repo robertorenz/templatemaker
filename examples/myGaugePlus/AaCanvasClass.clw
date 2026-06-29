@@ -22,6 +22,8 @@ gp_fillell     PROCEDURE(LONG,REAL,REAL,REAL,REAL,ULONG),NAME('_gpcanvas_fill_el
 gp_ell         PROCEDURE(LONG,REAL,REAL,REAL,REAL,REAL,ULONG),NAME('_gpcanvas_ellipse')
 gp_fillellg    PROCEDURE(LONG,REAL,REAL,REAL,REAL,ULONG,ULONG),NAME('_gpcanvas_fill_ellipse_grad')
 gp_fillrectg   PROCEDURE(LONG,REAL,REAL,REAL,REAL,ULONG,ULONG,LONG),NAME('_gpcanvas_fill_rect_grad')
+gp_clippie     PROCEDURE(LONG,REAL,REAL,REAL,REAL,REAL,REAL),NAME('_gpcanvas_clip_pie')
+gp_clipreset   PROCEDURE(LONG),NAME('_gpcanvas_clip_reset')
 gp_fillpoly    PROCEDURE(LONG,*REAL,LONG,ULONG),RAW,NAME('_gpcanvas_fill_polygon')
 gp_poly        PROCEDURE(LONG,*REAL,LONG,REAL,ULONG),RAW,NAME('_gpcanvas_polygon')
 gp_text        PROCEDURE(LONG,*CSTRING,REAL,REAL,REAL,ULONG,*CSTRING,LONG,LONG),RAW,NAME('_gpcanvas_text')
@@ -85,6 +87,14 @@ AaCanvasClass.FillCircleGrad PROCEDURE(REAL pCx,REAL pCy,REAL pR,ULONG pInner,UL
 AaCanvasClass.FillRectGrad PROCEDURE(REAL pX,REAL pY,REAL pW,REAL pH,ULONG pC1,ULONG pC2,BYTE pVertical)
   CODE
   IF SELF.H THEN gp_fillrectg(SELF.H, pX,pY,pW,pH, pC1, pC2, pVertical).
+
+AaCanvasClass.ClipPie PROCEDURE(REAL pX,REAL pY,REAL pW,REAL pH,REAL pStart,REAL pSweep)
+  CODE
+  IF SELF.H THEN gp_clippie(SELF.H, pX,pY,pW,pH, pStart,pSweep).
+
+AaCanvasClass.ClipReset PROCEDURE
+  CODE
+  IF SELF.H THEN gp_clipreset(SELF.H).
 
 AaCanvasClass.FillPolygon PROCEDURE(*REAL pPts,LONG pNPts,ULONG pArgb)
   CODE

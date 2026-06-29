@@ -150,6 +150,7 @@ nlen   REAL
 poly   REAL,DIM(8)
 emL    REAL
 emV    REAL
+full   BYTE
 txt    STRING(48)
   CODE
   cx = pW * SELF.PivotXPct / 100
@@ -162,6 +163,13 @@ txt    STRING(48)
   ! ---- background ----
   SELF.Cv.ClearCanvas(SELF.Cv.Argb(SELF.BackColor))
   ! ---- glossy face + rim ----
+  !  A wide span (270/360) keeps a full round bezel; a narrower one (180/90/45)
+  !  gets a half-disc / wedge face clipped to its own angular span, so the empty
+  !  half of the dial isn't filled. The clip preserves the gradient + gloss.
+  full = CHOOSE(ABS(SELF.SweepAngle) >= 270, 1, 0)
+  IF NOT full
+    SELF.Cv.ClipPie(cx-r, cy-r, 2*r, 2*r, -SELF.StartAngle, -SELF.SweepAngle)
+  END
   IF SELF.ShowFace
     SELF.Cv.FillCircleGrad(cx, cy, r, SELF.Cv.Argb(SELF.FaceColor), SELF.Cv.Argb(SELF.FaceEdge))
   END
@@ -170,6 +178,9 @@ txt    STRING(48)
   END
   IF SELF.ShowRim
     SELF.Cv.Circle(cx, cy, r, SELF.RimWidth, SELF.Cv.Argb(SELF.RimColor))
+  END
+  IF NOT full
+    SELF.Cv.ClipReset()
   END
   ! ---- track, value fill, zones ----
   IF SELF.ShowTrack

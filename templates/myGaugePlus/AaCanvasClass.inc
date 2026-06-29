@@ -40,6 +40,8 @@ FillCircle         PROCEDURE(REAL pCx,REAL pCy,REAL pR,ULONG pArgb)
 Circle             PROCEDURE(REAL pCx,REAL pCy,REAL pR,REAL pPenW,ULONG pArgb)
 FillCircleGrad     PROCEDURE(REAL pCx,REAL pCy,REAL pR,ULONG pInner,ULONG pOuter)  ! radial: centre->rim
 FillRectGrad       PROCEDURE(REAL pX,REAL pY,REAL pW,REAL pH,ULONG pC1,ULONG pC2,BYTE pVertical=1) ! linear
+ClipPie            PROCEDURE(REAL pX,REAL pY,REAL pW,REAL pH,REAL pStart,REAL pSweep) ! restrict drawing to a wedge
+ClipReset          PROCEDURE                                ! drawing returns to the whole canvas
 FillPolygon        PROCEDURE(*REAL pPts,LONG pNPts,ULONG pArgb)    ! pPts = x0,y0,x1,y1,...
 Polygon            PROCEDURE(*REAL pPts,LONG pNPts,REAL pPenW,ULONG pArgb)
 Text               PROCEDURE(STRING pText,REAL pX,REAL pY,REAL pEmPx,ULONG pArgb,<STRING pFont>,BYTE pAlign=1,BYTE pStyle=0) ! align 0=L 1=C 2=R; style bits 1=bold 2=italic

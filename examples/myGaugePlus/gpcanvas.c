@@ -115,6 +115,9 @@ typedef int (WINAPI *PFN_PGFromPath)(GpPath, GpBrush*);
 typedef int (WINAPI *PFN_PGCenterC)(GpBrush, ARGB);
 typedef int (WINAPI *PFN_PGSurround)(GpBrush, const ARGB*, int*);
 typedef int (WINAPI *PFN_FillPath)(GpGraphics, GpBrush, GpPath);
+typedef int (WINAPI *PFN_AddPie)(GpPath, float, float, float, float, float, float);
+typedef int (WINAPI *PFN_SetClip)(GpGraphics, GpPath, int);
+typedef int (WINAPI *PFN_ResetClip)(GpGraphics);
 typedef int (WINAPI *PFN_FamName)(const WCHAR*, void*, GpFontFamily*);
 typedef int (WINAPI *PFN_FamSans)(GpFontFamily*);
 typedef int (WINAPI *PFN_DelFam)(GpFontFamily);
@@ -152,6 +155,9 @@ static PFN_PGFromPath p_PGFromPath;
 static PFN_PGCenterC p_PGCenterC;
 static PFN_PGSurround p_PGSurround;
 static PFN_FillPath  p_FillPath;
+static PFN_AddPie    p_AddPie;
+static PFN_SetClip   p_SetClipPath;
+static PFN_ResetClip p_ResetClip;
 static PFN_FamName   p_FamName;
 static PFN_FamSans   p_FamSans;
 static PFN_DelFam    p_DelFam;
@@ -210,6 +216,9 @@ static int gp_init(void) {
     *(FARPROC*)&p_PGCenterC   = GetProcAddress(h, "GdipSetPathGradientCenterColor");
     *(FARPROC*)&p_PGSurround  = GetProcAddress(h, "GdipSetPathGradientSurroundColorsWithCount");
     *(FARPROC*)&p_FillPath    = GetProcAddress(h, "GdipFillPath");
+    *(FARPROC*)&p_AddPie      = GetProcAddress(h, "GdipAddPathPie");
+    *(FARPROC*)&p_SetClipPath = GetProcAddress(h, "GdipSetClipPath");
+    *(FARPROC*)&p_ResetClip   = GetProcAddress(h, "GdipResetClip");
     *(FARPROC*)&p_FamName     = GetProcAddress(h, "GdipCreateFontFamilyFromName");
     *(FARPROC*)&p_FamSans     = GetProcAddress(h, "GdipGetGenericFontFamilySansSerif");
     *(FARPROC*)&p_DelFam      = GetProcAddress(h, "GdipDeleteFontFamily");
@@ -421,6 +430,25 @@ int gpcanvas_save_png(int h, const char* path) {
     st = p_Save(c->bmp, wp, &CLSID_PNG, 0);
     LocalFree(wp);
     return st;
+}
+
+/* Restrict all subsequent drawing to a pie wedge (a circular sector). Used to
+   make a partial-span gauge's face a half-disc / wedge instead of a full circle.
+   Angles are GDI+ (degrees, 0 = 3 o'clock, clockwise). */
+void gpcanvas_clip_pie(int h, double x, double y, double w, double hh,
+                       double start, double sweep) {
+    Canvas* c = cv(h); GpPath path = 0;
+    if (!c || !p_NewPath || !p_AddPie || !p_SetClipPath) return;
+    if (p_NewPath(0, &path) != 0 || !path) return;
+    p_AddPie(path, (float)x,(float)y,(float)w,(float)hh,(float)start,(float)sweep);
+    p_SetClipPath(c->g, path, 0);          /* CombineModeReplace */
+    p_DelPath(path);
+}
+
+/* Remove any clip region (back to drawing on the whole canvas). */
+void gpcanvas_clip_reset(int h) {
+    Canvas* c = cv(h);
+    if (c && p_ResetClip) p_ResetClip(c->g);
 }
 
 /* Copy the user's %TEMP% directory (with trailing backslash) into out.
