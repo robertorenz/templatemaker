@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>myGaugePlus — Programmer's Documentation</title>
+<style>
+  :root{
+    --blue:#0A66C2; --blue-d:#084d93; --navy:#0E1A2B; --navy-2:#16263c;
+    --ink:#22303f; --muted:#6b7785; --line:#e3e8ef; --bg:#f5f7fa;
+    --card:#ffffff; --green:#1e7c5a; --amber:#9a6a12; --amber-bg:#fff7e8;
+    --green-bg:#eef8f3; --blue-bg:#eef4fc; --red-bg:#fcecec; --red:#b23a2e;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:15px/1.65 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg)}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:flex;min-height:100vh}
+  nav{width:280px;flex:0 0 280px;background:linear-gradient(180deg,var(--navy),var(--navy-2));
+    color:#cdd8e6;position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 0}
+  nav .brand{padding:0 22px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+  nav .brand h1{font-size:16px;margin:0;color:#fff} nav .brand span{font-size:12px;color:#8aa0bb}
+  nav a{display:block;color:#b9c7d8;padding:6px 22px;font-size:13.5px;border-left:3px solid transparent}
+  nav a:hover{background:rgba(255,255,255,.05);color:#fff;text-decoration:none}
+  nav a.h2{padding-left:34px;font-size:13px;color:#9fb2c8}
+  nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#6e85a1;
+    padding:14px 22px 4px;font-weight:700}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(120deg,#0c2a4d,var(--blue));color:#fff;padding:46px 52px 38px}
+  header.hero h1{margin:0 0 6px;font-size:30px;letter-spacing:-.3px}
+  header.hero p{margin:0;font-size:15.5px;color:#dbe8f8;max-width:780px}
+  header.hero .pill{display:inline-block;margin-top:16px;background:rgba(255,255,255,.16);
+    padding:4px 12px;border-radius:20px;font-size:12.5px;margin-right:8px}
+  .body{padding:14px 52px 80px;max-width:940px}
+  section{padding:22px 0;border-bottom:1px solid var(--line)} section:last-child{border-bottom:none}
+  h2{font-size:21px;margin:14px 0 10px;color:var(--navy);scroll-margin-top:14px}
+  h3{font-size:16px;margin:20px 0 6px;color:var(--blue-d)}
+  p{margin:9px 0} ul,ol{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  code,kbd,pre{font-family:"Cascadia Code",Consolas,monospace}
+  code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:13px;color:#1d3b5e}
+  pre{background:#0f1d2e;color:#dbe6f2;padding:16px 18px;border-radius:10px;overflow:auto;
+    font-size:13px;line-height:1.55;margin:12px 0}
+  pre .c{color:#7fa6c9} pre .k{color:#79c0ff} pre .s{color:#7ee0b8} pre .t{color:#ffd591}
+  .callout{border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;border:1px solid}
+  .tip{background:var(--green-bg);border-color:#bfe3d3;color:#155}
+  .note{background:var(--blue-bg);border-color:#c5dcf6;color:#13456f}
+  .warn{background:var(--amber-bg);border-color:#ecd9a6;color:#6f5210}
+  .callout b{display:block;margin-bottom:2px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f0f4f9;color:var(--navy);font-weight:600}
+  tr:hover td{background:#fafcff}
+  .lead{font-size:16px;color:#3a4756}
+  footer{padding:24px 52px;color:var(--muted);font-size:13px}
+  .top{font-size:12px;color:var(--muted);float:right}
+  .shot{float:right;margin:0 0 16px 22px;width:280px;border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 8px 26px rgba(13,40,80,.14);background:#fff}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
+  @media(max-width:880px){.shot{float:none;width:100%;max-width:320px;display:block;margin:0 0 16px}
+    .grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <div class="brand"><h1>myGaugePlus</h1><span>Antialiased GDI+ gauges</span></div>
+  <a href="#overview">Overview</a>
+  <a href="#how">How it works</a>
+  <a href="#install">Install &amp; files</a>
+  <div class="grp">Templates</div>
+  <a class="h2" href="#t-global">Global extension</a>
+  <a class="h2" href="#t-proc">Window extension</a>
+  <a class="h2" href="#t-control">Control template</a>
+  <a href="#prompts">Prompt reference</a>
+  <div class="grp">Classes</div>
+  <a class="h2" href="#gaugeplus">GaugePlusClass</a>
+  <a class="h2" href="#aacanvas">AaCanvasClass</a>
+  <a href="#code">Hand-coded use</a>
+  <a href="#notes">Notes &amp; gotchas</a>
+</nav>
+<main>
+<header class="hero">
+  <h1>myGaugePlus</h1>
+  <p>Beautiful, <b>antialiased</b> analog gauges and dials for Clarion — smooth arcs with rounded
+     caps, a glossy radial-gradient face, an antialiased needle and crisp text. The pretty,
+     GDI&#43;-rendered sibling of the native-graphics <a href="myGauge-template.html">myGauge</a> set.</p>
+  <span class="pill">No external dependency</span>
+  <span class="pill">Windows · gdiplus.dll</span>
+  <span class="pill">v1.0</span>
+</header>
+<div class="body">
+
+<section id="overview">
+  <span class="top"><a href="#">top ↑</a></span>
+  <h2>Overview</h2>
+  <img class="shot" src="myGaugePlus-preview.png" alt="An antialiased speedometer rendered by myGaugePlus">
+  <p class="lead">Clarion's native <code>ARC</code>/<code>ELLIPSE</code>/<code>LINE</code>/<code>POLYGON</code>
+     primitives have no antialiasing, so circular gauges drawn with them look jagged. <b>myGaugePlus</b>
+     draws every pixel with <b>GDI&#43;</b> instead, into a 32-bit ARGB bitmap, then shows the result as a
+     PNG in an <code>IMAGE</code> control.</p>
+  <p>The look it gives you out of the box:</p>
+  <ul>
+    <li><b>Glossy face</b> — a radial gradient from a light centre to a soft grey rim, with an optional
+        gloss highlight sweep.</li>
+    <li><b>Smooth arcs</b> — the track, the coloured value fill and the warning zones are all
+        antialiased with rounded caps.</li>
+    <li><b>Crisp text</b> — antialiased tick labels, a large value readout and title/units, in any font.</li>
+    <li><b>Animation</b> — an eased needle sweep driven by the window timer.</li>
+  </ul>
+  <p>It carries <b>no redistributable</b>: <code>gdiplus.dll</code> ships with every Windows since XP, and
+     the bridge to it is a small C file compiled by Clarion's own compiler.</p>
+  <div class="callout note"><b>Which gauge template should I use?</b>
+     Use <b>myGaugePlus</b> when looks matter (dashboards, KPI tiles, kiosks). Use the original
+     <a href="myGauge-template.html">myGauge</a> when you need <b>report-band</b> gauges or want a pure
+     native-graphics draw with zero PNG/temp-file traffic — myGaugePlus is window-only.</div>
+</section>
+
+<section id="how">
+  <span class="top"><a href="#">top ↑</a></span>
+  <h2>How it works</h2>
+  <p>Three layers, each shipped beside the template:</p>
+  <table>
+    <tr><th>File</th><th>Role</th></tr>
+    <tr><td><code>gpcanvas.c</code></td><td>A tiny C shim. It binds the GDI&#43; <i>flat</i> C API at
+        runtime (<code>LoadLibrary("gdiplus.dll")</code> + <code>GetProcAddress</code>) and exposes a
+        simple immediate-mode canvas. Clarion compiles it automatically — see below.</td></tr>
+    <tr><td><code>AaCanvasClass</code></td><td>A reusable <b>antialiased canvas</b> wrapper:
+        <code>BeginCanvas</code>, <code>Arc</code>, <code>Line</code>, <code>FillCircle</code>,
+        <code>FillCircleGrad</code>, <code>Polygon</code>, <code>Text</code>, <code>SavePng</code>. Useful
+        for any drawing, not just gauges.</td></tr>
+    <tr><td><code>GaugePlusClass</code></td><td>The gauge itself, built on the canvas. Same API shape as
+        the native <code>GaugeClass</code> (<code>SetRange</code>/<code>Preset</code>/<code>AddZone</code>/
+        <code>SetValue</code>/<code>AnimateTo</code>/<code>Draw</code>).</td></tr>
+  </table>
+  <p><code>GaugePlusClass.Draw(window, ?image)</code> reads the image control's <b>pixel</b> size, renders
+     the gauge to a PNG in <code>%TEMP%</code>, and points the control at it
+     (<code>?image{PROP:Text}=file</code>). Because the art is now a normal image, Clarion owns all of its
+     repainting and resizing for free. Two temp filenames are alternated each frame so animation reliably
+     reloads.</p>
+  <div class="callout tip"><b>Zero project setup</b>
+     <code>gpcanvas.c</code> is compiled by a <code>PRAGMA('compile(gpcanvas.c)')</code> inside
+     <code>AaCanvasClass.clw</code>, and the classes' <code>LINK</code> attributes pull everything into the
+     build. You only add the template — no manual project edits.</div>
+</section>
+
+<section id="install">
+  <span class="top"><a href="#">top ↑</a></span>
+  <h2>Install &amp; required files</h2>
+  <p>Copy these five files (shipped beside <code>myGaugePlus.tpl</code>) to a folder on your Clarion
+     <b>redirection path</b> — your app folder or <code>\clarion12\libsrc\win</code>. Save them all as
+     <b>ANSI</b> (not UTF-8):</p>
+  <ul>
+    <li><code>GaugePlusClass.inc</code> &nbsp;·&nbsp; <code>GaugePlusClass.clw</code></li>
+    <li><code>AaCanvasClass.inc</code> &nbsp;·&nbsp; <code>AaCanvasClass.clw</code></li>
+    <li><code>gpcanvas.c</code></li>
+  </ul>
+  <p>Register <code>myGaugePlus.tpl</code> in the IDE (<i>Setup ▸ Template Registry ▸ Register</i>), then add
+     the templates to your app. You only ever <code>INCLUDE</code> <code>GaugePlusClass.INC</code> — it pulls
+     in <code>AaCanvasClass.INC</code> for you.</p>
+</section>
+
+<section id="t-global">
+  <span class="top"><a href="#">top ↑</a></span>
+  <h2>Templates</h2>
+  <h3 id="t-global-h">1 · myGaugePlusGlobal — global extension</h3>
+  <p>Add it <b>once</b>, at the application (global) level. It emits
+     <code>INCLUDE('GaugePlusClass.INC'),ONCE</code> so the classes are available everywhere. Required by the
+     window extension (not needed if you only use the control template, which is self-contained).</p>
+
+  <h3 id="t-proc">2 · myGaugePlus — window procedure extension</h3>
+  <p>Add it <b>once per gauge</b> on a window procedure. You name the gauge object and pick an existing
+     <code>IMAGE</code> control to draw into. Multiple gauges per window are fine — each instance gets its own
+     object. The wiring lives in <code>TakeWindowEvent</code> at <code>PRIORITY(2000)</code>: it configures the
+     object on <code>EVENT:OpenWindow</code>, repaints on a private redraw event and on
+     <code>EVENT:Sized</code>, and (optionally) eases the needle on <code>EVENT:Timer</code>.</p>
+  <p>A per-instance <code>Refresh:<i>Object</i></code> ROUTINE is generated; call
+     <code>DO Refresh:Gauge1</code> after a bound value changes when you are not animating.</p>
+
+  <h3 id="t-control">3 · myGaugePlusControl — control template</h3>
+  <p>The easy path: drag it onto a window and it <b>drops a ready-made IMAGE</b> and wires the gauge to it in
+     one go. <code>WINDOW, MULTI</code> — drop as many as you like. It is fully self-contained (it INCLUDEs the
+     class itself), so it does <b>not</b> require the global extension.</p>
+</section>
+
+<section id="prompts">
+  <span class="top"><a href="#">top ↑</a></span>
+  <h2>Prompt reference</h2>
+  <p>Both the window and control templates share the same tabs:</p>
+  <table>
+    <tr><th>Tab</th><th>Prompts</th></tr>
+    <tr><td><b>General</b></td><td>Object name; image control; gauge <b>style</b> (180 semicircle, 270
+        speedometer, 360 dial, 90 quarter, 45 narrow, or custom start/sweep angles); min/max; value as a
+        literal or a bound variable/expression.</td></tr>
+    <tr><td><b>Ticks &amp; text</b></td><td>Major &amp; minor tick counts; show labels + label decimals;
+        title; units; show numeric value + value decimals.</td></tr>
+    <tr><td><b>Look</b></td><td>Needle style/width/colour; <b>value/accent</b> colour; <b>face centre</b> and
+        <b>face rim</b> colours; track, tick and text colours; show gloss / rim / value-arc fill; animation
+        (enable, timer interval, % step per tick).</td></tr>
+    <tr><td><b>Zones</b></td><td>A MULTI list of coloured bands — each a from/to value range and a colour
+        (e.g. green 0–60, amber 60–85, red 85–100).</td></tr>
+  </table>
+</section>
+
+<section id="gaugeplus">
+  <span class="top"><a href="#">top ↑</a></span>
+  <h2>GaugePlusClass — API</h2>
+  <p>The object is declared in your procedure's data; call it from any embed.</p>
+  <h3>Methods</h3>
+  <table>
+    <tr><th>Method</th><th>Description</th></tr>
+    <tr><td><code>SetRange(min, max)</code></td><td>Set the value range.</td></tr>
+    <tr><td><code>Preset(style)</code></td><td>Apply a shape preset: 1=180°, 2=270°, 3=360°, 4=90°,
+        5=45°.</td></tr>
+    <tr><td><code>SetSpan(start, sweep)</code></td><td>Custom geometry — start angle and sweep in degrees
+        (math convention: CCW from 3 o'clock; negative sweep = clockwise).</td></tr>
+    <tr><td><code>SetValue(v)</code></td><td>Set the needle value instantly (clamped to range).</td></tr>
+    <tr><td><code>AnimateTo(v)</code></td><td>Set an animation target; the needle eases there on each
+        <code>AnimStep</code>.</td></tr>
+    <tr><td><code>AnimStep()</code>, BYTE</td><td>Ease one step toward the target; returns 1 if it moved (so
+        the caller repaints).</td></tr>
+    <tr><td><code>AddZone(from, to, color)</code></td><td>Add a coloured warning band over a value range
+        (max 16). <code>color</code> is a Clarion <code>COLOR</code>.</td></tr>
+    <tr><td><code>ClearZones()</code></td><td>Remove all zones.</td></tr>
+    <tr><td><code>Draw(window, ?image)</code></td><td>Render the gauge and show it in the IMAGE control.</td></tr>
+  </table>
+  <h3>Key properties</h3>
+  <div class="grid2">
+  <table>
+    <tr><th>Property</th><th>What</th></tr>
+    <tr><td><code>MajorTicks</code>, <code>MinorTicks</code></td><td>Tick divisions.</td></tr>
+    <tr><td><code>ValueDP</code>, <code>LabelDP</code></td><td>Decimal places.</td></tr>
+    <tr><td><code>NeedleStyle</code></td><td>1=triangle, 0=line.</td></tr>
+    <tr><td><code>NeedleWidth</code>, <code>NeedleColor</code></td><td>Needle size &amp; colour.</td></tr>
+    <tr><td><code>ValueColor</code></td><td>The filled value arc / accent.</td></tr>
+  </table>
+  <table>
+    <tr><th>Property</th><th>What</th></tr>
+    <tr><td><code>FaceColor</code>, <code>FaceEdge</code></td><td>Glossy face centre &amp; rim shades.</td></tr>
+    <tr><td><code>TrackColor</code>, <code>TickColor</code></td><td>Empty track &amp; ticks.</td></tr>
+    <tr><td><code>TextColor</code>, <code>LabelColor</code></td><td>Readout &amp; tick labels.</td></tr>
+    <tr><td><code>ShowFace / ShowRim / ShowGloss</code></td><td>Face elements on/off.</td></tr>
+    <tr><td><code>Title</code>, <code>Units</code>, <code>FontName</code></td><td>Readout text &amp; font.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="aacanvas">
+  <span class="top"><a href="#">top ↑</a></span>
+  <h2>AaCanvasClass — the reusable antialiased canvas</h2>
+  <p>You can use the canvas on its own for any antialiased drawing. Angles are GDI&#43; convention (degrees,
+     0 = 3 o'clock, clockwise); colours come from <code>Argb()</code>.</p>
+  <table>
+    <tr><th>Method</th><th>Description</th></tr>
+    <tr><td><code>BeginCanvas(w, h)</code>, BYTE</td><td>Create a w×h ARGB canvas. 1 = ok.</td></tr>
+    <tr><td><code>ClearCanvas(argb)</code></td><td>Fill the canvas (use <code>Argb(COLOR:None)</code> for
+        transparent).</td></tr>
+    <tr><td><code>Arc(x,y,w,h, start,sweep, penW, argb [,round])</code></td><td>Stroked arc.</td></tr>
+    <tr><td><code>Line(x1,y1,x2,y2, penW, argb [,round])</code></td><td>Stroked line.</td></tr>
+    <tr><td><code>FillCircle / Circle(cx,cy,r, …)</code></td><td>Filled / outlined circle.</td></tr>
+    <tr><td><code>FillCircleGrad(cx,cy,r, inner, outer)</code></td><td>Radial gradient fill.</td></tr>
+    <tr><td><code>Pie(x,y,w,h, start,sweep, argb)</code></td><td>Filled wedge.</td></tr>
+    <tr><td><code>FillPolygon / Polygon(pts[], n, …)</code></td><td>Filled / outlined polygon.</td></tr>
+    <tr><td><code>Text(s, x,y, emPx, argb [,font,align,style])</code></td><td>Antialiased text. align 0/1/2 =
+        left/centre/right; style bits 1=bold 2=italic.</td></tr>
+    <tr><td><code>SavePng(path)</code>, BYTE / <code>EndCanvas()</code></td><td>Save the PNG / dispose.</td></tr>
+    <tr><td><code>Argb(clarionColor [,alpha])</code>, ULONG</td><td>Convert a Clarion COLOR to GDI&#43;
+        0xAARRGGBB.</td></tr>
+  </table>
+</section>
+
+<section id="code">
+  <span class="top"><a href="#">top ↑</a></span>
+  <h2>Hand-coded use</h2>
+  <p>You don't need the template — the classes work standalone:</p>
+<pre><span class="c">! one gauge object in your procedure's data</span>
+Speedo   GaugePlusClass
+
+  <span class="k">CODE</span>
+  Speedo.SetRange(<span class="t">0</span>, <span class="t">220</span>)
+  Speedo.Preset(GaugeP:Arc270)
+  Speedo.MajorTicks = <span class="t">11</span>; Speedo.MinorTicks = <span class="t">1</span>
+  Speedo.AddZone(<span class="t">170</span>, <span class="t">220</span>, <span class="t">02020E0h</span>)   <span class="c">! red zone (Clarion COLOR)</span>
+  Speedo.Title = <span class="s">'SPEED'</span>; Speedo.Units = <span class="s">'km/h'</span>
+  Speedo.SetValue(<span class="t">146</span>)
+  Speedo.Draw(Window, ?Img)             <span class="c">! render + show</span>
+  <span class="c">! ... later, for a smooth sweep on a window timer:</span>
+  Speedo.AnimateTo(<span class="t">80</span>)
+  <span class="k">IF</span> Speedo.AnimStep() <span class="k">THEN</span> Speedo.Draw(Window, ?Img).</pre>
+  <p>See the buildable examples in <code>examples/myGaugePlus/</code>: <code>AaTest.clw</code> (canvas
+     self-test), <code>GaugePlusTest.clw</code> (headless gauge render) and <code>GaugePlusDemo.clw</code> (a
+     live, animated window).</p>
+</section>
+
+<section id="notes">
+  <span class="top"><a href="#">top ↑</a></span>
+  <h2>Notes &amp; gotchas</h2>
+  <ul>
+    <li><b>Transparency.</b> By default the canvas background is transparent, so a round gauge composites
+        cleanly onto any window colour. Set <code>BackColor</code> if you want a solid backdrop.</li>
+    <li><b>Window-only.</b> Because it renders via PNG + window pixel sizing, myGaugePlus draws on windows,
+        not report bands. For report gauges use the native <a href="myGauge-template.html">myGauge</a>.</li>
+    <li><b>Temp files.</b> Each gauge writes two small PNGs to <code>%TEMP%</code>
+        (<code>gplus_<i>feq</i>_a/_b.png</code>), alternated so animation reloads reliably.</li>
+    <li><b>ANSI source.</b> Like all Clarion include/source files here, keep the five shipped files in ANSI
+        with CRLF line endings.</li>
+  </ul>
+  <div class="callout note"><b>Under the hood</b> The C shim hand-declares the few Win32 functions it needs
+     (Clarion's bundled compiler has no Windows SDK headers) and spells the stdcall convention
+     <code>pascal</code>. None of this concerns the template user — it just compiles.</div>
+</section>
+
+</div>
+<footer>myGaugePlus v1.0 — antialiased GDI&#43; gauges for Clarion 12. Part of the templatemaker set.</footer>
+</main>
+</div>
+</body>
+</html>

@@ -57,6 +57,11 @@ templates/                      # ready-to-register Clarion templates
     GaugeClass.inc              #     the gauge class (config + method prototypes)
     GaugeClass.clw              #     the implementation (geometry + native drawing)
     myGauge.tpl                 #     global include + window + report extensions
+  myGaugePlus/                  #   ANTIALIASED (GDI+) gauge/dial on windows (see below)
+    gpcanvas.c                  #     GDI+ flat-API shim (bound at runtime, compiled by Clacpp)
+    AaCanvasClass.inc/.clw      #     reusable antialiased 2D canvas over GDI+
+    GaugePlusClass.inc/.clw     #     the pretty gauge, drawn on the canvas
+    myGaugePlus.tpl             #     global include + window + control template
   myCompress/                   #   pure-Clarion compression: DEFLATE/zlib/gzip (see below)
     CompressClass.inc           #     the codec class (config + method prototypes)
     CompressClass.clw           #     the implementation (inflate/deflate/containers)
@@ -286,6 +291,26 @@ on open/resize, optional animation, a generated `Refresh:<Object>` routine), and
 **reports** (a gauge per record, drawn at `%BeforePrint` under `SETTARGET(Report)`). Copy `GaugeClass.inc` +
 `GaugeClass.clw` (ANSI) to the redirection path. Full programmer's documentation — shapes, prompts, the class
 API, run-time control, and troubleshooting — is in [`docs/myGauge-template.html`](docs/myGauge-template.html).
+
+### `templates/myGaugePlus/` — **antialiased** (GDI+) gauges/dials on windows
+The pretty sibling of myGauge. Native Clarion `ARC`/`ELLIPSE`/`LINE` have **no antialiasing**, so round
+gauges drawn with them look jagged — myGaugePlus draws every pixel with **GDI+** instead: smooth arcs with
+rounded caps, a **glossy radial-gradient face**, an antialiased needle and crisp text, rendered to a PNG and
+shown in an `IMAGE` control. It carries **no redistributable** — `gdiplus.dll` ships with Windows, and the
+bridge to its flat C API is a tiny shim (`gpcanvas.c`) bound at runtime (`LoadLibrary`/`GetProcAddress`) and
+compiled automatically by Clarion's own compiler (`PRAGMA('compile')` inside `AaCanvasClass.clw`) — so there
+is **no manual project step**. Three layers ship together: **`gpcanvas.c`** (the GDI+ shim),
+**`AaCanvasClass`** (a reusable antialiased 2D canvas — `Arc`/`Line`/`FillCircleGrad`/`Polygon`/`Text`/
+`SavePng`, useful for any drawing), and **`GaugePlusClass`** (the gauge, with the *same* API shape as
+`GaugeClass`: `SetRange`/`Preset`/`AddZone`/`SetValue`/`AnimateTo`/`Draw`). Same prompts and presets as
+myGauge — arc styles, range, literal-or-variable value, ticks/labels, title/units, up to 16 colored zones,
+and **eased needle animation** — plus a glossy **value/accent fill**, face-gloss and rim toggles. Three
+registrations: the **myGaugePlusControl** control template (drag-on, self-contained) and the
+**myGaugePlusGlobal** + **myGaugePlus** (window) extensions. The transparent PNG composites cleanly onto any
+window; it is **window-only** (use myGauge for report-band gauges). Copy the five files
+(`GaugePlusClass.inc/.clw`, `AaCanvasClass.inc/.clw`, `gpcanvas.c`, all ANSI) to the redirection path. Full
+docs — how it works, prompts, the `GaugePlusClass` + `AaCanvasClass` API, and gotchas — are in
+[`docs/myGaugePlus-template.html`](docs/myGaugePlus-template.html).
 
 ### `templates/myCompress/` — pure-Clarion compression (memory + files)
 A self-contained **compression library** written entirely in **pure Clarion** — no DLL, no external

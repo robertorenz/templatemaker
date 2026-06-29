@@ -20,3 +20,7 @@ templates/AJEBackupAPP.tpl
 templates/AJE*.png
 templates/aje*.png
 templates/ajebackup.zip
+
+# Edge user-data-dir leftovers from my3D embedded-browser testing
+examples/**/*.edge/
+*.edge/
