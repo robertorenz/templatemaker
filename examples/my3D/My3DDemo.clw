@@ -19,6 +19,7 @@
 Scene   WebGL2Class
 
 LastMeshCount  LONG
+EmbedMode      BYTE                                          ! toggle: 0 = browser, 1 = dock in a viewer window
 ! --- shared scratch variables for the fixture routines (single-threaded demo) ---
 M     LONG                                                   ! index of the last-added mesh
 I     LONG
@@ -81,10 +82,15 @@ Window WINDOW('my3D / WebGL2 - Proof of Concept'),AT(,,420,322),CENTER,SYSTEM,GR
          BUTTON('Re-open last page'),AT(222,216,90,16),USE(?bReopen)
          BUTTON('About / Close'),AT(316,216,88,16),USE(?bAbout)
        END
+       CHECK('Show &embedded - dock the 3D in a viewer window (WebView via Edge) instead of the browser'),|
+            AT(12,278,400,10),USE(EmbedMode)
        STRING('Tip: in the 3D page, drag to orbit, mouse-wheel to zoom, press R to reset the camera.'),|
             AT(12,266),USE(?Tip),FONT('Segoe UI',8),TRN
        BUTTON('Close'),AT(360,300,52,16),USE(?bClose),STD(STD:Close)
      END
+
+ViewWin WINDOW('my3D - embedded viewer'),AT(,,520,360),CENTER,SYSTEM,GRAY,RESIZE,MAX
+        END
 
   CODE
   OPEN(Window)
@@ -465,9 +471,30 @@ Fx_Mega ROUTINE
 
 !============================================================================
 ShowIt ROUTINE
-  Scene.Show()
   LastMeshCount = Scene.MeshCount()
+  IF EmbedMode
+    DO EmbedView                                             ! dock it in a viewer window
+  ELSE
+    Scene.Show()                                             ! open it in the default browser
+  END
   DISPLAY
+
+!  Open a dedicated viewer window and dock the current scene into it (a nested
+!  ACCEPT loop - returns here when the viewer window is closed).
+EmbedView ROUTINE
+  OPEN(ViewWin)
+  ViewWin{PROP:Text} = 'my3D - ' & CLIP(Scene.Title)
+  ACCEPT
+    CASE EVENT()
+    OF EVENT:OpenWindow
+      Scene.ShowEmbedded(0{PROP:Handle})
+    OF EVENT:Sized
+      Scene.EmbedFit()
+    OF EVENT:CloseWindow
+      Scene.EmbedClose()
+    END
+  END
+  CLOSE(ViewWin)
 
 !============================================================================
 !  Self-test: prove the Vec3 / Mat4 methods compute correctly in Clarion.

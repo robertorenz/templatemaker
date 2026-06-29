@@ -56,6 +56,7 @@ DisplayMode       BYTE                                       ! WebGL2:External (
 EdgeExe           CSTRING(260)                               ! path to msedge.exe (set in Construct; override if needed)
 HostHwnd          LONG                                       ! the Clarion window the view is docked into
 EdgeHwnd          LONG                                       ! the docked Edge child window (0 until shown)
+EmbedInset        LONG                                       ! px the docked view is shifted up to hide Edge's title bar
 ! ---- background ----
 BgGradient        BYTE                                       ! 1 = vertical gradient, 0 = solid
 BgR               REAL                                       ! solid / gradient bottom

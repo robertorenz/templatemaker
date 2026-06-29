@@ -417,9 +417,12 @@ Scene.SetPos(Scene.AddSphere(0.4, 24), Scene.Rx, Scene.Ry, Scene.Rz)</pre>
       <div class="callout note"><b>Pick it in the template</b>
         The control template's <b>Show in</b> dropdown offers <i>External browser</i> (default) or
         <i>Embedded</i>; choosing Embedded wires the calls above for you. The docked view fills the host
-        window, so use it on a window dedicated to the 3D. Edge shows a slim app title-bar at the top of the
-        docked view. Set the <code>EdgeExe</code> property if Edge isn't at the default path. Working example:
-        <a href="../examples/my3D/My3DEmbedded.clw"><code>examples/my3D/My3DEmbedded.clw</code></a>.</div>
+        window, so use it on a window dedicated to the 3D. Edge's app title-bar is tucked out of view by
+        shifting the docked window up <code>EmbedInset</code> px (default 33) — bump it if a sliver shows at
+        higher display scaling. Set the <code>EdgeExe</code> property if Edge isn't at the default path.
+        Working examples: <a href="../examples/my3D/My3DEmbedded.clw"><code>examples/my3D/My3DEmbedded.clw</code></a>,
+        and <code>My3DDemo</code>'s <b>"Show embedded"</b> checkbox (run any fixture in the browser or docked
+        in a viewer window).</div>
     </section>
 
     <section id="props">

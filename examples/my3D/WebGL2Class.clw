@@ -46,6 +46,7 @@ Line     STRING(902)
 WebGL2Class.Construct PROCEDURE()
   CODE
   SELF.EngineFile = 'my3D.engine.js'
+  SELF.EmbedInset = 33                                       ! px to hide Edge's app title bar when docked
   SELF.EdgeExe = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
   IF ~EXISTS(SELF.EdgeExe)
     SELF.EdgeExe = 'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
@@ -72,6 +73,7 @@ WebGL2Class.Reset PROCEDURE()
   SELF.GridR = 0.13; SELF.GridG = 0.16; SELF.GridB = 0.22
   SELF.AxesOn = 1; SELF.AxesSize = 3
   SELF.Wireframe = 0
+  SELF.DisplayMode = WebGL2:External
   SELF.ResetMaterial()
   SELF.ClearScene()
 
@@ -867,12 +869,15 @@ tries LONG
   CODE
   SELF.HostHwnd = SELF.ResolveHost(pHostHwnd)
   IF ~SELF.HostHwnd THEN RETURN 0.
+  ! EmbedInset (default 33, set in Construct) is the px the docked view is shifted
+  ! up so Edge's app title bar is clipped above the host's client area. Bump it if
+  ! a sliver of title bar still shows at higher display scaling.
+  SELF.DisplayMode = WebGL2:Embedded                          ! before SaveHtml: the page moves its HUD to the bottom
   ! a unique page title so we can find exactly this Edge window
   SELF.Title = CLIP(SELF.Title) & ' #' & RANDOM(100000, 999999)
   path = SELF.TempHtmlPath()
   IF ~SELF.SaveHtml(path) THEN RETURN 0.
   SELF.LastFile = path
-  SELF.DisplayMode = WebGL2:Embedded
   url = SELF.FileUrl(path)
   ! launch a borderless Edge app window, off-screen, in its own profile
   cmd = '"' & CLIP(SELF.EdgeExe) & '" --app=' & CLIP(url) |
@@ -901,7 +906,8 @@ rc  LONG,DIM(4)
   CODE
   IF ~SELF.EdgeHwnd OR ~SELF.HostHwnd THEN RETURN 0.
   wgGetClientRect(SELF.HostHwnd, rc[1])                       ! rc = left,top,right,bottom
-  wgMoveWindow(SELF.EdgeHwnd, 0, 0, rc[3], rc[4], 1)
+  ! -EmbedInset hides Edge's title bar above the client; +EmbedInset keeps content filling
+  wgMoveWindow(SELF.EdgeHwnd, 0, -SELF.EmbedInset, rc[3], rc[4] + SELF.EmbedInset, 1)
   RETURN 1
 
 WebGL2Class.EmbedSetBounds PROCEDURE(LONG pX,LONG pY,LONG pW,LONG pH)
