@@ -50,6 +50,8 @@ Win WINDOW('my3D - WebGL2 docked inside a Clarion window'),AT(,,560,400),CENTER,
       Scene.ShowEmbedded(0{PROP:Handle})                     ! dock once the window is realized + sized
     OF EVENT:Sized
       Scene.EmbedFit()                                       ! keep the view filling the window
+    OF EVENT:Moved
+      Scene.EmbedFit()
     OF EVENT:CloseWindow
       Scene.EmbedClose()                                     ! close the docked Edge window with this one
     END

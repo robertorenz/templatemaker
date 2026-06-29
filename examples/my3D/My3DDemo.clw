@@ -490,6 +490,8 @@ EmbedView ROUTINE
       Scene.ShowEmbedded(0{PROP:Handle})
     OF EVENT:Sized
       Scene.EmbedFit()
+    OF EVENT:Moved
+      Scene.EmbedFit()
     OF EVENT:CloseWindow
       Scene.EmbedClose()
     END

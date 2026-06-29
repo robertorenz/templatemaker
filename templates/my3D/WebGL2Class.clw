@@ -21,10 +21,10 @@
       wgCreateWindow (ULONG,*CSTRING,*CSTRING,ULONG,SIGNED,SIGNED,SIGNED,SIGNED,ULONG,ULONG,ULONG,ULONG),ULONG,PASCAL,RAW,NAME('CreateWindowExA')
       wgGetModule    (ULONG),ULONG,PASCAL,NAME('GetModuleHandleA')
       wgDestroyWindow(ULONG),SIGNED,PASCAL,NAME('DestroyWindow')
-      wgGetWinThread (ULONG,ULONG),ULONG,PASCAL,NAME('GetWindowThreadProcessId')
-      wgGetCurThread (),ULONG,PASCAL,NAME('GetCurrentThreadId')
-      wgAttachInput  (ULONG,ULONG,SIGNED),SIGNED,PASCAL,NAME('AttachThreadInput')
-      wgSetFocus     (ULONG),ULONG,PASCAL,NAME('SetFocus')
+      wgClientToScreen(ULONG,*LONG),SIGNED,PASCAL,RAW,NAME('ClientToScreen')
+      wgSetWindowRgn (ULONG,ULONG,SIGNED),SIGNED,PASCAL,NAME('SetWindowRgn')
+      wgCreateRectRgn(SIGNED,SIGNED,SIGNED,SIGNED),ULONG,PASCAL,NAME('CreateRectRgn')
+      wgSetForeground(ULONG),SIGNED,PASCAL,NAME('SetForegroundWindow')
     END
   END
 
@@ -35,6 +35,7 @@ WG2:GWL_STYLE     EQUATE(-16)                                ! Win32 constants f
 WG2:WS_CHILD      EQUATE(40000000h)
 WG2:WS_VISIBLE    EQUATE(10000000h)
 WG2:WS_CLIPCH     EQUATE(02000000h)                          ! WS_CLIPCHILDREN
+WG2:GWL_HWNDPARENT EQUATE(-8)                                ! SetWindowLong index for a window's owner
 WG2:WM_CLOSE      EQUATE(0010h)
 
 ! --- module-scope ASCII files (THREAD'd) used for streaming text IO ---------
@@ -854,11 +855,12 @@ full  CSTRING(300)
   RUN('rundll32.exe url.dll,FileProtocolHandler ' & full)
   RETURN 1
 
-!=== embedded display (a docked, borderless Edge window) =====================
-!  Renders real WebGL2 INSIDE a Clarion window with zero extra dependencies:
-!  it launches a separate-process "msedge --app" window (off-screen), finds it
-!  by its unique page title, then re-parents it into the host with SetParent.
-!  Edge runs in its own process, so its message pump never re-enters Clarion.
+!=== embedded display (a borderless Edge OVERLAY owned by the Clarion window) =
+!  Launches a separate-process "msedge --app" window and positions it OVER the
+!  host window (or a control in it), set as an OWNED window of the host so it
+!  stays above it, moves/hides with it. It stays a TOP-LEVEL window (not a
+!  child), so it keeps full native mouse + keyboard interaction; SetWindowRgn
+!  clips Edge's app title bar away. Call EmbedFit on EVENT:Sized AND EVENT:Moved.
 WebGL2Class.ResolveHost PROCEDURE(ULONG pHwnd)
 h  ULONG
   CODE
@@ -878,14 +880,9 @@ title CSTRING(140)
 cls   CSTRING(20)
 cmd   CSTRING(700)
 tries LONG
-emptyStr CSTRING(2)
-staticCl CSTRING(8)
   CODE
   SELF.HostHwnd = SELF.ResolveHost(pHostHwnd)
   IF ~SELF.HostHwnd THEN RETURN 0.
-  ! EmbedInset (default 33, set in Construct) is the px the docked view is shifted
-  ! up so Edge's app title bar is clipped above the host's client area. Bump it if
-  ! a sliver of title bar still shows at higher display scaling.
   SELF.DisplayMode = WebGL2:Embedded                          ! before SaveHtml: the page moves its HUD to the bottom
   ! a unique page title so we can find exactly this Edge window
   SELF.Title = CLIP(SELF.Title) & ' #' & RANDOM(100000, 999999)
@@ -910,29 +907,23 @@ staticCl CSTRING(8)
     wgSleep(50)
   END
   IF ~SELF.EdgeHwnd THEN RETURN 0.
-  ! a clipping child (our process) hosts Edge: it hides the title bar (Edge is
-  ! shifted up inside it) and confines the view to a control's rect anywhere on
-  ! the window - not just the top edge.
-  emptyStr = ''
-  staticCl = 'STATIC'
-  SELF.ClipHwnd = wgCreateWindow(0, staticCl, emptyStr, |
-      BOR(BOR(WG2:WS_CHILD, WG2:WS_VISIBLE), WG2:WS_CLIPCH), |
-      0, 0, 50, 50, SELF.HostHwnd, 0, wgGetModule(0), 0)
-  IF ~SELF.ClipHwnd THEN SELF.ClipHwnd = SELF.HostHwnd.       ! fallback: no clip container
-  wgSetWindowLong(SELF.EdgeHwnd, WG2:GWL_STYLE, BOR(WG2:WS_CHILD, WG2:WS_VISIBLE))
-  wgSetParent(SELF.EdgeHwnd, SELF.ClipHwnd)
+  ! OWN it by the Clarion window (stays above it, hides when it minimises) but
+  ! keep it top-level - that's what preserves full mouse/keyboard interaction.
+  wgSetWindowLong(SELF.EdgeHwnd, WG2:GWL_HWNDPARENT, SELF.HostHwnd)
   SELF.EmbedFit()
-  SELF.EmbedFocus()                                          ! make it interactive (drag / R / space)
+  SELF.EmbedFocus()
   RETURN 1
 
 WebGL2Class.EmbedFit PROCEDURE()
 rc    LONG,DIM(4)
+pt    LONG,DIM(2)
 x     LONG
 y     LONG
 w     LONG
 h     LONG
 savePx BYTE
 f     SIGNED
+rgn   ULONG
   CODE
   IF ~SELF.EdgeHwnd OR ~SELF.HostHwnd THEN RETURN 0.
   IF SELF.HostFeq                                            ! confine to a control's pixel rect
@@ -945,12 +936,14 @@ f     SIGNED
     wgGetClientRect(SELF.HostHwnd, rc[1])
     x = 0; y = 0; w = rc[3]; h = rc[4]
   END
-  IF SELF.ClipHwnd AND SELF.ClipHwnd <> SELF.HostHwnd
-    wgMoveWindow(SELF.ClipHwnd, x, y, w, h, 1)               ! container = exact target rect
-    wgMoveWindow(SELF.EdgeHwnd, 0, -SELF.EmbedInset, w, h + SELF.EmbedInset, 1)  ! Edge shifted up -> title bar clipped
-  ELSE
-    wgMoveWindow(SELF.EdgeHwnd, x, y - SELF.EmbedInset, w, h + SELF.EmbedInset, 1)
-  END
+  IF w < 1 OR h < 1 THEN RETURN 0.
+  pt[1] = x; pt[2] = y                                       ! client (x,y) -> screen
+  wgClientToScreen(SELF.HostHwnd, pt[1])
+  ! the overlay is shifted up by EmbedInset; SetWindowRgn shows only the content
+  ! below the title bar, so the visible area maps exactly onto the target rect.
+  wgMoveWindow(SELF.EdgeHwnd, pt[1], pt[2] - SELF.EmbedInset, w, h + SELF.EmbedInset, 1)
+  rgn = wgCreateRectRgn(0, SELF.EmbedInset, w, h + SELF.EmbedInset)
+  wgSetWindowRgn(SELF.EdgeHwnd, rgn, 1)                       ! window owns the region (don't delete it)
   RETURN 1
 
 WebGL2Class.EmbedSetBounds PROCEDURE(LONG pX,LONG pY,LONG pW,LONG pH)
@@ -963,35 +956,18 @@ WebGL2Class.EmbedReady PROCEDURE()
   CODE
   RETURN CHOOSE(SELF.EdgeHwnd <> 0, 1, 0)
 
-!  Merge the Clarion UI thread's input queue with the (separate-process) Edge
-!  thread so the docked view actually receives the mouse + keyboard, then give it
-!  focus. Without this, a re-parented cross-process window can't be interacted with.
+!  Bring the overlay to the foreground (it's a real top-level window, so this
+!  gives it the mouse + keyboard). Call it to hand input back to the 3D.
 WebGL2Class.EmbedFocus PROCEDURE()
   CODE
-  IF ~SELF.EdgeHwnd THEN RETURN.
-  SELF.MyTid = wgGetCurThread()
-  IF ~SELF.EdgeTid                                           ! attach once for the session
-    SELF.EdgeTid = wgGetWinThread(SELF.EdgeHwnd, 0)
-    IF SELF.EdgeTid AND SELF.MyTid AND SELF.EdgeTid <> SELF.MyTid
-      wgAttachInput(SELF.MyTid, SELF.EdgeTid, 1)
-    END
-  END
-  wgSetFocus(SELF.EdgeHwnd)
+  IF SELF.EdgeHwnd THEN wgSetForeground(SELF.EdgeHwnd).
 
 WebGL2Class.EmbedClose PROCEDURE()
   CODE
-  IF SELF.EdgeTid AND SELF.MyTid AND SELF.EdgeTid <> SELF.MyTid
-    wgAttachInput(SELF.MyTid, SELF.EdgeTid, 0)               ! detach the input queues
-  END
-  SELF.EdgeTid = 0; SELF.MyTid = 0
   IF SELF.EdgeHwnd
-    wgPostMessage(SELF.EdgeHwnd, WG2:WM_CLOSE, 0, 0)          ! ask the docked Edge window to close
+    wgPostMessage(SELF.EdgeHwnd, WG2:WM_CLOSE, 0, 0)          ! ask the overlay window to close
     SELF.EdgeHwnd = 0
   END
-  IF SELF.ClipHwnd AND SELF.ClipHwnd <> SELF.HostHwnd
-    wgDestroyWindow(SELF.ClipHwnd)                            ! tear down our clipping container
-  END
-  SELF.ClipHwnd = 0
 
 WebGL2Class.FileUrl PROCEDURE(STRING pPath)
 s  CSTRING(320)

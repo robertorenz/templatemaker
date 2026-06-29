@@ -54,6 +54,8 @@ Win WINDOW('my3D rendered inside an IMAGE control'),AT(,,520,344),CENTER,SYSTEM,
       Scene.ShowEmbedded(0{PROP:Handle})
     OF EVENT:Sized
       Scene.EmbedFit()                                       ! re-fit to the IMAGE control's new rect
+    OF EVENT:Moved
+      Scene.EmbedFit()
     OF EVENT:CloseWindow
       Scene.EmbedClose()
     END

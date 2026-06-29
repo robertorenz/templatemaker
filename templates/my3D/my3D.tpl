@@ -246,7 +246,9 @@ INCLUDE('WebGL2Class.INC'),ONCE
     END
 #IF(%my3DDisplayMode = '1')
   OF EVENT:Sized
-    %my3DObject.EmbedFit()                                ! keep the docked view filling the window
+    %my3DObject.EmbedFit()                                ! the overlay follows the window's size
+  OF EVENT:Moved
+    %my3DObject.EmbedFit()                                ! ...and its position
   OF EVENT:CloseWindow
     %my3DObject.EmbedClose()                              ! close the docked Edge window with this one
 #ENDIF

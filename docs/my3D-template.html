@@ -397,23 +397,25 @@ Scene.SetPos(Scene.AddSphere(0.4, 24), Scene.Rx, Scene.Ry, Scene.Rz)</pre>
 
       <h3>Embedded display — dock the 3D inside a Clarion window</h3>
       <p>Instead of opening a browser, <code>ShowEmbedded</code> renders the scene <b>inside</b> a Clarion
-        window. It launches a borderless Edge <code>--app</code> window off-screen and re-parents it into
-        the host with the Win32 <code>SetParent</code>. Edge runs in its <b>own process</b>, so Chromium's
-        message pump never re-enters Clarion's event loop — it's stable, and needs <b>no DLL, no import
-        lib</b>, just <code>user32</code> (which every Clarion app already links) plus Microsoft Edge
-        (Windows 10/11) and <code>my3D.engine.js</code> beside the <code>.exe</code>.</p>
-      <code class="sig">ShowEmbedded(ULONG hostHwnd),BYTE   ! dock into hostHwnd (0 = the active Clarion window)</code>
+        window. It launches a borderless Edge <code>--app</code> window off-screen, then positions it as an
+        <b>owned overlay</b> over the host window (or a control in it) — it stays a <b>top-level window</b>
+        (set as the host's owner via <code>GWL_HWNDPARENT</code>), so it follows the window, hides when it's
+        minimised, and keeps <b>full native mouse + keyboard interaction</b>; <code>SetWindowRgn</code> clips
+        Edge's app title bar away. Edge is a separate process, so it never re-enters Clarion's event loop —
+        stable, and needs <b>no DLL, no import lib</b>, just <code>user32</code> (which every Clarion app
+        links) plus Microsoft Edge (Windows 10/11) and <code>my3D.engine.js</code> beside the <code>.exe</code>.</p>
+      <code class="sig">ShowEmbedded(ULONG hostHwnd),BYTE   ! show the overlay over hostHwnd (0 = the active Clarion window)</code>
       <code class="sig">SetEmbedControl(SIGNED feq)         ! confine the view to a control (e.g. an IMAGE); 0 = whole window</code>
-      <code class="sig">EmbedFit(),BYTE                     ! re-fit the view to the host/control (call on EVENT:Sized)</code>
-      <code class="sig">EmbedSetBounds(x,y,w,h),BYTE        ! place the view at an explicit pixel rect</code>
-      <code class="sig">EmbedReady(),BYTE   EmbedClose()    ! is it docked yet / close it (call on EVENT:CloseWindow)</code>
-      <code class="sig">EmbedFocus()                        ! give the view mouse/keyboard focus (drag / R / space)</code>
+      <code class="sig">EmbedFit(),BYTE                     ! re-fit the overlay (call on EVENT:Sized AND EVENT:Moved)</code>
+      <code class="sig">EmbedSetBounds(x,y,w,h),BYTE        ! place the overlay at explicit screen pixels</code>
+      <code class="sig">EmbedReady(),BYTE   EmbedClose()    ! is it shown yet / close it (call on EVENT:CloseWindow)</code>
+      <code class="sig">EmbedFocus()                        ! bring the overlay to the foreground (hand it the keyboard)</code>
       <div class="callout note"><b>Interaction</b>
-        The docked Edge window is a separate process, so its thread's input queue is merged with the Clarion
-        UI thread (Win32 <code>AttachThreadInput</code>) and focused on show — that's what makes <b>drag-orbit,
-        mouse-wheel, and the R/space keys</b> work inside the docked view. <code>ShowEmbedded</code> calls
-        <code>EmbedFocus</code> for you; call it yourself if you want to hand focus back to the 3D after the
-        user has been in other controls.</div>
+        Because the overlay is a real top-level window (not a re-parented child), <b>drag-orbit, mouse-wheel
+        and the R/space keys work natively</b> — a re-parented cross-process child window does <i>not</i> get
+        input, which is why this uses the owned-overlay approach. Call <code>EmbedFocus()</code> to hand the
+        keyboard back to the 3D after the user has been in other controls. Important: call <code>EmbedFit()</code>
+        on <b>both EVENT:Sized and EVENT:Moved</b> so the overlay tracks the window.</div>
       <p>To put the 3D in a <b>control</b> (so the rest of the window holds buttons/lists), drop an
         <code>IMAGE</code> or <code>REGION</code> as a placeholder and call <code>SetEmbedControl(?View)</code>
         before <code>ShowEmbedded</code> — the view fills just that control's rectangle and re-fits with it.
@@ -422,8 +424,9 @@ Scene.SetPos(Scene.AddSphere(0.4, 24), Scene.Rx, Scene.Ry, Scene.Rz)</pre>
       <pre><span class="c">! a window whose whole client area is the 3D view</span>
   ACCEPT
     CASE EVENT()
-    OF EVENT:OpenWindow ;  Scene.ShowEmbedded(0{PROP:Handle})   <span class="c">! dock once the window is sized</span>
+    OF EVENT:OpenWindow ;  Scene.ShowEmbedded(0{PROP:Handle})   <span class="c">! show once the window is sized</span>
     OF EVENT:Sized      ;  Scene.EmbedFit()
+    OF EVENT:Moved      ;  Scene.EmbedFit()                     <span class="c">! the overlay follows the window</span>
     OF EVENT:CloseWindow;  Scene.EmbedClose()
     END
   END</pre>
