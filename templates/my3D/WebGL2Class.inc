@@ -29,7 +29,7 @@ WebGL2:MaxMesh    EQUATE(256)                                ! scene mesh capaci
 WebGL2:MaxLight   EQUATE(8)                                  ! point-light capacity (matches the shader)
 
 WebGL2:External   EQUATE(0)                                  ! DisplayMode: open the default browser
-WebGL2:Embedded   EQUATE(1)                                  ! DisplayMode: render inside a Clarion window (WebView2)
+WebGL2:Embedded   EQUATE(1)                                  ! DisplayMode: render inside a Clarion window (docked Edge overlay)
 
 ! mesh type ids (also accepted as the strings used by the engine)
 WebGL2:Box        EQUATE(1)
@@ -274,18 +274,19 @@ Rad2Deg           PROCEDURE(REAL pRad),REAL
 SaveHtml          PROCEDURE(STRING pFilename),BYTE,PROC      ! write the scene + engine to an .html file; 1 = ok
 Show              PROCEDURE(),BYTE,PROC                      ! save to a temp .html and launch the default browser
 ShowFile          PROCEDURE(STRING pFilename),BYTE,PROC      ! save to pFilename and launch it
-! ---- embedded display (a borderless Edge window docked into a Clarion window)
+! ---- embedded display (a borderless Edge OVERLAY owned by a Clarion window) --
 !      Pure Win32 (user32) - no DLL, no extra dependency. Renders real WebGL2 by
-!      re-parenting a separate-process "msedge --app" window, so Chromium can't
-!      re-enter Clarion's event loop. Pass the host window's handle (0 = use the
-!      active Clarion window).
-ShowEmbedded      PROCEDURE(ULONG pHostHwnd),BYTE,PROC       ! write the page + dock an Edge view into pHostHwnd
+!      positioning a separate-process "msedge --app" window as an OWNED top-level
+!      overlay over the host (so it keeps native mouse + keyboard); it is a
+!      frameless, non-resizable WS_POPUP sized to exactly the host or a control.
+!      Pass the host window's handle (0 = use the active Clarion window).
+ShowEmbedded      PROCEDURE(ULONG pHostHwnd),BYTE,PROC       ! write the page + show the overlay over pHostHwnd
 SetEmbedControl   PROCEDURE(SIGNED pFeq)                     ! confine the view to a control (e.g. an IMAGE); 0 = whole window
-EmbedFit          PROCEDURE(),BYTE,PROC                      ! re-fit the view to the host/control (call on EVENT:Sized)
-EmbedSetBounds    PROCEDURE(LONG pX,LONG pY,LONG pW,LONG pH),BYTE,PROC ! place the view at a pixel rect in the host
-EmbedReady        PROCEDURE(),BYTE                           ! 1 once the docked view exists
-EmbedFocus        PROCEDURE()                                ! give the docked view keyboard/mouse focus (so drag/R/space work)
-EmbedClose        PROCEDURE()                                ! close the docked view (call on window close)
+EmbedFit          PROCEDURE(),BYTE,PROC                      ! re-fit the overlay (call on EVENT:Sized AND EVENT:Moved)
+EmbedSetBounds    PROCEDURE(LONG pX,LONG pY,LONG pW,LONG pH),BYTE,PROC ! place the overlay at explicit screen pixels
+EmbedReady        PROCEDURE(),BYTE                           ! 1 once the overlay exists
+EmbedFocus        PROCEDURE()                                ! bring the overlay to the foreground (hand it the keyboard)
+EmbedClose        PROCEDURE()                                ! close the overlay (call on window close)
 ! ---- internal --------------------------------------------------------------
 PlaceModel        PROCEDURE(LONG pStart,REAL pOX,REAL pOY,REAL pOZ,REAL pScale) ! offset+scale meshes pStart..end
 ClToRGB           PROCEDURE(LONG pClarionColor,*REAL pR,*REAL pG,*REAL pB) ! 0xBBGGRR -> 0..1 rgb

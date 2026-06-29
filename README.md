@@ -411,8 +411,9 @@ solids, a 120-cube random field, a material matrix, point-light and fog demos, a
 orbits are placed with the class's own `Vec3` maths, a Fibonacci sphere, a "mega" scene, and a
 **Vec3/Mat4 self-test**). Both build with their shipped `.cwproj`. Copy `WebGL2Class.inc` + `WebGL2Class.clw` (**ANSI, CRLF**) to the redirection path, and
 ship **`my3D.engine.js`** beside the compiled `.exe` (it is read at run time and inlined into each page).
-Full programmer's documentation — every method, property and prompt — is in
-[`docs/my3D-template.html`](docs/my3D-template.html).
+Full programmer's documentation — a guided tour in [`docs/my3D-template.html`](docs/my3D-template.html), and
+the **exhaustive per‑method/per‑property API reference with example code for each** in
+[`docs/my3D-reference.html`](docs/my3D-reference.html).
 
 ## Install
 

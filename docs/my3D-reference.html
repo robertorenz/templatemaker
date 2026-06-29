@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebGL2Class — Complete Programmer's Reference (my3D)</title>
+<style>
+  :root{
+    --blue:#0A66C2; --blue-d:#084d93; --navy:#0E1A2B; --navy-2:#16263c;
+    --ink:#22303f; --muted:#6b7785; --line:#e3e8ef; --bg:#f5f7fa;
+    --card:#ffffff; --green:#1e7c5a; --amber:#9a6a12; --amber-bg:#fff7e8;
+    --green-bg:#eef8f3; --blue-bg:#eef4fc; --red-bg:#fcecec; --red:#b23a2e;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:15px/1.65 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg)}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:flex;min-height:100vh}
+  nav{width:300px;flex:0 0 300px;background:linear-gradient(180deg,var(--navy),var(--navy-2));
+    color:#cdd8e6;position:sticky;top:0;height:100vh;overflow-y:auto;padding:20px 0}
+  nav .brand{padding:0 20px 14px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:8px}
+  nav .brand h1{font-size:15px;margin:0;color:#fff} nav .brand span{font-size:12px;color:#8aa0bb}
+  nav a{display:block;color:#b9c7d8;padding:5px 20px;font-size:13px;border-left:3px solid transparent}
+  nav a:hover{background:rgba(255,255,255,.05);color:#fff;text-decoration:none}
+  nav a.h2{padding-left:30px;font-size:12.5px;color:#9fb2c8}
+  nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#6e85a1;
+    padding:12px 20px 3px;font-weight:700}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(120deg,#0c2a4d,var(--blue));color:#fff;padding:40px 52px 32px}
+  header.hero h1{margin:0 0 6px;font-size:28px;letter-spacing:-.3px}
+  header.hero p{margin:0;font-size:15px;color:#dbe8f8;max-width:820px}
+  header.hero .pill{display:inline-block;margin-top:14px;background:rgba(255,255,255,.16);
+    padding:4px 12px;border-radius:20px;font-size:12.5px}
+  .body{padding:14px 52px 90px;max-width:980px}
+  section{padding:18px 0;border-bottom:1px solid var(--line)} section:last-child{border-bottom:none}
+  h2{font-size:21px;margin:16px 0 8px;color:var(--navy);scroll-margin-top:14px}
+  h3{font-size:15px;margin:18px 0 4px;color:var(--blue-d)}
+  p{margin:8px 0} ul,ol{margin:8px 0;padding-left:22px} li{margin:3px 0}
+  code,kbd,pre{font-family:"Cascadia Code",Consolas,monospace}
+  code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:12.5px;color:#1d3b5e}
+  kbd{background:#1d2a3a;color:#e7eef7;padding:2px 7px;border-radius:5px;font-size:12px;border:1px solid #324558}
+  pre{background:#0f1d2e;color:#dbe6f2;padding:13px 16px;border-radius:9px;overflow:auto;
+    font-size:12.5px;line-height:1.5;margin:8px 0}
+  pre .c{color:#7fa6c9} pre .k{color:#79c0ff} pre .s{color:#7ee0b8} pre .t{color:#ffd591}
+  .callout{border-radius:8px;padding:11px 15px;margin:13px 0;font-size:13.5px;border:1px solid}
+  .tip{background:var(--green-bg);border-color:#bfe3d3;color:#155}
+  .note{background:var(--blue-bg);border-color:#c5dcf6;color:#13456f}
+  .warn{background:var(--amber-bg);border-color:#ecd9a6;color:#6f5210}
+  .callout b{display:block;margin-bottom:2px}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13px}
+  th,td{text-align:left;padding:7px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f0f4f9;color:var(--navy);font-weight:600}
+  tr:hover td{background:#fafcff}
+  td code{white-space:nowrap}
+  .lead{font-size:15.5px;color:#3a4756}
+  footer{padding:22px 52px;color:var(--muted);font-size:13px}
+  .top{font-size:12px;color:var(--muted);float:right}
+  /* method entry */
+  .m{border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:8px;
+     padding:11px 15px;margin:11px 0;background:#fff}
+  .m .sig{font-family:"Cascadia Code",Consolas,monospace;font-size:13px;color:#0b2f56;
+     font-weight:600;display:block;margin-bottom:3px}
+  .m .ret{color:var(--green);font-weight:600}
+  .m p{margin:5px 0;font-size:13.5px}
+  .m pre{margin:7px 0 2px}
+  .anchor{scroll-margin-top:12px}
+  .twocol{column-count:2;column-gap:26px} .twocol a{display:block;font-size:12.5px;padding:1px 0;break-inside:avoid}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><h1>WebGL2Class</h1><span>Complete API Reference · my3D</span></div>
+    <a href="#over">Overview</a>
+    <a href="#model">Scene model &amp; units</a>
+    <a href="#equates">Constants (EQUATEs)</a>
+    <div class="grp">Methods</div>
+    <a href="#m-life" class="h2">Lifecycle</a>
+    <a href="#m-page" class="h2">Page, canvas &amp; view</a>
+    <a href="#m-bg" class="h2">Background &amp; fog</a>
+    <a href="#m-cam" class="h2">Camera</a>
+    <a href="#m-light" class="h2">Lighting</a>
+    <a href="#m-chrome" class="h2">Grid, axes, wireframe</a>
+    <a href="#m-mat" class="h2">Material state</a>
+    <a href="#m-mesh" class="h2">Mesh primitives</a>
+    <a href="#m-models" class="h2">Composite models</a>
+    <a href="#m-xform" class="h2">Per-mesh transforms</a>
+    <a href="#m-vec" class="h2">Vec3 math</a>
+    <a href="#m-mat4" class="h2">Mat4 math</a>
+    <a href="#m-out" class="h2">Output</a>
+    <a href="#m-embed" class="h2">Embedded display</a>
+    <a href="#m-internal" class="h2">Internal helpers</a>
+    <div class="grp">Reference</div>
+    <a href="#props" class="h2">All properties</a>
+    <a href="#recipes" class="h2">Recipes</a>
+  </nav>
+  <main>
+    <header class="hero">
+      <h1>WebGL2Class — Complete Programmer's Reference</h1>
+      <p>Every property and every method of the my3D 3D-scene class, each with example code. The class builds
+        a scene through a fluent API and emits a self-contained WebGL2 page that it opens in the browser or
+        docks inside a Clarion window.</p>
+      <span class="pill">Pure Clarion · no DLL · no COM · companion file my3D.engine.js</span>
+    </header>
+    <div class="body">
+
+    <section id="over">
+      <h2>Overview <a class="top" href="#">top ↑</a></h2>
+      <p class="lead">Declare one object per scene. Configure it (camera, lights, materials, meshes), then
+        <code>Show()</code> (browser) or <code>ShowEmbedded()</code> (in a Clarion window).</p>
+      <pre><span class="k">INCLUDE</span>(<span class="s">'WebGL2Class.INC'</span>),ONCE      <span class="c">! once, globally (or via the my3D template)</span>
+
+Scene   WebGL2Class                  <span class="c">! Construct() runs automatically -&gt; sensible defaults</span>
+
+  <span class="k">CODE</span>
+  Scene.SetCamera(7, 6, 11)
+  Scene.SetDirLight(-1,-2,-1.3, 1,0.97,0.9, 1.1)
+  Scene.AddPointLight(4,3,4, 1,0.4,0.2, 1.2, 18)
+  Scene.SetColor(0.20,0.55,0.95);  Scene.SetSpin(0,0.6,0)
+  Scene.AddCube(1.4)
+  Scene.Show()                       <span class="c">! writes my3D_preview.html and launches the browser</span></pre>
+      <div class="callout warn"><b>Ship two files at run time</b>
+        Compile <code>WebGL2Class.inc</code> + <code>WebGL2Class.clw</code> into your app, and ship
+        <b><code>my3D.engine.js</code> beside the <code>.exe</code></b> — it is read at run time and inlined
+        into every page, so the renderer and the class must be the <i>same version</i>. (If a new flag like a
+        view-option seems ignored, your engine.js is stale.)</div>
+      <h3>Conventions used below</h3>
+      <ul>
+        <li>All colour channels are <b>REAL 0.0–1.0</b>. Methods ending <code>…Cl</code> take a Clarion
+          <code>COLOR</code> (0xBBGGRR) instead and convert it for you.</li>
+        <li>Rotations/spins are in <b>radians</b> (use <code>Deg2Rad()</code> if you think in degrees).</li>
+        <li>Mesh adders return the new mesh's <b>1-based index</b> (<code>LONG</code>); they are
+          <code>,PROC</code> so you may also call them as a statement.</li>
+      </ul>
+    </section>
+
+    <section id="model">
+      <h2>Scene model &amp; units <a class="top" href="#">top ↑</a></h2>
+      <ul>
+        <li><b>Right-handed axes:</b> +X right, +Y up, +Z toward the camera. The grid/ground sits on
+          Y=0; the axis helper marks +X (red), +Y (green), +Z (blue).</li>
+        <li><b>Units</b> are arbitrary world units — keep meshes in roughly −10..10 and the camera a similar
+          distance out.</li>
+        <li><b>Capacity:</b> 256 meshes (<code>WebGL2:MaxMesh</code>), 8 point lights
+          (<code>WebGL2:MaxLight</code>). Adders past the cap return 0.</li>
+        <li><b>The "current material"</b> (colour, metalness, roughness, opacity, emissive, spin) is object
+          state: set it, then the next <code>Add…</code> captures it.</li>
+      </ul>
+    </section>
+
+    <section id="equates">
+      <h2>Constants (EQUATEs) <a class="top" href="#">top ↑</a></h2>
+      <table>
+        <tr><th>EQUATE</th><th>Value</th><th>Use</th></tr>
+        <tr><td><code>WebGL2:MaxMesh</code></td><td>256</td><td>mesh capacity</td></tr>
+        <tr><td><code>WebGL2:MaxLight</code></td><td>8</td><td>point-light capacity (matches the shader)</td></tr>
+        <tr><td><code>WebGL2:External</code></td><td>0</td><td><code>DisplayMode</code>: open the default browser</td></tr>
+        <tr><td><code>WebGL2:Embedded</code></td><td>1</td><td><code>DisplayMode</code>: docked-Edge overlay in a Clarion window</td></tr>
+        <tr><td><code>WebGL2:Box … WebGL2:Dodeca</code></td><td>1…11</td><td>mesh-type ids (the engine also accepts the type strings)</td></tr>
+      </table>
+    </section>
+
+    <!-- ============================ METHODS ============================ -->
+    <section id="m-life">
+      <h2>Lifecycle <a class="top" href="#">top ↑</a></h2>
+
+      <div class="m anchor" id="Construct">
+        <code class="sig">Construct()</code>
+        <p>Runs automatically when the object is declared. Sets the engine file (<code>my3D.engine.js</code>),
+          the Edge path, the title-bar inset, then calls <code>Reset()</code>.</p>
+        <pre>Scene   WebGL2Class      <span class="c">! that's it - Construct() already configured defaults</span></pre>
+      </div>
+
+      <div class="m anchor" id="Reset">
+        <code class="sig">Reset()</code>
+        <p>Returns every setting to its default <b>and empties the scene</b>. Call it at the start of each
+          scene build (the template and all examples do).</p>
+        <pre>Scene.Reset()
+Scene.SetTitle('Frame 2')
+<span class="c">! ... build the next scene ...</span></pre>
+      </div>
+
+      <div class="m anchor" id="ClearScene">
+        <code class="sig">ClearScene()</code>
+        <p>Drops all meshes and point lights but <b>keeps</b> camera, lights, colours, grid, etc. Handy for
+          re-drawing a changing dataset without re-configuring the view.</p>
+        <pre>Scene.ClearScene()
+LOOP i = 1 TO Records(Orders)
+  Scene.AddCube(0.5)
+END
+Scene.Show()</pre>
+      </div>
+    </section>
+
+    <section id="m-page">
+      <h2>Page, canvas &amp; view options <a class="top" href="#">top ↑</a></h2>
+
+      <div class="m anchor" id="SetTitle">
+        <code class="sig">SetTitle(STRING pTitle)</code>
+        <p>Sets the browser tab title and the on-screen HUD heading.</p>
+        <pre>Scene.SetTitle('Warehouse layout')</pre>
+      </div>
+      <div class="m anchor" id="SetCanvas">
+        <code class="sig">SetCanvas(LONG pW, LONG pH)</code>
+        <p>Pixel size of the drawing canvas (also the launch size of the embedded window). Default 1000×640.</p>
+        <pre>Scene.SetCanvas(1280, 720)</pre>
+      </div>
+      <div class="m anchor" id="SetAntialias">
+        <code class="sig">SetAntialias(BYTE pOn)</code>
+        <p>Smooth edges on/off (default on). Turn off for a few extra fps on weak GPUs.</p>
+        <pre>Scene.SetAntialias(1)</pre>
+      </div>
+      <div class="m anchor" id="SetHud">
+        <code class="sig">SetHud(BYTE pOn)</code>
+        <p>Show/hide the on-screen info box (title, mesh &amp; light counts, the drag/wheel/R hint). Default on.</p>
+        <pre>Scene.SetHud(0)      <span class="c">! a clean view with no overlay text</span></pre>
+      </div>
+      <div class="m anchor" id="SetFps">
+        <code class="sig">SetFps(BYTE pOn)</code>
+        <p>Show/hide the fps counter in the corner. Default on.</p>
+        <pre>Scene.SetFps(0)</pre>
+      </div>
+    </section>
+
+    <section id="m-bg">
+      <h2>Background &amp; fog <a class="top" href="#">top ↑</a></h2>
+
+      <div class="m anchor" id="SetBackground">
+        <code class="sig">SetBackground(REAL pR, REAL pG, REAL pB)</code>
+        <p>Solid background colour (0..1).</p>
+        <pre>Scene.SetBackground(0.02, 0.03, 0.06)   <span class="c">! near-black navy</span></pre>
+      </div>
+      <div class="m anchor" id="SetBackgroundGradient">
+        <code class="sig">SetBackgroundGradient(REAL tR,tG,tB, REAL bR,bG,bB)</code>
+        <p>Vertical gradient from a top colour to a bottom colour. (Default background is a gradient.)</p>
+        <pre>Scene.SetBackgroundGradient(0.06,0.09,0.15, 0.01,0.02,0.05)</pre>
+      </div>
+      <div class="m anchor" id="SetFog">
+        <code class="sig">SetFog(BYTE pOn, REAL pR,pG,pB, REAL pNear, REAL pFar)</code>
+        <p>Distance fog: meshes fade to the fog colour between <code>pNear</code> and <code>pFar</code>.</p>
+        <pre>Scene.SetFog(1, 0.02,0.03,0.06, 16, 40)</pre>
+      </div>
+      <div class="m anchor" id="SetSolidBackgroundCl">
+        <code class="sig">SetSolidBackgroundCl(LONG pClarionColor)</code>
+        <p>Solid background from a Clarion <code>COLOR</code>.</p>
+        <pre>Scene.SetSolidBackgroundCl(0F0A0AH)</pre>
+      </div>
+      <div class="m anchor" id="SetBackgroundGradientCl">
+        <code class="sig">SetBackgroundGradientCl(LONG pTopColor, LONG pBotColor)</code>
+        <p>Gradient from two Clarion colours.</p>
+        <pre>Scene.SetBackgroundGradientCl(00140906H, 00050201H)</pre>
+      </div>
+      <div class="m anchor" id="SetFogCl">
+        <code class="sig">SetFogCl(BYTE pOn, LONG pClarionColor, REAL pNear, REAL pFar)</code>
+        <p>Fog with a Clarion colour.</p>
+        <pre>Scene.SetFogCl(1, 00060302H, 14, 38)</pre>
+      </div>
+    </section>
+
+    <section id="m-cam">
+      <h2>Camera <a class="top" href="#">top ↑</a></h2>
+
+      <div class="m anchor" id="SetCamera">
+        <code class="sig">SetCamera(REAL pX, REAL pY, REAL pZ)</code>
+        <p>Eye position in world units. Default (7, 6, 11).</p>
+        <pre>Scene.SetCamera(0, 8, 14)</pre>
+      </div>
+      <div class="m anchor" id="LookAt">
+        <code class="sig">LookAt(REAL pX, REAL pY, REAL pZ)</code>
+        <p>The point the camera aims at (and orbits around). Default (0, 0.4, 0).</p>
+        <pre>Scene.LookAt(0, 1, 0)</pre>
+      </div>
+      <div class="m anchor" id="SetFOV">
+        <code class="sig">SetFOV(REAL pDeg)</code>
+        <p>Vertical field of view in degrees (1–179). Default 50. Smaller = more "zoomed/telephoto".</p>
+        <pre>Scene.SetFOV(38)</pre>
+      </div>
+      <div class="m anchor" id="SetClip">
+        <code class="sig">SetClip(REAL pNear, REAL pFar)</code>
+        <p>Near/far clip planes. Default 0.1 / 300.</p>
+        <pre>Scene.SetClip(0.1, 500)</pre>
+      </div>
+      <div class="m anchor" id="OrbitCamera">
+        <code class="sig">OrbitCamera(BYTE pOn, REAL pSpeed)</code>
+        <p>Auto-orbit turntable on/off and speed (radians/sec). Default on at 0.3. A click/drag in the view
+          stops it.</p>
+        <pre>Scene.OrbitCamera(1, 0.2)
+Scene.OrbitCamera(0, 0)        <span class="c">! static view</span></pre>
+      </div>
+    </section>
+
+    <section id="m-light">
+      <h2>Lighting <a class="top" href="#">top ↑</a></h2>
+
+      <div class="m anchor" id="SetAmbient">
+        <code class="sig">SetAmbient(REAL pR, REAL pG, REAL pB)</code>
+        <p>Flat fill light on everything. Default (0.18, 0.20, 0.26).</p>
+        <pre>Scene.SetAmbient(0.10, 0.11, 0.16)   <span class="c">! moodier</span></pre>
+      </div>
+      <div class="m anchor" id="SetDirLight">
+        <code class="sig">SetDirLight(REAL dx,dy,dz, REAL r,g,b, REAL pIntensity)</code>
+        <p>The single directional "key" light: a direction vector, a colour, and an intensity.</p>
+        <pre>Scene.SetDirLight(-1,-2,-1.3, 1,0.97,0.9, 1.1)</pre>
+      </div>
+      <div class="m anchor" id="AddPointLight">
+        <code class="sig">AddPointLight(REAL x,y,z, REAL r,g,b, REAL pIntensity, REAL pRange)<span class="ret"> , LONG</span></code>
+        <p>Adds a coloured point light (up to 8). Attenuates to zero at <code>pRange</code>. Returns its index
+          (0 if full).</p>
+        <pre>Scene.AddPointLight(4, 3.5, 4,  1.0,0.45,0.25, 1.2, 18)   <span class="c">! warm</span>
+Scene.AddPointLight(-4, 3, -3,  0.25,0.55,1.0, 1.1, 18)  <span class="c">! cool</span></pre>
+      </div>
+      <div class="m anchor" id="SetAmbientCl">
+        <code class="sig">SetAmbientCl(LONG pClarionColor)</code>
+        <pre>Scene.SetAmbientCl(002E2A24H)</pre>
+      </div>
+      <div class="m anchor" id="SetDirLightCl">
+        <code class="sig">SetDirLightCl(REAL dx,dy,dz, LONG pClarionColor, REAL pIntensity)</code>
+        <pre>Scene.SetDirLightCl(-1,-2,-1.3, COLOR:White, 1.05)</pre>
+      </div>
+      <div class="m anchor" id="AddPointLightCl">
+        <code class="sig">AddPointLightCl(REAL x,y,z, LONG pClarionColor, REAL pIntensity, REAL pRange)<span class="ret"> , LONG</span></code>
+        <pre>Scene.AddPointLightCl(4,3,4, COLOR:Orange, 1.2, 18)</pre>
+      </div>
+      <div class="m anchor" id="ClearLights">
+        <code class="sig">ClearLights()</code>
+        <p>Removes all point lights (the ambient + directional key light remain).</p>
+        <pre>Scene.ClearLights()</pre>
+      </div>
+    </section>
+
+    <section id="m-chrome">
+      <h2>Grid, axes &amp; wireframe <a class="top" href="#">top ↑</a></h2>
+
+      <div class="m anchor" id="ShowGrid">
+        <code class="sig">ShowGrid(BYTE pOn, REAL pSize, LONG pDiv, REAL pR,pG,pB)</code>
+        <p>Ground grid: on/off, total size, number of divisions, colour. Default on, 20, 20.</p>
+        <pre>Scene.ShowGrid(1, 24, 24, 0.13,0.16,0.22)
+Scene.ShowGrid(0, 0, 0, 0,0,0)        <span class="c">! no grid</span></pre>
+      </div>
+      <div class="m anchor" id="ShowGridCl">
+        <code class="sig">ShowGridCl(BYTE pOn, REAL pSize, LONG pDiv, LONG pClarionColor)</code>
+        <pre>Scene.ShowGridCl(1, 20, 20, 00382716H)</pre>
+      </div>
+      <div class="m anchor" id="ShowAxes">
+        <code class="sig">ShowAxes(BYTE pOn, REAL pSize)</code>
+        <p>The red/green/blue X/Y/Z axis helper. Default on, size 3.</p>
+        <pre>Scene.ShowAxes(1, 3)</pre>
+      </div>
+      <div class="m anchor" id="SetWireframe">
+        <code class="sig">SetWireframe(BYTE pOn)</code>
+        <p>Draw <b>all</b> meshes as wireframe. (Per-mesh wireframe is captured at <code>Add…</code> time from
+          this flag.)</p>
+        <pre>Scene.SetWireframe(1)</pre>
+      </div>
+    </section>
+
+    <section id="m-mat">
+      <h2>Material state (applies to the next Add…) <a class="top" href="#">top ↑</a></h2>
+      <p>These set object state; the next <code>Add…</code> captures it. Change and add again for the next mesh.</p>
+
+      <div class="m anchor" id="SetColor">
+        <code class="sig">SetColor(REAL pR, REAL pG, REAL pB)</code>
+        <pre>Scene.SetColor(0.20, 0.55, 0.95)</pre>
+      </div>
+      <div class="m anchor" id="SetColorCl">
+        <code class="sig">SetColorCl(LONG pClarionColor)</code>
+        <p>Colour from a Clarion <code>COLOR</code> (0xBBGGRR → 0..1 rgb).</p>
+        <pre>Scene.SetColorCl(COLOR:Red)
+Scene.SetColorCl(0F08C33H)</pre>
+      </div>
+      <div class="m anchor" id="SetEmissive">
+        <code class="sig">SetEmissive(REAL pR, REAL pG, REAL pB)</code>
+        <p>Self-illumination (glow) that ignores lighting. (0,0,0) = none.</p>
+        <pre>Scene.SetEmissive(1.0, 0.6, 0.1)    <span class="c">! glowing</span>
+<span class="c">! ... add the glowing mesh ...</span>
+Scene.SetEmissive(0, 0, 0)          <span class="c">! turn glow off for later meshes</span></pre>
+      </div>
+      <div class="m anchor" id="SetEmissiveCl">
+        <code class="sig">SetEmissiveCl(LONG pClarionColor)</code>
+        <pre>Scene.SetEmissiveCl(COLOR:Lime)</pre>
+      </div>
+      <div class="m anchor" id="SetMaterial">
+        <code class="sig">SetMaterial(REAL pMetalness, REAL pRoughness)</code>
+        <p>Both 0..1. High metalness = mirror-like tinted highlights; low roughness = sharp/shiny.</p>
+        <pre>Scene.SetMaterial(0.7, 0.2)    <span class="c">! shiny metal</span>
+Scene.SetMaterial(0.0, 0.9)    <span class="c">! matte</span></pre>
+      </div>
+      <div class="m anchor" id="SetOpacity">
+        <code class="sig">SetOpacity(REAL pOpacity)</code>
+        <p>1 = opaque, &lt;1 = translucent (alpha-blended).</p>
+        <pre>Scene.SetOpacity(0.45)
+<span class="c">! ... add glass spheres ...</span>
+Scene.SetOpacity(1)</pre>
+      </div>
+      <div class="m anchor" id="SetSpin">
+        <code class="sig">SetSpin(REAL pSX, REAL pSY, REAL pSZ)</code>
+        <p>Per-frame auto-rotation (radians/sec on each axis) for the next mesh.</p>
+        <pre>Scene.SetSpin(0, 0.6, 0)       <span class="c">! gentle Y spin</span></pre>
+      </div>
+      <div class="m anchor" id="ResetMaterial">
+        <code class="sig">ResetMaterial()</code>
+        <p>Current colour/material/opacity/emissive/spin back to neutral (light grey, no spin).</p>
+        <pre>Scene.ResetMaterial()</pre>
+      </div>
+    </section>
+
+    <section id="m-mesh">
+      <h2>Mesh primitives <a class="top" href="#">top ↑</a></h2>
+      <p>Each returns the new 1-based mesh index. Set the material first; position/rotate after with the
+        <a href="#m-xform">transform</a> methods.</p>
+
+      <div class="m anchor" id="AddMesh">
+        <code class="sig">AddMesh(STRING pType, REAL p1,p2,p3,p4,p5,p6)<span class="ret"> , LONG</span></code>
+        <p>Generic adder. <code>pType</code> is one of
+          <code>'box' 'sphere' 'cylinder' 'cone' 'plane' 'torus' 'torusknot' 'tetra' 'octa' 'icosa' 'dodeca'</code>;
+          the params mean what the matching <code>Add…</code> takes. All the typed adders below call this.</p>
+        <pre>M = Scene.AddMesh('sphere', 0.8, 24, 0,0,0,0)</pre>
+      </div>
+      <div class="m anchor" id="AddBox">
+        <code class="sig">AddBox(REAL pW, REAL pH, REAL pD)<span class="ret"> , LONG</span></code>
+        <pre>M = Scene.AddBox(2, 1, 0.5)</pre>
+      </div>
+      <div class="m anchor" id="AddCube">
+        <code class="sig">AddCube(REAL pSize)<span class="ret"> , LONG</span></code>
+        <pre>Scene.SetColor(0.2,0.55,0.95)
+M = Scene.AddCube(1.4);  Scene.SetPos(M, 0, 0.7, 0)</pre>
+      </div>
+      <div class="m anchor" id="AddSphere">
+        <code class="sig">AddSphere(REAL pRadius, LONG pSegments)<span class="ret"> , LONG</span></code>
+        <p>Segments ≈ smoothness (24 is a good default).</p>
+        <pre>M = Scene.AddSphere(0.85, 28)</pre>
+      </div>
+      <div class="m anchor" id="AddCylinder">
+        <code class="sig">AddCylinder(REAL pRTop, REAL pRBot, REAL pHeight, LONG pSeg)<span class="ret"> , LONG</span></code>
+        <p>Different top/bottom radii give a cone/funnel; equal radii give a tube.</p>
+        <pre>M = Scene.AddCylinder(0.5, 0.5, 1.5, 32)</pre>
+      </div>
+      <div class="m anchor" id="AddCone">
+        <code class="sig">AddCone(REAL pRadius, REAL pHeight, LONG pSeg)<span class="ret"> , LONG</span></code>
+        <p>Use <code>pSeg = 4</code> for a square pyramid.</p>
+        <pre>M = Scene.AddCone(0.7, 1.5, 32)
+M = Scene.AddCone(2.6, 1.8, 4);  Scene.SetRot(M, 0, 0.7854, 0)  <span class="c">! pyramid</span></pre>
+      </div>
+      <div class="m anchor" id="AddPlane">
+        <code class="sig">AddPlane(REAL pW, REAL pD)<span class="ret"> , LONG</span></code>
+        <p>A flat quad on Y=0 (a floor).</p>
+        <pre>Scene.SetColor(0.10,0.12,0.16); Scene.SetMaterial(0,0.9)
+M = Scene.AddPlane(26, 26)</pre>
+      </div>
+      <div class="m anchor" id="AddTorus">
+        <code class="sig">AddTorus(REAL pR, REAL pTube, LONG pRadSeg, LONG pTubeSeg)<span class="ret"> , LONG</span></code>
+        <pre>M = Scene.AddTorus(0.7, 0.26, 28, 18)</pre>
+      </div>
+      <div class="m anchor" id="AddTorusKnot">
+        <code class="sig">AddTorusKnot(REAL pR, REAL pTube, LONG pP, LONG pQ)<span class="ret"> , LONG</span></code>
+        <p><code>pP, pQ</code> = winding numbers (try 2, 3).</p>
+        <pre>M = Scene.AddTorusKnot(0.7, 0.2, 2, 3)</pre>
+      </div>
+      <div class="m anchor" id="AddPlatonic">
+        <code class="sig">AddTetra(r) · AddOcta(r) · AddIcosa(r) · AddDodeca(r)<span class="ret"> , LONG</span></code>
+        <p>The four other Platonic solids; <code>r</code> is the circumscribed radius.</p>
+        <pre>M = Scene.AddIcosa(0.9)
+M = Scene.AddDodeca(0.9)</pre>
+      </div>
+    </section>
+
+    <section id="m-models">
+      <h2>Composite models <a class="top" href="#">top ↑</a></h2>
+      <p>Ready-made objects assembled from many primitives in one call. The first three params are the
+        <b>ground origin</b> the model sits on; the fourth is a <b>uniform scale</b>. Each returns the index of
+        the model's first mesh.</p>
+      <div class="m anchor" id="AddModels">
+        <code class="sig">AddCar(x,y,z,scale) · AddAirplane(…) · AddRocket(…) · AddWindTurbine(…) · AddRobot(…)<span class="ret"> , LONG</span></code>
+        <code class="sig">AddTableSet(…) · AddHouse(…) · AddFoundation(…) · AddSkyscraper(…) · AddTrees(x,y,z,scale)<span class="ret"> , LONG</span></code>
+        <pre><span class="c">! a little town - one call per object</span>
+Scene.AddHouse(-6, 0, 4, 0.9)
+Scene.AddCar(-5, 0, 8, 0.9)
+Scene.AddSkyscraper(7, 0, -6, 0.7)
+Scene.AddAirplane(2, 6, -2, 0.7)     <span class="c">! y=6 -&gt; flying overhead</span></pre>
+        <p>These are just method bodies that call the primitive <code>Add…</code> functions then
+          <code>PlaceModel</code> to offset+scale the batch — copy the pattern in
+          <code>examples/my3D/My3DModels.clw</code> to build your own.</p>
+      </div>
+    </section>
+
+    <section id="m-xform">
+      <h2>Per-mesh transforms <a class="top" href="#">top ↑</a></h2>
+      <p>By 1-based index (a no-op if out of range, so nesting an adder is safe).</p>
+
+      <div class="m anchor" id="SetPos">
+        <code class="sig">SetPos(LONG pIdx, REAL pX, REAL pY, REAL pZ)</code>
+        <pre>M = Scene.AddCube(1)
+Scene.SetPos(M, -2, 0.5, 0)
+Scene.SetPos(Scene.AddSphere(0.6,24), 2, 0.6, 0)   <span class="c">! nested - also fine</span></pre>
+      </div>
+      <div class="m anchor" id="SetRot">
+        <code class="sig">SetRot(LONG pIdx, REAL pX, REAL pY, REAL pZ)</code>
+        <p>Fixed rotation in <b>radians</b> on each axis.</p>
+        <pre>Scene.SetRot(M, 1.5708, 0, 0)      <span class="c">! 90&deg; about X</span></pre>
+      </div>
+      <div class="m anchor" id="SetScale">
+        <code class="sig">SetScale(LONG pIdx, REAL pSX, REAL pSY, REAL pSZ)</code>
+        <pre>Scene.SetScale(M, 1.2, 0.7, 0.9)   <span class="c">! squash</span></pre>
+      </div>
+      <div class="m anchor" id="SetUniformScale">
+        <code class="sig">SetUniformScale(LONG pIdx, REAL pS)</code>
+        <pre>Scene.SetUniformScale(M, 1.5)</pre>
+      </div>
+      <div class="m anchor" id="SetMeshColor">
+        <code class="sig">SetMeshColor(LONG pIdx, REAL pR, REAL pG, REAL pB)</code>
+        <p>Recolour an existing mesh (vs the "current colour" used at add time).</p>
+        <pre>Scene.SetMeshColor(M, 0.9, 0.2, 0.2)</pre>
+      </div>
+      <div class="m anchor" id="SpinMesh">
+        <code class="sig">SpinMesh(LONG pIdx, REAL pSX, REAL pSY, REAL pSZ)</code>
+        <pre>Scene.SpinMesh(M, 0, 0.8, 0)</pre>
+      </div>
+      <div class="m anchor" id="MeshCount">
+        <code class="sig">MeshCount()<span class="ret"> , LONG</span></code>
+        <p>Index of the last-added mesh (= the current mesh total).</p>
+        <pre>Scene.AddCube(1)
+Scene.SetPos(Scene.MeshCount(), 0, 1, 0)</pre>
+      </div>
+    </section>
+
+    <section id="m-vec">
+      <h2>Vec3 math <a class="top" href="#">top ↑</a></h2>
+      <p>Real maths that run in Clarion. Scalar results are returned; vector results land in
+        <code>SELF.Rx / Ry / Rz</code>.</p>
+
+      <div class="m anchor" id="Vec3Length">
+        <code class="sig">Vec3Length(REAL x,y,z)<span class="ret"> , REAL</span></code>
+        <pre>d = Scene.Vec3Length(3, 4, 0)      <span class="c">! 5</span></pre>
+      </div>
+      <div class="m anchor" id="Vec3Distance">
+        <code class="sig">Vec3Distance(REAL x1,y1,z1, REAL x2,y2,z2)<span class="ret"> , REAL</span></code>
+        <pre>d = Scene.Vec3Distance(0,0,0, 1,2,2)   <span class="c">! 3</span></pre>
+      </div>
+      <div class="m anchor" id="Vec3Dot">
+        <code class="sig">Vec3Dot(REAL ax,ay,az, REAL bx,by,bz)<span class="ret"> , REAL</span></code>
+        <pre>k = Scene.Vec3Dot(1,2,3, 4,-5,6)   <span class="c">! 12</span></pre>
+      </div>
+      <div class="m anchor" id="Vec3AddSubScale">
+        <code class="sig">Vec3Add(…) · Vec3Sub(…) · Vec3Scale(REAL x,y,z, REAL s)</code>
+        <p>Result in <code>Rx,Ry,Rz</code>.</p>
+        <pre>Scene.Vec3Scale(COS(a), 0, SIN(a), radius)      <span class="c">! point on a circle</span>
+Scene.SetPos(Scene.AddSphere(0.4,24), Scene.Rx, Scene.Ry, Scene.Rz)</pre>
+      </div>
+      <div class="m anchor" id="Vec3Cross">
+        <code class="sig">Vec3Cross(REAL ax,ay,az, REAL bx,by,bz)</code>
+        <pre>Scene.Vec3Cross(1,0,0, 0,1,0)      <span class="c">! Rx,Ry,Rz = 0,0,1</span></pre>
+      </div>
+      <div class="m anchor" id="Vec3Normalize">
+        <code class="sig">Vec3Normalize(REAL x,y,z)</code>
+        <pre>Scene.Vec3Normalize(0, 3, 4)       <span class="c">! Rx,Ry,Rz length 1</span></pre>
+      </div>
+      <div class="m anchor" id="Vec3Lerp">
+        <code class="sig">Vec3Lerp(REAL ax,ay,az, REAL bx,by,bz, REAL pT)</code>
+        <p>Linear interpolate from A to B by t (0..1).</p>
+        <pre>Scene.Vec3Lerp(0,0,0, 10,0,0, 0.25)   <span class="c">! Rx,Ry,Rz = 2.5,0,0</span></pre>
+      </div>
+    </section>
+
+    <section id="m-mat4">
+      <h2>Mat4 math <a class="top" href="#">top ↑</a></h2>
+      <p>4×4 column-major matrices; results land in <code>SELF.Mat[1..16]</code>.</p>
+      <div class="m anchor" id="Mat4">
+        <code class="sig">Mat4Identity() · Mat4Translate(x,y,z) · Mat4Scale(x,y,z)</code>
+        <code class="sig">Mat4RotateX(rad) · Mat4RotateY(rad) · Mat4RotateZ(rad)</code>
+        <code class="sig">Mat4Perspective(fovDeg, aspect, near, far)</code>
+        <code class="sig">Mat4Multiply(a1 … a16)   <span class="c">! SELF.Mat := SELF.Mat &times; {a1..a16}</span></code>
+        <pre>Scene.Mat4Identity()
+Scene.Mat4Multiply(2,0,0,0, 0,2,0,0, 0,0,2,0, 0,0,0,1)   <span class="c">! Mat = scale(2)</span>
+Scene.Mat4Translate(2, 3, 4)        <span class="c">! Mat[13..15] = 2,3,4</span></pre>
+      </div>
+      <div class="m anchor" id="DegRad">
+        <code class="sig">Deg2Rad(REAL pDeg)<span class="ret"> , REAL</span> &nbsp; Rad2Deg(REAL pRad)<span class="ret"> , REAL</span></code>
+        <pre>Scene.SetRot(M, 0, Scene.Deg2Rad(45), 0)</pre>
+      </div>
+    </section>
+
+    <section id="m-out">
+      <h2>Output <a class="top" href="#">top ↑</a></h2>
+
+      <div class="m anchor" id="SaveHtml">
+        <code class="sig">SaveHtml(STRING pFilename)<span class="ret"> , BYTE</span></code>
+        <p>Writes the scene + inlined engine to a self-contained <code>.html</code>. Returns 1 on success;
+          sets <code>LastFile</code>.</p>
+        <pre>IF Scene.SaveHtml('report.html')
+  MESSAGE('Saved ' &amp; CLIP(Scene.LastFile))
+END</pre>
+      </div>
+      <div class="m anchor" id="Show">
+        <code class="sig">Show()<span class="ret"> , BYTE</span></code>
+        <p>Saves to <code>my3D_preview.html</code> in the current folder and opens it in the default browser.</p>
+        <pre>Scene.Show()</pre>
+      </div>
+      <div class="m anchor" id="ShowFile">
+        <code class="sig">ShowFile(STRING pFilename)<span class="ret"> , BYTE</span></code>
+        <p>Saves to your path and launches it.</p>
+        <pre>Scene.ShowFile('C:\temp\scene.html')</pre>
+      </div>
+    </section>
+
+    <section id="m-embed">
+      <h2>Embedded display (docked Edge overlay) <a class="top" href="#">top ↑</a></h2>
+      <p>Renders the scene <b>inside a Clarion window</b> by positioning a borderless Microsoft Edge
+        <code>--app</code> window as an <b>owned overlay</b> (a frameless, non-resizable top-level window owned
+        by your window), so it keeps full native mouse + keyboard. Needs Edge (Win10/11) and
+        <code>my3D.engine.js</code> beside the <code>.exe</code>.</p>
+
+      <div class="m anchor" id="ShowEmbedded">
+        <code class="sig">ShowEmbedded(ULONG pHostHwnd)<span class="ret"> , BYTE</span></code>
+        <p>Writes the page and shows the overlay over <code>pHostHwnd</code> (pass <code>0{PROP:Handle}</code>,
+          or 0 to use the active window). Call it on <code>EVENT:OpenWindow</code> so the window is sized first.</p>
+      </div>
+      <div class="m anchor" id="SetEmbedControl">
+        <code class="sig">SetEmbedControl(SIGNED pFeq)</code>
+        <p>Confine the overlay to a control's rectangle (an <code>IMAGE</code>/<code>REGION</code> placeholder);
+          0 = the whole window. Call it before <code>ShowEmbedded</code>.</p>
+      </div>
+      <div class="m anchor" id="EmbedFit">
+        <code class="sig">EmbedFit()<span class="ret"> , BYTE</span></code>
+        <p>Re-fit the overlay to the host/control. Call on <b>EVENT:Sized AND EVENT:Moved</b> so it tracks
+          the window.</p>
+      </div>
+      <div class="m anchor" id="EmbedExtras">
+        <code class="sig">EmbedSetBounds(x,y,w,h)<span class="ret"> , BYTE</span> · EmbedReady()<span class="ret"> , BYTE</span> · EmbedFocus() · EmbedClose()</code>
+        <p><code>EmbedSetBounds</code> places it at explicit screen pixels; <code>EmbedReady</code> is 1 once
+          shown; <code>EmbedFocus</code> hands it the keyboard; <code>EmbedClose</code> closes it (on
+          <code>EVENT:CloseWindow</code>).</p>
+      </div>
+      <pre><span class="c">! a window whose whole client area is the 3D view (or set a control first)</span>
+  Scene.SetEmbedControl(?View)             <span class="c">! optional: dock into an IMAGE control</span>
+  ACCEPT
+    CASE EVENT()
+    OF EVENT:OpenWindow ;  Scene.ShowEmbedded(0{PROP:Handle})
+    OF EVENT:Sized      ;  Scene.EmbedFit()
+    OF EVENT:Moved      ;  Scene.EmbedFit()
+    OF EVENT:CloseWindow;  Scene.EmbedClose()
+    END
+  END</pre>
+      <div class="callout note"><b>Properties you can tune</b>
+        <code>EdgeExe</code> (path to msedge.exe), <code>EmbedInset</code> (px shifted up to hide Edge's title
+        bar; default 33 — bump it at higher display scaling), and <code>DisplayMode</code>
+        (<code>WebGL2:External</code>/<code>WebGL2:Embedded</code>, set for you).</div>
+    </section>
+
+    <section id="m-internal">
+      <h2>Internal helpers <a class="top" href="#">top ↑</a></h2>
+      <p>Used by the class; you normally won't call these, but they're public so you can.</p>
+      <table>
+        <tr><th>Method</th><th>What it does</th></tr>
+        <tr><td><code>PlaceModel(start,ox,oy,oz,scale)</code></td><td>offset + scale meshes <code>start..end</code> (how the composite models place themselves)</td></tr>
+        <tr><td><code>ClToRGB(color, *r,*g,*b)</code></td><td>0xBBGGRR Clarion colour → three 0..1 reals</td></tr>
+        <tr><td><code>NumStr(REAL),STRING</code></td><td>compact, locale-safe JS number (no grouping commas, sign kept)</td></tr>
+        <tr><td><code>ColStr(r,g,b),STRING</code></td><td><code>"[r,g,b]"</code> for the scene JSON</td></tr>
+        <tr><td><code>JsEsc(STRING),STRING</code></td><td>escape <code>'</code> and <code>\</code> for a JS string</td></tr>
+        <tr><td><code>FindEngine(),STRING</code></td><td>locate <code>my3D.engine.js</code> on the redirection path</td></tr>
+        <tr><td><code>TempHtmlPath(),STRING</code></td><td>the scratch <code>my3D_preview.html</code> path</td></tr>
+        <tr><td><code>FileUrl(path),STRING</code></td><td>local path → <code>file:///</code> URL</td></tr>
+        <tr><td><code>ResolveHost(hwnd),LONG</code></td><td>a valid host HWND (falls back to the active/foreground window)</td></tr>
+        <tr><td><code>WriteLine(STRING)</code> / <code>EmitScene()</code></td><td>stream a line / write the <code>window.SCENE={…}</code> block</td></tr>
+      </table>
+    </section>
+
+    <!-- ============================ PROPERTIES ============================ -->
+    <section id="props">
+      <h2>All properties <a class="top" href="#">top ↑</a></h2>
+      <p>Everything the setters touch is a public field — read it, or poke it directly instead of calling a
+        setter. Defaults are set by <code>Construct()</code>/<code>Reset()</code>.</p>
+
+      <h3>Page, canvas &amp; view</h3>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Default</th><th>Notes</th></tr>
+        <tr><td><code>Title</code></td><td>CSTRING(128)</td><td>'my3D / WebGL2'</td><td>tab + HUD heading</td></tr>
+        <tr><td><code>CanvasW</code> / <code>CanvasH</code></td><td>LONG</td><td>1000 / 640</td><td>canvas px / embed launch size</td></tr>
+        <tr><td><code>Antialias</code></td><td>BYTE</td><td>1</td><td>smooth edges</td></tr>
+        <tr><td><code>ShowHud</code> / <code>ShowFps</code></td><td>BYTE</td><td>1 / 1</td><td>info box / fps counter</td></tr>
+        <tr><td><code>EngineFile</code></td><td>CSTRING(260)</td><td>'my3D.engine.js'</td><td>renderer file name/path</td></tr>
+        <tr><td><code>LastFile</code></td><td>CSTRING(260)</td><td>—</td><td>absolute path of the last page written</td></tr>
+      </table>
+
+      <h3>Background &amp; fog</h3>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Default</th></tr>
+        <tr><td><code>BgGradient</code></td><td>BYTE</td><td>1 (gradient)</td></tr>
+        <tr><td><code>BgR/BgG/BgB</code></td><td>REAL</td><td>0.02 / 0.03 / 0.06 (solid or gradient bottom)</td></tr>
+        <tr><td><code>BgTopR/BgTopG/BgTopB</code></td><td>REAL</td><td>0.06 / 0.09 / 0.15 (gradient top)</td></tr>
+        <tr><td><code>FogOn</code></td><td>BYTE</td><td>0</td></tr>
+        <tr><td><code>FogR/FogG/FogB</code></td><td>REAL</td><td>0.02 / 0.03 / 0.06</td></tr>
+        <tr><td><code>FogNear / FogFar</code></td><td>REAL</td><td>12 / 36</td></tr>
+      </table>
+
+      <h3>Camera</h3>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Default</th></tr>
+        <tr><td><code>CamX/CamY/CamZ</code></td><td>REAL</td><td>7 / 6 / 11</td></tr>
+        <tr><td><code>TgtX/TgtY/TgtZ</code></td><td>REAL</td><td>0 / 0.4 / 0</td></tr>
+        <tr><td><code>Fov</code></td><td>REAL</td><td>50</td></tr>
+        <tr><td><code>ClipNear / ClipFar</code></td><td>REAL</td><td>0.1 / 300</td></tr>
+        <tr><td><code>Orbit / OrbitSpeed</code></td><td>BYTE / REAL</td><td>1 / 0.3</td></tr>
+      </table>
+
+      <h3>Lighting</h3>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Default</th></tr>
+        <tr><td><code>AmbR/AmbG/AmbB</code></td><td>REAL</td><td>0.18 / 0.20 / 0.26</td></tr>
+        <tr><td><code>DirX/DirY/DirZ</code></td><td>REAL</td><td>-1 / -2 / -1.3 (direction)</td></tr>
+        <tr><td><code>DirR/DirG/DirB</code></td><td>REAL</td><td>1 / 0.97 / 0.90 (colour)</td></tr>
+        <tr><td><code>DirInt</code></td><td>REAL</td><td>1.05</td></tr>
+        <tr><td><code>NLight</code></td><td>LONG</td><td>0 (count; max 8)</td></tr>
+        <tr><td><code>PLPosX/Y/Z, PLColR/G/B, PLInt, PLRange</code></td><td>REAL,DIM(8)</td><td>per point light</td></tr>
+      </table>
+
+      <h3>Grid, axes, wireframe</h3>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Default</th></tr>
+        <tr><td><code>GridOn</code></td><td>BYTE</td><td>1</td></tr>
+        <tr><td><code>GridSize / GridDiv</code></td><td>REAL / LONG</td><td>20 / 20</td></tr>
+        <tr><td><code>GridR/GridG/GridB</code></td><td>REAL</td><td>0.13 / 0.16 / 0.22</td></tr>
+        <tr><td><code>AxesOn / AxesSize</code></td><td>BYTE / REAL</td><td>1 / 3</td></tr>
+        <tr><td><code>Wireframe</code></td><td>BYTE</td><td>0</td></tr>
+      </table>
+
+      <h3>Current-material state (captured at the next Add…)</h3>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Default (ResetMaterial)</th></tr>
+        <tr><td><code>CurR/CurG/CurB</code></td><td>REAL</td><td>0.80 / 0.82 / 0.86</td></tr>
+        <tr><td><code>CurMetal / CurRough</code></td><td>REAL</td><td>0.15 / 0.55</td></tr>
+        <tr><td><code>CurOpacity</code></td><td>REAL</td><td>1</td></tr>
+        <tr><td><code>CurEmiR/CurEmiG/CurEmiB</code></td><td>REAL</td><td>0 / 0 / 0</td></tr>
+        <tr><td><code>CurSpinX/CurSpinY/CurSpinZ</code></td><td>REAL</td><td>0 / 0 / 0</td></tr>
+      </table>
+
+      <h3>Mesh arrays (per index, DIM 256)</h3>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Holds</th></tr>
+        <tr><td><code>NMesh</code></td><td>LONG</td><td>mesh count</td></tr>
+        <tr><td><code>MType[]</code></td><td>CSTRING(16)</td><td>'box','sphere',…</td></tr>
+        <tr><td><code>MP1[]…MP6[]</code></td><td>REAL</td><td>geometry params 1–6</td></tr>
+        <tr><td><code>MPosX/Y/Z[]</code></td><td>REAL</td><td>position</td></tr>
+        <tr><td><code>MRotX/Y/Z[]</code></td><td>REAL</td><td>rotation (rad)</td></tr>
+        <tr><td><code>MSclX/Y/Z[]</code></td><td>REAL</td><td>scale</td></tr>
+        <tr><td><code>MColR/G/B[]</code></td><td>REAL</td><td>colour</td></tr>
+        <tr><td><code>MMetal/MRough/MOpacity[]</code></td><td>REAL</td><td>material</td></tr>
+        <tr><td><code>MEmiR/G/B[]</code></td><td>REAL</td><td>emissive</td></tr>
+        <tr><td><code>MSpinX/Y/Z[]</code></td><td>REAL</td><td>per-frame spin</td></tr>
+        <tr><td><code>MWire[]</code></td><td>BYTE</td><td>wireframe flag</td></tr>
+      </table>
+
+      <h3>Maths results &amp; embed state</h3>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+        <tr><td><code>Rx / Ry / Rz</code></td><td>REAL</td><td>Vec3 result (Cross/Normalize/Add/…)</td></tr>
+        <tr><td><code>Mat[1..16]</code></td><td>REAL,DIM(16)</td><td>Mat4 result (column-major)</td></tr>
+        <tr><td><code>DisplayMode</code></td><td>BYTE</td><td>WebGL2:External / WebGL2:Embedded</td></tr>
+        <tr><td><code>EdgeExe</code></td><td>CSTRING(260)</td><td>path to msedge.exe (Construct sets it)</td></tr>
+        <tr><td><code>EmbedInset</code></td><td>LONG</td><td>33 — px to hide Edge's title bar; bump at high DPI</td></tr>
+        <tr><td><code>HostHwnd / HostFeq / EdgeHwnd</code></td><td>LONG / SIGNED / LONG</td><td>host window / target control / the overlay (runtime)</td></tr>
+      </table>
+      <pre><span class="c">! reading / poking properties directly is fine:</span>
+IF Scene.NMesh &gt;= WebGL2:MaxMesh
+  MESSAGE('Scene is full')
+END
+Scene.OrbitSpeed = 0.15        <span class="c">! same as OrbitCamera(Scene.Orbit, 0.15)</span></pre>
+    </section>
+
+    <section id="recipes">
+      <h2>Recipes <a class="top" href="#">top ↑</a></h2>
+
+      <h3>A complete, lit scene</h3>
+      <pre>Scene.Reset()
+Scene.SetTitle('Showroom')
+Scene.SetCamera(8,6,11);  Scene.LookAt(0,0.4,0)
+Scene.SetFog(1, 0.02,0.03,0.06, 16, 40)
+Scene.AddPointLight(4,3.5,4, 1,0.45,0.25, 1.2, 18)
+Scene.AddPointLight(-4,3,-3, 0.25,0.55,1, 1.1, 18)
+Scene.SetColor(0.20,0.55,0.95); Scene.SetMaterial(0.2,0.4); Scene.SetSpin(0,0.6,0)
+Scene.SetPos(Scene.AddCube(1.4), -3, 0.7, 0)
+Scene.SetColor(0.2,0.85,0.85);  Scene.SetMaterial(0.7,0.2)
+Scene.SetPos(Scene.AddTorusKnot(0.7,0.2,2,3), 3, 0.9, 0)
+Scene.SetColor(0.10,0.12,0.16); Scene.SetMaterial(0,0.9)
+Scene.AddPlane(26,26)
+Scene.Show()</pre>
+
+      <h3>Place objects with the class's own Vec3 maths (a ring)</h3>
+      <pre>LOOP i = 0 TO 11
+  a = i / 12.0 * 6.2831853
+  Scene.Vec3Scale(COS(a), 0, SIN(a), 4.0)
+  Scene.SetColor(0.5+0.4*COS(a), 0.6, 0.5+0.4*SIN(a))
+  Scene.SetPos(Scene.AddCube(0.6), Scene.Rx, 0.5, Scene.Rz)
+END
+Scene.Show()</pre>
+
+      <h3>Dock into an IMAGE control, no overlay text</h3>
+      <pre>Scene.SetHud(0); Scene.SetFps(0)
+Scene.SetEmbedControl(?View)
+<span class="c">! EVENT:OpenWindow -&gt; ShowEmbedded;  Sized/Moved -&gt; EmbedFit;  CloseWindow -&gt; EmbedClose</span></pre>
+    </section>
+
+    <footer>WebGL2Class · Complete API Reference · part of the my3D template (Clarion Template Maker).
+      See also the <a href="my3D-template.html">my3D guide</a>.</footer>
+    </div>
+  </main>
+</div>
+</body>
+</html>
