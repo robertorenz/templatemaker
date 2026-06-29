@@ -403,9 +403,15 @@ Scene.SetPos(Scene.AddSphere(0.4, 24), Scene.Rx, Scene.Ry, Scene.Rz)</pre>
         lib</b>, just <code>user32</code> (which every Clarion app already links) plus Microsoft Edge
         (Windows 10/11) and <code>my3D.engine.js</code> beside the <code>.exe</code>.</p>
       <code class="sig">ShowEmbedded(ULONG hostHwnd),BYTE   ! dock into hostHwnd (0 = the active Clarion window)</code>
-      <code class="sig">EmbedFit(),BYTE                     ! re-fit the view to the host (call on EVENT:Sized)</code>
+      <code class="sig">SetEmbedControl(SIGNED feq)         ! confine the view to a control (e.g. an IMAGE); 0 = whole window</code>
+      <code class="sig">EmbedFit(),BYTE                     ! re-fit the view to the host/control (call on EVENT:Sized)</code>
       <code class="sig">EmbedSetBounds(x,y,w,h),BYTE        ! place the view at an explicit pixel rect</code>
       <code class="sig">EmbedReady(),BYTE   EmbedClose()    ! is it docked yet / close it (call on EVENT:CloseWindow)</code>
+      <p>To put the 3D in a <b>control</b> (so the rest of the window holds buttons/lists), drop an
+        <code>IMAGE</code> or <code>REGION</code> as a placeholder and call <code>SetEmbedControl(?View)</code>
+        before <code>ShowEmbedded</code> — the view fills just that control's rectangle and re-fits with it.
+        Example: <a href="../examples/my3D/My3DInControl.clw"><code>examples/my3D/My3DInControl.clw</code></a>.
+        In the control template, set <b>Dock into this control</b> to your IMAGE/REGION.</p>
       <pre><span class="c">! a window whose whole client area is the 3D view</span>
   ACCEPT
     CASE EVENT()

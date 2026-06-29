@@ -18,6 +18,9 @@
       wgGetForeWin   (),ULONG,PASCAL,NAME('GetForegroundWindow')
       wgPostMessage  (ULONG,ULONG,ULONG,LONG),SIGNED,PASCAL,NAME('PostMessageA')
       wgSleep        (ULONG),PASCAL,NAME('Sleep')
+      wgCreateWindow (ULONG,*CSTRING,*CSTRING,ULONG,SIGNED,SIGNED,SIGNED,SIGNED,ULONG,ULONG,ULONG,ULONG),ULONG,PASCAL,RAW,NAME('CreateWindowExA')
+      wgGetModule    (ULONG),ULONG,PASCAL,NAME('GetModuleHandleA')
+      wgDestroyWindow(ULONG),SIGNED,PASCAL,NAME('DestroyWindow')
     END
   END
 
@@ -27,6 +30,7 @@ WebGL2:PI         EQUATE(3.14159265358979)
 WG2:GWL_STYLE     EQUATE(-16)                                ! Win32 constants for the docked-Edge embed
 WG2:WS_CHILD      EQUATE(40000000h)
 WG2:WS_VISIBLE    EQUATE(10000000h)
+WG2:WS_CLIPCH     EQUATE(02000000h)                          ! WS_CLIPCHILDREN
 WG2:WM_CLOSE      EQUATE(0010h)
 
 ! --- module-scope ASCII files (THREAD'd) used for streaming text IO ---------
@@ -859,6 +863,10 @@ h  ULONG
   IF ~wgIsWindow(h) THEN h = wgGetForeWin().
   RETURN h
 
+WebGL2Class.SetEmbedControl PROCEDURE(SIGNED pFeq)
+  CODE
+  SELF.HostFeq = pFeq                                         ! 0 = fill the whole window; otherwise this control's rect
+
 WebGL2Class.ShowEmbedded PROCEDURE(ULONG pHostHwnd)
 path  CSTRING(300)
 url   CSTRING(330)
@@ -866,6 +874,8 @@ title CSTRING(140)
 cls   CSTRING(20)
 cmd   CSTRING(700)
 tries LONG
+emptyStr CSTRING(2)
+staticCl CSTRING(8)
   CODE
   SELF.HostHwnd = SELF.ResolveHost(pHostHwnd)
   IF ~SELF.HostHwnd THEN RETURN 0.
@@ -896,18 +906,46 @@ tries LONG
     wgSleep(50)
   END
   IF ~SELF.EdgeHwnd THEN RETURN 0.
+  ! a clipping child (our process) hosts Edge: it hides the title bar (Edge is
+  ! shifted up inside it) and confines the view to a control's rect anywhere on
+  ! the window - not just the top edge.
+  emptyStr = ''
+  staticCl = 'STATIC'
+  SELF.ClipHwnd = wgCreateWindow(0, staticCl, emptyStr, |
+      BOR(BOR(WG2:WS_CHILD, WG2:WS_VISIBLE), WG2:WS_CLIPCH), |
+      0, 0, 50, 50, SELF.HostHwnd, 0, wgGetModule(0), 0)
+  IF ~SELF.ClipHwnd THEN SELF.ClipHwnd = SELF.HostHwnd.       ! fallback: no clip container
   wgSetWindowLong(SELF.EdgeHwnd, WG2:GWL_STYLE, BOR(WG2:WS_CHILD, WG2:WS_VISIBLE))
-  wgSetParent(SELF.EdgeHwnd, SELF.HostHwnd)
+  wgSetParent(SELF.EdgeHwnd, SELF.ClipHwnd)
   SELF.EmbedFit()
   RETURN 1
 
 WebGL2Class.EmbedFit PROCEDURE()
-rc  LONG,DIM(4)
+rc    LONG,DIM(4)
+x     LONG
+y     LONG
+w     LONG
+h     LONG
+savePx BYTE
+f     SIGNED
   CODE
   IF ~SELF.EdgeHwnd OR ~SELF.HostHwnd THEN RETURN 0.
-  wgGetClientRect(SELF.HostHwnd, rc[1])                       ! rc = left,top,right,bottom
-  ! -EmbedInset hides Edge's title bar above the client; +EmbedInset keeps content filling
-  wgMoveWindow(SELF.EdgeHwnd, 0, -SELF.EmbedInset, rc[3], rc[4] + SELF.EmbedInset, 1)
+  IF SELF.HostFeq                                            ! confine to a control's pixel rect
+    savePx = 0{PROP:Pixels}
+    0{PROP:Pixels} = 1
+    f = SELF.HostFeq
+    x = f{PROP:Xpos}; y = f{PROP:Ypos}; w = f{PROP:Width}; h = f{PROP:Height}
+    0{PROP:Pixels} = savePx
+  ELSE                                                       ! fill the whole client area
+    wgGetClientRect(SELF.HostHwnd, rc[1])
+    x = 0; y = 0; w = rc[3]; h = rc[4]
+  END
+  IF SELF.ClipHwnd AND SELF.ClipHwnd <> SELF.HostHwnd
+    wgMoveWindow(SELF.ClipHwnd, x, y, w, h, 1)               ! container = exact target rect
+    wgMoveWindow(SELF.EdgeHwnd, 0, -SELF.EmbedInset, w, h + SELF.EmbedInset, 1)  ! Edge shifted up -> title bar clipped
+  ELSE
+    wgMoveWindow(SELF.EdgeHwnd, x, y - SELF.EmbedInset, w, h + SELF.EmbedInset, 1)
+  END
   RETURN 1
 
 WebGL2Class.EmbedSetBounds PROCEDURE(LONG pX,LONG pY,LONG pW,LONG pH)
@@ -926,6 +964,10 @@ WebGL2Class.EmbedClose PROCEDURE()
     wgPostMessage(SELF.EdgeHwnd, WG2:WM_CLOSE, 0, 0)          ! ask the docked Edge window to close
     SELF.EdgeHwnd = 0
   END
+  IF SELF.ClipHwnd AND SELF.ClipHwnd <> SELF.HostHwnd
+    wgDestroyWindow(SELF.ClipHwnd)                            ! tear down our clipping container
+  END
+  SELF.ClipHwnd = 0
 
 WebGL2Class.FileUrl PROCEDURE(STRING pPath)
 s  CSTRING(320)

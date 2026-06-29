@@ -54,12 +54,15 @@ INCLUDE('WebGL2Class.INC'),ONCE
       #PROMPT('&Disable this viewer',CHECK),%my3DDisable,DEFAULT(0),AT(10)
       #PROMPT('&Object name:',@s64),%my3DObject,REQ,DEFAULT('Scene' & %ActiveTemplateInstance)
       #PROMPT('&Page title:',@s64),%my3DTitle,DEFAULT('my3D / WebGL2 Scene')
-      #PROMPT('&Show in:',DROP('External browser[0]|Embedded - docked Edge, fills this window[1]')),%my3DDisplayMode,DEFAULT('0')
+      #PROMPT('&Show in:',DROP('External browser[0]|Embedded - docked Edge (real WebGL2)[1]')),%my3DDisplayMode,DEFAULT('0')
+      #ENABLE(%my3DDisplayMode='1')
+        #PROMPT('Dock into this &control (blank = the whole window):',FROM(%Control,%ControlType='IMAGE' OR %ControlType='REGION')),%my3DDockCtrl,DEFAULT('')
+      #ENDENABLE
       #PROMPT('Open the scene &automatically when the window opens',CHECK),%my3DAutoOpen,DEFAULT(0),AT(10)
       #BOXED('')
-        #DISPLAY('Embedded docks a borderless Edge window (real WebGL2) into THIS window -')
-        #DISPLAY('it fills the whole window, so use it on a window dedicated to the 3D view.')
-        #DISPLAY('Needs Microsoft Edge (Win10/11) and my3D.engine.js beside the .exe.')
+        #DISPLAY('Embedded docks a borderless Edge window (real WebGL2) into this window.')
+        #DISPLAY('Pick an IMAGE/REGION to confine it to that control, or leave blank to')
+        #DISPLAY('fill the window. Needs Microsoft Edge (Win10/11) + my3D.engine.js by the .exe.')
       #ENDBOXED
     #ENDBOXED
     #BOXED('Canvas')
@@ -222,6 +225,9 @@ INCLUDE('WebGL2Class.INC'),ONCE
 #ENDFOR
 #IF(%my3DAutoOpen)
 #IF(%my3DDisplayMode = '1')
+#IF(%my3DDockCtrl)
+    %my3DObject.SetEmbedControl(%my3DDockCtrl)           ! confine the view to this control
+#ENDIF
     %my3DObject.ShowEmbedded(0{PROP:Handle})              ! dock the 3D into this window
 #ELSE
     %my3DObject.Show()                                    ! open in the default browser
@@ -230,6 +236,9 @@ INCLUDE('WebGL2Class.INC'),ONCE
   OF EVENT:Accepted
     IF FIELD() = %my3DButtonFeq
 #IF(%my3DDisplayMode = '1')
+#IF(%my3DDockCtrl)
+      %my3DObject.SetEmbedControl(%my3DDockCtrl)
+#ENDIF
       %my3DObject.ShowEmbedded(0{PROP:Handle})
 #ELSE
       %my3DObject.Show()

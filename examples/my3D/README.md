@@ -8,6 +8,7 @@ the camera).
 * **`My3DModels`** — a gallery of **10 real-world objects modelled from primitives** (see below).
 * **`My3DDemo`** — **20 fixture scenes** that stress every feature of the class.
 * **`My3DEmbedded`** — the scene rendered **inside a Clarion window** (docked Edge / real WebGL2).
+* **`My3DInControl`** — the scene docked into a single **IMAGE control**, with buttons beside it.
 
 ## `My3DEmbedded` — WebGL2 inside a Clarion window
 

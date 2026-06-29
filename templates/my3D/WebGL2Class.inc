@@ -55,6 +55,8 @@ LastFile          CSTRING(260)                               ! the .html written
 DisplayMode       BYTE                                       ! WebGL2:External (default) or WebGL2:Embedded
 EdgeExe           CSTRING(260)                               ! path to msedge.exe (set in Construct; override if needed)
 HostHwnd          LONG                                       ! the Clarion window the view is docked into
+HostFeq           SIGNED                                     ! optional control to fill (0 = the whole window)
+ClipHwnd          LONG                                       ! our clipping child that hides Edge's title bar
 EdgeHwnd          LONG                                       ! the docked Edge child window (0 until shown)
 EmbedInset        LONG                                       ! px the docked view is shifted up to hide Edge's title bar
 ! ---- background ----
@@ -272,7 +274,8 @@ ShowFile          PROCEDURE(STRING pFilename),BYTE,PROC      ! save to pFilename
 !      re-enter Clarion's event loop. Pass the host window's handle (0 = use the
 !      active Clarion window).
 ShowEmbedded      PROCEDURE(ULONG pHostHwnd),BYTE,PROC       ! write the page + dock an Edge view into pHostHwnd
-EmbedFit          PROCEDURE(),BYTE,PROC                      ! re-fit the view to the host (call on EVENT:Sized)
+SetEmbedControl   PROCEDURE(SIGNED pFeq)                     ! confine the view to a control (e.g. an IMAGE); 0 = whole window
+EmbedFit          PROCEDURE(),BYTE,PROC                      ! re-fit the view to the host/control (call on EVENT:Sized)
 EmbedSetBounds    PROCEDURE(LONG pX,LONG pY,LONG pW,LONG pH),BYTE,PROC ! place the view at a pixel rect in the host
 EmbedReady        PROCEDURE(),BYTE                           ! 1 once the docked view exists
 EmbedClose        PROCEDURE()                                ! close the docked view (call on window close)
