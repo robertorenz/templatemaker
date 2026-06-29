@@ -69,6 +69,8 @@ INCLUDE('WebGL2Class.INC'),ONCE
       #PROMPT('&Width (px):',SPIN(@n5,320,4000,10)),%my3DW,DEFAULT(1000)
       #PROMPT('&Height (px):',SPIN(@n5,240,4000,10)),%my3DH,DEFAULT(640)
       #PROMPT('&Antialias',CHECK),%my3DAA,DEFAULT(1),AT(10)
+      #PROMPT('Show &info overlay (title / mesh && light counts / controls hint)',CHECK),%my3DHud,DEFAULT(1),AT(10)
+      #PROMPT('Show &FPS counter',CHECK),%my3DFps,DEFAULT(1),AT(10)
     #ENDBOXED
   #ENDTAB
   #TAB('&Camera')
@@ -178,6 +180,8 @@ INCLUDE('WebGL2Class.INC'),ONCE
     %my3DObject.SetTitle('%my3DTitle')
     %my3DObject.SetCanvas(%my3DW, %my3DH)
     %my3DObject.SetAntialias(%my3DAA)
+    %my3DObject.SetHud(%my3DHud)
+    %my3DObject.SetFps(%my3DFps)
     %my3DObject.SetBackgroundGradientCl(%my3DBgTop, %my3DBgBot)
     %my3DObject.SetCamera(%my3DCamX, %my3DCamY, %my3DCamZ)
     %my3DObject.LookAt(%my3DTgtX, %my3DTgtY, %my3DTgtZ)

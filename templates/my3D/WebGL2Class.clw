@@ -25,6 +25,7 @@
       wgSetWindowRgn (ULONG,ULONG,SIGNED),SIGNED,PASCAL,NAME('SetWindowRgn')
       wgCreateRectRgn(SIGNED,SIGNED,SIGNED,SIGNED),ULONG,PASCAL,NAME('CreateRectRgn')
       wgSetForeground(ULONG),SIGNED,PASCAL,NAME('SetForegroundWindow')
+      wgSetWindowPos (ULONG,ULONG,SIGNED,SIGNED,SIGNED,SIGNED,ULONG),SIGNED,PASCAL,NAME('SetWindowPos')
     END
   END
 
@@ -36,6 +37,8 @@ WG2:WS_CHILD      EQUATE(40000000h)
 WG2:WS_VISIBLE    EQUATE(10000000h)
 WG2:WS_CLIPCH     EQUATE(02000000h)                          ! WS_CLIPCHILDREN
 WG2:GWL_HWNDPARENT EQUATE(-8)                                ! SetWindowLong index for a window's owner
+WG2:WS_POPUP      EQUATE(80000000h)                          ! a fixed, frameless, non-resizable popup
+WG2:SWP_FRAME     EQUATE(0027h)                              ! SWP_NOMOVE+NOSIZE+NOZORDER+FRAMECHANGED
 WG2:WM_CLOSE      EQUATE(0010h)
 
 ! --- module-scope ASCII files (THREAD'd) used for streaming text IO ---------
@@ -66,6 +69,7 @@ WebGL2Class.Reset PROCEDURE()
   CODE
   SELF.Title = 'my3D / WebGL2'
   SELF.CanvasW = 1000; SELF.CanvasH = 640; SELF.Antialias = 1
+  SELF.ShowHud = 1; SELF.ShowFps = 1
   SELF.BgGradient = 1
   SELF.BgTopR = 0.06; SELF.BgTopG = 0.09; SELF.BgTopB = 0.15
   SELF.BgR = 0.02; SELF.BgG = 0.03; SELF.BgB = 0.06
@@ -104,6 +108,14 @@ WebGL2Class.SetCanvas PROCEDURE(LONG pW,LONG pH)
 WebGL2Class.SetAntialias PROCEDURE(BYTE pOn)
   CODE
   SELF.Antialias = CHOOSE(pOn <> 0, 1, 0)
+
+WebGL2Class.SetHud PROCEDURE(BYTE pOn)
+  CODE
+  SELF.ShowHud = CHOOSE(pOn <> 0, 1, 0)
+
+WebGL2Class.SetFps PROCEDURE(BYTE pOn)
+  CODE
+  SELF.ShowFps = CHOOSE(pOn <> 0, 1, 0)
 
 WebGL2Class.SetBackground PROCEDURE(REAL pR,REAL pG,REAL pB)
   CODE
@@ -910,6 +922,9 @@ tries LONG
   ! OWN it by the Clarion window (stays above it, hides when it minimises) but
   ! keep it top-level - that's what preserves full mouse/keyboard interaction.
   wgSetWindowLong(SELF.EdgeHwnd, WG2:GWL_HWNDPARENT, SELF.HostHwnd)
+  ! strip the frame: WS_POPUP only -> no resize border, no caption, fixed size
+  wgSetWindowLong(SELF.EdgeHwnd, WG2:GWL_STYLE, BOR(WG2:WS_POPUP, WG2:WS_VISIBLE))
+  wgSetWindowPos(SELF.EdgeHwnd, 0, 0, 0, 0, 0, WG2:SWP_FRAME)  ! apply the style change
   SELF.EmbedFit()
   SELF.EmbedFocus()
   RETURN 1
@@ -1061,6 +1076,8 @@ line CSTRING(900)
   SELF.WriteLine('  title:''' & SELF.JsEsc(SELF.Title) & ''',')
   SELF.WriteLine('  canvas:{w:' & SELF.NumStr(SELF.CanvasW) & ',h:' & SELF.NumStr(SELF.CanvasH) |
     & ',aa:' & CHOOSE(SELF.Antialias<>0,'true','false') & '},')
+  SELF.WriteLine('  hud:' & CHOOSE(SELF.ShowHud<>0,'true','false') |
+    & ',fps:' & CHOOSE(SELF.ShowFps<>0,'true','false') & ',')
   IF SELF.BgGradient
     SELF.WriteLine('  background:{type:''gradient'',top:' & SELF.ColStr(SELF.BgTopR,SELF.BgTopG,SELF.BgTopB) |
       & ',bottom:' & SELF.ColStr(SELF.BgR,SELF.BgG,SELF.BgB) |

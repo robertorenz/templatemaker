@@ -267,6 +267,7 @@ M       LONG
       <code class="sig">SetTitle(STRING title)</code>
       <code class="sig">SetCanvas(LONG w, LONG h)</code>
       <code class="sig">SetAntialias(BYTE on)</code>
+      <code class="sig">SetHud(BYTE on)   SetFps(BYTE on)   ! view options: the info box / the fps counter (default on)</code>
       <code class="sig">SetBackground(REAL r, REAL g, REAL b)               ! solid, 0..1</code>
       <code class="sig">SetBackgroundGradient(REAL tR,tG,tB, REAL bR,bG,bB)  ! top, bottom</code>
       <code class="sig">SetFog(BYTE on, REAL r,g,b, REAL near, REAL far)</code>
@@ -403,7 +404,8 @@ Scene.SetPos(Scene.AddSphere(0.4, 24), Scene.Rx, Scene.Ry, Scene.Rz)</pre>
         minimised, and keeps <b>full native mouse + keyboard interaction</b>; <code>SetWindowRgn</code> clips
         Edge's app title bar away. Edge is a separate process, so it never re-enters Clarion's event loop —
         stable, and needs <b>no DLL, no import lib</b>, just <code>user32</code> (which every Clarion app
-        links) plus Microsoft Edge (Windows 10/11) and <code>my3D.engine.js</code> beside the <code>.exe</code>.</p>
+        links) plus Microsoft Edge (Windows 10/11) and <code>my3D.engine.js</code> beside the <code>.exe</code>.
+        The overlay is a <b>frameless, non-resizable</b> popup sized to exactly the host window or control.</p>
       <code class="sig">ShowEmbedded(ULONG hostHwnd),BYTE   ! show the overlay over hostHwnd (0 = the active Clarion window)</code>
       <code class="sig">SetEmbedControl(SIGNED feq)         ! confine the view to a control (e.g. an IMAGE); 0 = whole window</code>
       <code class="sig">EmbedFit(),BYTE                     ! re-fit the overlay (call on EVENT:Sized AND EVENT:Moved)</code>

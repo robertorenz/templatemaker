@@ -50,6 +50,8 @@ Title             CSTRING(128)
 CanvasW           LONG
 CanvasH           LONG
 Antialias         BYTE
+ShowHud           BYTE                                       ! the on-screen info box (title / mesh counts / controls)
+ShowFps           BYTE                                       ! the fps counter
 EngineFile        CSTRING(260)                               ! my3D.engine.js (found on the redirection path)
 LastFile          CSTRING(260)                               ! the .html written by the last Save/Show
 DisplayMode       BYTE                                       ! WebGL2:External (default) or WebGL2:Embedded
@@ -176,6 +178,8 @@ ClearScene        PROCEDURE                                  ! drop all meshes +
 SetTitle          PROCEDURE(STRING pTitle)
 SetCanvas         PROCEDURE(LONG pW,LONG pH)
 SetAntialias      PROCEDURE(BYTE pOn)
+SetHud            PROCEDURE(BYTE pOn)                        ! show/hide the info box (title/mesh counts/controls)
+SetFps            PROCEDURE(BYTE pOn)                        ! show/hide the fps counter
 SetBackground     PROCEDURE(REAL pR,REAL pG,REAL pB)
 SetBackgroundGradient PROCEDURE(REAL pTopR,REAL pTopG,REAL pTopB,REAL pBotR,REAL pBotG,REAL pBotB)
 SetFog            PROCEDURE(BYTE pOn,REAL pR,REAL pG,REAL pB,REAL pNear,REAL pFar)

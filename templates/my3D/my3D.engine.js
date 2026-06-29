@@ -300,6 +300,8 @@ document.getElementById('hud').innerHTML =
   `<span class="k">meshes</span> ${objs.length} &nbsp; `+
   `<span class="k">point lights</span> ${pts.length}<br>`+
   `<span class="k">drag</span> orbit &nbsp; <span class="k">wheel</span> dolly &nbsp; <span class="k">R</span> reset`;
+if(SC.hud===false) document.getElementById('hud').style.display='none';   /* view options */
+if(SC.fps===false) document.getElementById('fps').style.display='none';
 
 /* ===================== render loop ===================== */
 gl.enable(gl.DEPTH_TEST);
