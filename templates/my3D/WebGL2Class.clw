@@ -21,6 +21,10 @@
       wgCreateWindow (ULONG,*CSTRING,*CSTRING,ULONG,SIGNED,SIGNED,SIGNED,SIGNED,ULONG,ULONG,ULONG,ULONG),ULONG,PASCAL,RAW,NAME('CreateWindowExA')
       wgGetModule    (ULONG),ULONG,PASCAL,NAME('GetModuleHandleA')
       wgDestroyWindow(ULONG),SIGNED,PASCAL,NAME('DestroyWindow')
+      wgGetWinThread (ULONG,ULONG),ULONG,PASCAL,NAME('GetWindowThreadProcessId')
+      wgGetCurThread (),ULONG,PASCAL,NAME('GetCurrentThreadId')
+      wgAttachInput  (ULONG,ULONG,SIGNED),SIGNED,PASCAL,NAME('AttachThreadInput')
+      wgSetFocus     (ULONG),ULONG,PASCAL,NAME('SetFocus')
     END
   END
 
@@ -918,6 +922,7 @@ staticCl CSTRING(8)
   wgSetWindowLong(SELF.EdgeHwnd, WG2:GWL_STYLE, BOR(WG2:WS_CHILD, WG2:WS_VISIBLE))
   wgSetParent(SELF.EdgeHwnd, SELF.ClipHwnd)
   SELF.EmbedFit()
+  SELF.EmbedFocus()                                          ! make it interactive (drag / R / space)
   RETURN 1
 
 WebGL2Class.EmbedFit PROCEDURE()
@@ -958,8 +963,27 @@ WebGL2Class.EmbedReady PROCEDURE()
   CODE
   RETURN CHOOSE(SELF.EdgeHwnd <> 0, 1, 0)
 
+!  Merge the Clarion UI thread's input queue with the (separate-process) Edge
+!  thread so the docked view actually receives the mouse + keyboard, then give it
+!  focus. Without this, a re-parented cross-process window can't be interacted with.
+WebGL2Class.EmbedFocus PROCEDURE()
+  CODE
+  IF ~SELF.EdgeHwnd THEN RETURN.
+  SELF.MyTid = wgGetCurThread()
+  IF ~SELF.EdgeTid                                           ! attach once for the session
+    SELF.EdgeTid = wgGetWinThread(SELF.EdgeHwnd, 0)
+    IF SELF.EdgeTid AND SELF.MyTid AND SELF.EdgeTid <> SELF.MyTid
+      wgAttachInput(SELF.MyTid, SELF.EdgeTid, 1)
+    END
+  END
+  wgSetFocus(SELF.EdgeHwnd)
+
 WebGL2Class.EmbedClose PROCEDURE()
   CODE
+  IF SELF.EdgeTid AND SELF.MyTid AND SELF.EdgeTid <> SELF.MyTid
+    wgAttachInput(SELF.MyTid, SELF.EdgeTid, 0)               ! detach the input queues
+  END
+  SELF.EdgeTid = 0; SELF.MyTid = 0
   IF SELF.EdgeHwnd
     wgPostMessage(SELF.EdgeHwnd, WG2:WM_CLOSE, 0, 0)          ! ask the docked Edge window to close
     SELF.EdgeHwnd = 0

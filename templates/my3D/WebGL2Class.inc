@@ -59,6 +59,8 @@ HostFeq           SIGNED                                     ! optional control 
 ClipHwnd          LONG                                       ! our clipping child that hides Edge's title bar
 EdgeHwnd          LONG                                       ! the docked Edge child window (0 until shown)
 EmbedInset        LONG                                       ! px the docked view is shifted up to hide Edge's title bar
+EdgeTid           LONG                                       ! Edge window's thread id (for AttachThreadInput)
+MyTid             LONG                                       ! the Clarion UI thread id
 ! ---- background ----
 BgGradient        BYTE                                       ! 1 = vertical gradient, 0 = solid
 BgR               REAL                                       ! solid / gradient bottom
@@ -278,6 +280,7 @@ SetEmbedControl   PROCEDURE(SIGNED pFeq)                     ! confine the view 
 EmbedFit          PROCEDURE(),BYTE,PROC                      ! re-fit the view to the host/control (call on EVENT:Sized)
 EmbedSetBounds    PROCEDURE(LONG pX,LONG pY,LONG pW,LONG pH),BYTE,PROC ! place the view at a pixel rect in the host
 EmbedReady        PROCEDURE(),BYTE                           ! 1 once the docked view exists
+EmbedFocus        PROCEDURE()                                ! give the docked view keyboard/mouse focus (so drag/R/space work)
 EmbedClose        PROCEDURE()                                ! close the docked view (call on window close)
 ! ---- internal --------------------------------------------------------------
 PlaceModel        PROCEDURE(LONG pStart,REAL pOX,REAL pOY,REAL pOZ,REAL pScale) ! offset+scale meshes pStart..end

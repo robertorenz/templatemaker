@@ -407,6 +407,13 @@ Scene.SetPos(Scene.AddSphere(0.4, 24), Scene.Rx, Scene.Ry, Scene.Rz)</pre>
       <code class="sig">EmbedFit(),BYTE                     ! re-fit the view to the host/control (call on EVENT:Sized)</code>
       <code class="sig">EmbedSetBounds(x,y,w,h),BYTE        ! place the view at an explicit pixel rect</code>
       <code class="sig">EmbedReady(),BYTE   EmbedClose()    ! is it docked yet / close it (call on EVENT:CloseWindow)</code>
+      <code class="sig">EmbedFocus()                        ! give the view mouse/keyboard focus (drag / R / space)</code>
+      <div class="callout note"><b>Interaction</b>
+        The docked Edge window is a separate process, so its thread's input queue is merged with the Clarion
+        UI thread (Win32 <code>AttachThreadInput</code>) and focused on show — that's what makes <b>drag-orbit,
+        mouse-wheel, and the R/space keys</b> work inside the docked view. <code>ShowEmbedded</code> calls
+        <code>EmbedFocus</code> for you; call it yourself if you want to hand focus back to the 3D after the
+        user has been in other controls.</div>
       <p>To put the 3D in a <b>control</b> (so the rest of the window holds buttons/lists), drop an
         <code>IMAGE</code> or <code>REGION</code> as a placeholder and call <code>SetEmbedControl(?View)</code>
         before <code>ShowEmbedded</code> — the view fills just that control's rectangle and re-fits with it.
