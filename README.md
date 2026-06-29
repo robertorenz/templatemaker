@@ -672,6 +672,13 @@ title bar; call `EmbedFit()` on **EVENT:Sized and EVENT:Moved** so it tracks the
 info box and the fps counter. Note: `my3D.engine.js` is read at run time — ship the matching version beside
 the `.exe`.
 
+**my3D — complete API reference (v2.29.1).** Added [`docs/my3D-reference.html`](docs/my3D-reference.html): an
+exhaustive per-method/per-property reference for `WebGL2Class` — all 108 methods, each with **example code**,
+grouped (lifecycle, page/canvas/view, background/fog, camera, lighting, chrome, material, meshes, composite
+models, transforms, Vec3/Mat4, output, embedded display, internal), plus a constants table, a full properties
+table with defaults, and recipes. The existing [`docs/my3D-template.html`](docs/my3D-template.html) remains
+the guided tour and links to it.
+
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
 
