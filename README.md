@@ -660,6 +660,17 @@ the top of the window, and re-fits as the control resizes. The control template'
 **Dock into this control** prompt; example [`examples/my3D/My3DInControl.clw`](examples/my3D/My3DInControl.clw)
 renders the 3D in an IMAGE control with buttons beside it.
 
+**my3D — interactive frameless overlay + HUD/FPS view options (v2.29).** The embedded view changed from a
+*re-parented child* to an **owned overlay**: a re-parented cross-process Edge window can't receive input
+(Chromium isn't built to be a foreign-process child), so the embed now keeps Edge a **top-level window**, set
+as the Clarion window's **owner** (`GWL_HWNDPARENT`) and positioned over the host/control in screen
+coordinates — which preserves **full native mouse + keyboard** (drag-orbit, wheel, R/space). It is stripped
+to a **frameless, non-resizable** `WS_POPUP` sized to exactly the target, with `SetWindowRgn` clipping Edge's
+title bar; call `EmbedFit()` on **EVENT:Sized and EVENT:Moved** so it tracks the window. New **view options**
+`SetHud(on)`/`SetFps(on)` (and **Show info overlay** / **Show FPS** template checkboxes) toggle the on-screen
+info box and the fps counter. Note: `my3D.engine.js` is read at run time — ship the matching version beside
+the `.exe`.
+
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
 
