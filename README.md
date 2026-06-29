@@ -632,6 +632,24 @@ was "Unknown identifier"), and the handler moved from `PRIORITY(2500)` to **`PRI
 with ABC's `TakeWindowEvent` scaffolding, mangling the generated `CASE`). Validated against the real Clarion
 compiler: the template registers (`ClarionCL -tr`) and the reworked generated code compiles.
 
+**my3D — drive real WebGL2 3D scenes from Clarion (v2.26).** A new template set: `WebGL2Class` (pure
+Clarion) exposes a rich OOP 3D API — camera, ambient + directional + 8 point lights, materials, **20+ mesh
+primitives**, per-mesh transforms, fog, grid, axes, and genuine `Vec3`/`Mat4` maths that run in Clarion —
+and emits a **single self-contained `.html`** (scene data + the inlined `my3D.engine.js` WebGL2 renderer)
+shown in the browser. A control template wires a whole scene from AppGen prompts. Verified end-to-end
+against the real Clarion 12 compiler and headless-rendered to confirm it actually draws. See
+[`docs/my3D-template.html`](docs/my3D-template.html).
+
+**my3D — composite "special meshes" + WebGL2 *inside* a Clarion window (v2.27).** Ten real-world models
+(car, airplane, rocket, wind turbine, robot, table, house, building foundation, skyscraper, trees) are now
+one-call class methods — `AddCar(x,y,z,scale)` etc. — and appear in the template's Shape dropdown alongside
+the primitives. And the scene can render **embedded in a Clarion window**: `ShowEmbedded()` docks a
+borderless Edge `--app` window (real WebGL2, 120 fps) into the host with the Win32 `SetParent`. Edge runs in
+its **own process**, which sidesteps the `ClaRUN` reentrancy crash an in-process WebView2 control causes — so
+it needs **no DLL and no import lib**, only `user32`. The control template's **Show in** dropdown picks
+External browser or Embedded; Edge's title bar is tucked out of view. Examples: a 20-fixture demo (with a
+browser/embed toggle), a 10-model gallery, and a dedicated embedded viewer in [`examples/my3D/`](examples/my3D/).
+
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
 
