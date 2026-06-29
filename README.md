@@ -650,6 +650,15 @@ it needs **no DLL and no import lib**, only `user32`. The control template's **S
 External browser or Embedded; Edge's title bar is tucked out of view. Examples: a 20-fixture demo (with a
 browser/embed toggle), a 10-model gallery, and a dedicated embedded viewer in [`examples/my3D/`](examples/my3D/).
 
+**my3D — dock the WebGL2 view into a control, not just the whole window (v2.28).** `SetEmbedControl(?View)`
+confines the docked Edge view to an **IMAGE/REGION** control's rectangle, so the rest of the window holds
+ordinary Clarion buttons, lists, etc. The control is a layout placeholder with no HWND of its own, so the
+class reads its **pixel rect** (`PROP:Pixels` + `PROP:Xpos/Ypos/Width/Height`) and hosts the view in a small
+`WS_CLIPCHILDREN` child window at that rect — which also clips Edge's title bar even when the control isn't at
+the top of the window, and re-fits as the control resizes. The control template's embedded option gains a
+**Dock into this control** prompt; example [`examples/my3D/My3DInControl.clw`](examples/my3D/My3DInControl.clw)
+renders the 3D in an IMAGE control with buttons beside it.
+
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
 
