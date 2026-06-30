@@ -26,6 +26,11 @@
       wgCreateRectRgn(SIGNED,SIGNED,SIGNED,SIGNED),ULONG,PASCAL,NAME('CreateRectRgn')
       wgSetForeground(ULONG),SIGNED,PASCAL,NAME('SetForegroundWindow')
       wgSetWindowPos (ULONG,ULONG,SIGNED,SIGNED,SIGNED,SIGNED,ULONG),SIGNED,PASCAL,NAME('SetWindowPos')
+      wgGetWinPid    (ULONG,*ULONG),ULONG,PASCAL,RAW,NAME('GetWindowThreadProcessId')
+    END
+    MODULE('kernel32')                                      ! launch taskkill HIDDEN to tear down the whole Edge tree
+      wgCreateProcess(LONG,*CSTRING,LONG,LONG,LONG,ULONG,LONG,LONG,LONG,LONG),LONG,PASCAL,PROC,NAME('CreateProcessA')
+      wgCloseHandle  (LONG),LONG,PASCAL,PROC,NAME('CloseHandle')  ! wg-prefixed Clarion label so it can't clash with ABC's CloseHandle
     END
   END
 
@@ -40,6 +45,9 @@ WG2:GWL_HWNDPARENT EQUATE(-8)                                ! SetWindowLong ind
 WG2:WS_POPUP      EQUATE(80000000h)                          ! a fixed, frameless, non-resizable popup
 WG2:SWP_FRAME     EQUATE(0027h)                              ! SWP_NOMOVE+NOSIZE+NOZORDER+FRAMECHANGED
 WG2:WM_CLOSE      EQUATE(0010h)
+WG2:STARTF_USESHOWWINDOW EQUATE(00000001h)                  ! honour wShowWindow in STARTUPINFO
+WG2:SW_HIDE       EQUATE(0)                                  ! no window for the taskkill helper
+WG2:CREATE_NO_WINDOW EQUATE(08000000h)                      ! no console window for the (console) taskkill
 
 ! --- module-scope ASCII files (THREAD'd) used for streaming text IO ---------
 OutF FILE,DRIVER('ASCII'),NAME(''),PRE(OutF),CREATE,THREAD
@@ -64,6 +72,10 @@ WebGL2Class.Construct PROCEDURE()
     SELF.EdgeExe = 'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
   END
   SELF.Reset()
+
+WebGL2Class.Destruct PROCEDURE()
+  CODE
+  SELF.EmbedClose()                                          ! never leak an msedge.exe, even if EVENT:CloseWindow was missed or the app died abnormally
 
 WebGL2Class.Reset PROCEDURE()
   CODE
@@ -919,6 +931,8 @@ tries LONG
     wgSleep(50)
   END
   IF ~SELF.EdgeHwnd THEN RETURN 0.
+  SELF.EdgePid = 0
+  wgGetWinPid(SELF.EdgeHwnd, SELF.EdgePid)                    ! remember the browser process so EmbedClose can kill its whole tree
   ! OWN it by the Clarion window (stays above it, hides when it minimises) but
   ! keep it top-level - that's what preserves full mouse/keyboard interaction.
   wgSetWindowLong(SELF.EdgeHwnd, WG2:GWL_HWNDPARENT, SELF.HostHwnd)
@@ -978,10 +992,49 @@ WebGL2Class.EmbedFocus PROCEDURE()
   IF SELF.EdgeHwnd THEN wgSetForeground(SELF.EdgeHwnd).
 
 WebGL2Class.EmbedClose PROCEDURE()
+cmd  CSTRING(64)
+ok   LONG
+si   GROUP                                                    ! STARTUPINFOA - lets us hide the taskkill window
+cb     ULONG
+lpReserved   LONG(0)
+lpDesktop    LONG(0)
+lpTitle      LONG(0)
+dwX          ULONG
+dwY          ULONG
+dwXSize      ULONG
+dwYSize      ULONG
+dwXCount     ULONG
+dwYCount     ULONG
+dwFill       ULONG
+dwFlags      ULONG
+wShow        SHORT(0)
+cbReserved2  SHORT(0)
+lpReserved2  LONG(0)
+hStdIn       LONG
+hStdOut      LONG
+hStdErr      LONG
+     END
+pi   GROUP                                                    ! PROCESS_INFORMATION
+hProcess     LONG
+hThread      LONG
+dwPid        ULONG
+dwTid        ULONG
+     END
   CODE
   IF SELF.EdgeHwnd
-    wgPostMessage(SELF.EdgeHwnd, WG2:WM_CLOSE, 0, 0)          ! ask the overlay window to close
+    wgPostMessage(SELF.EdgeHwnd, WG2:WM_CLOSE, 0, 0)          ! ask the overlay window to close gracefully (releases the profile lock)
     SELF.EdgeHwnd = 0
+  END
+  IF SELF.EdgePid                                             ! GUARANTEED backstop: kill the Edge browser AND its whole child tree
+    wgSleep(120)                                             ! give the graceful close a moment first
+    cmd = 'taskkill /F /T /PID ' & SELF.EdgePid              ! /T = the GPU/renderer/network/crashpad children too
+    si.cb = SIZE(si); si.dwFlags = WG2:STARTF_USESHOWWINDOW; si.wShow = WG2:SW_HIDE
+    ok = wgCreateProcess(0, cmd, 0, 0, 0, WG2:CREATE_NO_WINDOW, 0, 0, ADDRESS(si), ADDRESS(pi))
+    IF ok                                                     ! release the handles taskkill handed back
+      wgCloseHandle(pi.hThread)
+      wgCloseHandle(pi.hProcess)
+    END
+    SELF.EdgePid = 0
   END
 
 WebGL2Class.FileUrl PROCEDURE(STRING pPath)

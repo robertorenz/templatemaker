@@ -704,6 +704,16 @@ models, transforms, Vec3/Mat4, output, embedded display, internal), plus a const
 table with defaults, and recipes. The existing [`docs/my3D-template.html`](docs/my3D-template.html) remains
 the guided tour and links to it.
 
+**my3D — reliable cleanup of the embedded Edge view (v2.30.2).** The docked WebGL2 view is a separate
+`msedge.exe` process tree; closing it with only `PostMessage(WM_CLOSE)` could leave **orphaned `msedge.exe`
+processes** behind (Edge defers/ignores the message during shutdown, and it never reached the GPU/renderer/
+network/crashpad child processes). `EmbedClose` now captures the Edge **browser PID** at embed time
+(`GetWindowThreadProcessId`), still asks it to close gracefully first, then **guarantees** teardown of the
+whole tree via a hidden `taskkill /F /T /PID` (launched with `CREATE_NO_WINDOW`, no console flash). A new
+**`Destruct`** calls `EmbedClose` as a safety net, so the view is reaped even when the host forgets the
+`EVENT:CloseWindow` handler or the app exits abnormally. Verified end-to-end: 7 Edge processes spawned, all
+reaped within ~0.5 s of closing the window, zero leftovers.
+
 To package everything (designer **+** templates **+** skill **+** agent) into one deliverable — .NET is
 bundled in, so nothing needs pre-installing on the target:
 

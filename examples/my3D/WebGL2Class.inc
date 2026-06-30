@@ -62,6 +62,7 @@ ClipHwnd          LONG                                       ! our clipping chil
 EdgeHwnd          LONG                                       ! the docked Edge child window (0 until shown)
 EmbedInset        LONG                                       ! px the docked view is shifted up to hide Edge's title bar
 EdgeTid           LONG                                       ! Edge window's thread id (for AttachThreadInput)
+EdgePid           ULONG                                      ! Edge browser process id (captured at embed; used to kill the whole tree on close)
 MyTid             LONG                                       ! the Clarion UI thread id
 ! ---- background ----
 BgGradient        BYTE                                       ! 1 = vertical gradient, 0 = solid
@@ -172,6 +173,7 @@ Rz                REAL
 Mat               REAL,DIM(16)                               ! Mat4 result (column-major)
 ! ---- lifecycle -------------------------------------------------------------
 Construct         PROCEDURE
+Destruct          PROCEDURE                                  ! safety net: tears down the docked Edge overlay if still open
 Reset             PROCEDURE                                  ! back to defaults, empty scene
 ClearScene        PROCEDURE                                  ! drop all meshes + point lights, keep settings
 ! ---- page / canvas / background --------------------------------------------
