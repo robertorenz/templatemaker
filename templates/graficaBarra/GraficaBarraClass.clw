@@ -19,6 +19,7 @@ i  LONG
   CODE
   SELF.ChartType = Chart:Column
   SELF.Title = ''
+  SELF.ValueLabel = ''
   SELF.ShowValues = 1; SELF.ValueDP = 0
   SELF.ShowLabels = 1
   SELF.ShowScale = 1;  SELF.ScaleDP = 0
@@ -372,6 +373,7 @@ h      LONG
 i      LONG
 k      LONG
 nitem  LONG
+useCat BYTE
 maxlen LONG
 totw   LONG
 avail  LONG
@@ -439,27 +441,36 @@ txt    STRING(64)
   ! ---- how much room does the legend want? ----
   SELF.zLegW = 0; SELF.zLegH = 0
   IF SELF.ShowLegend = 1
+    ! useCat=1: one row per bar/category, "label  value" (or "label  ValueLabel = value") - what a pie
+    ! always did, and now also what a single-series bar/line/area gets (it had no legend at all before).
+    ! useCat=0: unchanged - one row per series name, for genuine multi-series charts.
     IF SELF.IsPie()
-      nitem = SELF.NBars
+      nitem = SELF.NBars; useCat = 1
     ELSIF SELF.SeriesCount() > 1
-      nitem = SELF.SeriesCount()
+      nitem = SELF.SeriesCount(); useCat = 0
+    ELSIF SELF.NBars > 1
+      nitem = SELF.NBars; useCat = 1
     ELSE
-      nitem = 0
+      nitem = 0; useCat = 0
     END
     IF nitem > 0
       maxlen = 0; totw = 0
       LOOP i = 1 TO nitem
-        IF SELF.IsPie()
-          txt = SELF.BarLabel[i]
+        IF useCat = 1
+          IF SELF.ValueLabel
+            txt = CLIP(SELF.BarLabel[i]) & '   ' & CLIP(SELF.ValueLabel) & ' = ' & CLIP(SELF.FmtNum(SELF.BarValue[i],SELF.ValueDP))
+          ELSE
+            txt = CLIP(SELF.BarLabel[i]) & '  ' & CLIP(SELF.FmtNum(SELF.BarValue[i],SELF.ValueDP))
+          END
         ELSE
           txt = SELF.SeriesName[i]
         END
         k = LEN(CLIP(txt)); IF k < 1 THEN k = 1.
         IF k > maxlen THEN maxlen = k.
-        totw += SELF.zCH + SELF.zPad + k * SELF.zCW + 2 * SELF.zCW
+        totw += CHOOSE(useCat=1,5,0) * SELF.zCW + SELF.zCH + SELF.zPad + k * SELF.zCW + 2 * SELF.zCW  ! +"100% " if useCat
       END
       IF SELF.LegendPos = Legend:Right
-        SELF.zLegW = SELF.zCH + SELF.zPad + maxlen * SELF.zCW + 3 * SELF.zCW
+        SELF.zLegW = CHOOSE(useCat=1,5,0) * SELF.zCW + SELF.zCH + SELF.zPad + maxlen * SELF.zCW + 3 * SELF.zCW
         IF SELF.zLegW > INT(w * 2 / 5) THEN SELF.zLegW = INT(w * 2 / 5).
       ELSE
         avail = w - 2 * SELF.zPad
@@ -655,7 +666,10 @@ txt   STRING(64)
       LOOP i = 1 TO n
         IF INT((i-1)/step) * step <> i - 1 THEN CYCLE.
         txt = CLIP(SELF.BarLabel[i])
-        SELF.TextAt(SELF.zPX - SELF.zPad - LEN(CLIP(txt)) * SELF.zCW, |
+        IF SELF.zCW > 0 AND LEN(txt) * SELF.zCW > ml - SELF.zPad     ! safety: never overrun into the plot area
+          txt = txt[1 : INT((ml - SELF.zPad) / SELF.zCW)]            ! if the real font renders wider than estimated
+        END
+        SELF.TextAt(SELF.zX + SELF.zPad, |                           ! left-aligned, flush against the window edge
                     INT(SELF.zPY + slot * (i - 0.5) - SELF.zCH / 2), txt, SELF.TextColor)
       END
     ELSE
@@ -728,10 +742,20 @@ gap   REAL
 band  REAL
 one   REAL
 v     REAL
+tot   REAL
 txt   STRING(64)
   CODE
   n = SELF.NBars
   ns = SELF.SeriesCount()
+  tot = 0
+  IF SELF.Percent = 1                                        ! % of the sum of every bar/series on screen
+    LOOP i = 1 TO n
+      LOOP s = 1 TO ns
+        tot += ABS(SELF.GetValue(s, i))
+      END
+    END
+    IF tot <= 0 THEN tot = 1.
+  END
   IF SELF.IsHorizontal()
     slot = SELF.zPH / n
   ELSE
@@ -744,6 +768,11 @@ txt   STRING(64)
     LOOP s = 1 TO ns
       v = SELF.GetValue(s, i)
       c = SELF.ColorOf(s, i)
+      IF SELF.Percent = 1
+        txt = SELF.FmtNum(100 * ABS(v) / tot, SELF.ValueDP) & '%'
+      ELSE
+        txt = SELF.FmtNum(v, SELF.ValueDP)
+      END
       IF SELF.IsHorizontal()
         ry = INT(SELF.zPY + slot * (i-1) + gap + one * (s-1))
         bh = INT(one); IF bh < 1 THEN bh = 1.
@@ -756,13 +785,19 @@ txt   STRING(64)
         IF bw < 1 THEN bw = 1.
         SELF.FillBox(bx, ry, bw, bh, c)
         IF SELF.ShowValues = 1 AND bh >= SELF.zCH
-          txt = SELF.FmtNum(v, SELF.ValueDP)
-          IF v >= 0
-            tx = bx + bw + INT(SELF.zPad/2)
+          IF SELF.Percent = 1
+            IF bw >= (LEN(CLIP(txt))+1) * SELF.zCW            ! only if the % fits inside the bar itself
+              tx = bx + INT(bw/2) - INT(LEN(CLIP(txt)) * SELF.zCW / 2)
+              SELF.TextAt(tx, ry + INT(bh/2) - INT(SELF.zCH/2), txt, SELF.TextColor)
+            END
           ELSE
-            tx = bx - INT(SELF.zPad/2) - LEN(CLIP(txt)) * SELF.zCW
+            IF v >= 0
+              tx = bx + bw + INT(SELF.zPad/2)
+            ELSE
+              tx = bx - INT(SELF.zPad/2) - LEN(CLIP(txt)) * SELF.zCW
+            END
+            SELF.TextAt(tx, ry + INT(bh/2) - INT(SELF.zCH/2), txt, SELF.TextColor)
           END
-          SELF.TextAt(tx, ry + INT(bh/2) - INT(SELF.zCH/2), txt, SELF.TextColor)
         END
       ELSE
         bx = INT(SELF.zPX + slot * (i-1) + gap + one * (s-1))
@@ -776,14 +811,19 @@ txt   STRING(64)
         IF bh < 1 THEN bh = 1.
         SELF.FillBox(bx, bt, bw, bh, c)
         IF SELF.ShowValues = 1
-          txt = SELF.FmtNum(v, SELF.ValueDP)
-          IF bw + SELF.zCW >= LEN(CLIP(txt)) * SELF.zCW      ! only if it fits over the bar
-            IF v >= 0
-              ty = bt - SELF.zCH - INT(SELF.zPad/2)
-            ELSE
-              ty = bt + bh + INT(SELF.zPad/2)
+          IF SELF.Percent = 1
+            IF bh >= SELF.zCH AND bw + SELF.zCW >= LEN(CLIP(txt)) * SELF.zCW   ! only if the % fits inside the bar
+              SELF.TextMid(bx + INT(bw/2), bt + INT(bh/2) - INT(SELF.zCH/2), txt, SELF.TextColor)
             END
-            SELF.TextMid(bx + INT(bw/2), ty, txt, SELF.TextColor)
+          ELSE
+            IF bw + SELF.zCW >= LEN(CLIP(txt)) * SELF.zCW      ! only if it fits over the bar
+              IF v >= 0
+                ty = bt - SELF.zCH - INT(SELF.zPad/2)
+              ELSE
+                ty = bt + bh + INT(SELF.zPad/2)
+              END
+              SELF.TextMid(bx + INT(bw/2), ty, txt, SELF.TextColor)
+            END
           END
         END
       END
@@ -890,6 +930,7 @@ lasty LONG
 nx    LONG
 ny    LONG
 slot  REAL
+tot   REAL
 t     REAL
 t2    REAL
 t3    REAL
@@ -905,6 +946,13 @@ txt   STRING(64)
   CODE
   n = SELF.NBars
   IF n < 1 THEN RETURN.
+  tot = 0
+  IF SELF.Percent = 1                                        ! % of this series' own total (Linea/Area)
+    LOOP i = 1 TO n
+      tot += ABS(SELF.GetValue(pSeries, i))
+    END
+    IF tot <= 0 THEN tot = 1.
+  END
   slot = SELF.zPW / n
   c = SELF.ColorOf(pSeries, 1)
   IF SELF.SeriesCount() = 1 THEN c = SELF.ColorOf(1, 1).      ! one series: its first color, not one per point
@@ -948,7 +996,11 @@ txt   STRING(64)
       SELF.Marker(cx, cy, c)
     END
     IF SELF.ShowValues = 1
-      txt = SELF.FmtNum(SELF.GetValue(pSeries, i), SELF.ValueDP)
+      IF SELF.Percent = 1
+        txt = SELF.FmtNum(100 * ABS(SELF.GetValue(pSeries, i)) / tot, SELF.ValueDP) & '%'
+      ELSE
+        txt = SELF.FmtNum(SELF.GetValue(pSeries, i), SELF.ValueDP)
+      END
       SELF.TextMid(cx, cy - SELF.zCH - INT(SELF.zPad/2), txt, SELF.TextColor)
     END
   END
@@ -1280,35 +1332,60 @@ txt   STRING(64)
 GraficaBarraClass.PaintLegend PROCEDURE()
 i      LONG
 nitem  LONG
+useCat BYTE
 sw     LONG
+pw     LONG
 lx     LONG
 ly     LONG
 itemw  LONG
 c      LONG
+tot    REAL
 txt    STRING(64)
+ptxt   STRING(8)
   CODE
   IF SELF.zLegW < 1 AND SELF.zLegH < 1 THEN RETURN.
+  ! useCat=1: one row per bar/category (pie always did; a single-series bar/line/area now does too - it had
+  ! no legend at all before). useCat=0: one row per series name, unchanged, for genuine multi-series charts.
   IF SELF.IsPie()
-    nitem = SELF.NBars
+    nitem = SELF.NBars; useCat = 1
+  ELSIF SELF.SeriesCount() > 1
+    nitem = SELF.SeriesCount(); useCat = 0
+  ELSIF SELF.NBars > 1
+    nitem = SELF.NBars; useCat = 1
   ELSE
-    nitem = SELF.SeriesCount()
-    IF nitem < 2 THEN RETURN.
+    nitem = 0
   END
   IF nitem < 1 THEN RETURN.
   sw = INT(SELF.zCH * 3 / 4); IF sw < 2 THEN sw = 2.
+  pw = 0; tot = 1
+  IF useCat = 1
+    pw = 5 * SELF.zCW                                        ! room for "100% "
+    tot = 0
+    LOOP i = 1 TO nitem
+      tot += ABS(SELF.BarValue[i])
+    END
+    IF tot <= 0 THEN tot = 1.
+  END
   IF SELF.LegendPos = Legend:Right
     lx = SELF.zX + SELF.zW - SELF.zLegW + SELF.zPad
     ly = SELF.zY + SELF.zPad
     IF SELF.Title THEN ly += SELF.zCH + SELF.zPad.
     LOOP i = 1 TO nitem
       IF ly + SELF.zCH > SELF.zY + SELF.zH THEN BREAK.
-      IF SELF.IsPie()
-        txt = SELF.BarLabel[i]; c = SELF.ColorOf(1, i)
+      IF useCat = 1
+        IF SELF.ValueLabel
+          txt = CLIP(SELF.BarLabel[i]) & '   ' & CLIP(SELF.ValueLabel) & ' = ' & CLIP(SELF.FmtNum(SELF.BarValue[i],SELF.ValueDP))
+        ELSE
+          txt = CLIP(SELF.BarLabel[i]) & '  ' & CLIP(SELF.FmtNum(SELF.BarValue[i],SELF.ValueDP))
+        END
+        c = SELF.ColorOf(1, i)
+        ptxt = SELF.FmtNum(100 * ABS(SELF.BarValue[i]) / tot, 0) & '%'
+        SELF.TextAt(lx, ly, ptxt, SELF.TextColor)
       ELSE
         txt = SELF.SeriesName[i]; c = SELF.ColorOf(i, 1)
       END
-      SELF.FillBox(lx, ly + INT((SELF.zCH-sw)/2), sw, sw, c)
-      SELF.TextAt(lx + sw + SELF.zPad, ly, txt, SELF.TextColor)
+      SELF.FillBox(lx + pw, ly + INT((SELF.zCH-sw)/2), sw, sw, c)
+      SELF.TextAt(lx + pw + sw + SELF.zPad, ly, txt, SELF.TextColor)
       ly += SELF.zCH + SELF.zPad
     END
   ELSE
@@ -1320,19 +1397,26 @@ txt    STRING(64)
     END
     lx = SELF.zX + SELF.zPad
     LOOP i = 1 TO nitem
-      IF SELF.IsPie()
-        txt = SELF.BarLabel[i]; c = SELF.ColorOf(1, i)
+      IF useCat = 1
+        IF SELF.ValueLabel
+          txt = CLIP(SELF.BarLabel[i]) & '   ' & CLIP(SELF.ValueLabel) & ' = ' & CLIP(SELF.FmtNum(SELF.BarValue[i],SELF.ValueDP))
+        ELSE
+          txt = CLIP(SELF.BarLabel[i]) & '  ' & CLIP(SELF.FmtNum(SELF.BarValue[i],SELF.ValueDP))
+        END
+        c = SELF.ColorOf(1, i)
+        ptxt = SELF.FmtNum(100 * ABS(SELF.BarValue[i]) / tot, 0) & '%'
       ELSE
         txt = SELF.SeriesName[i]; c = SELF.ColorOf(i, 1)
       END
-      itemw = sw + SELF.zPad + LEN(CLIP(txt)) * SELF.zCW + 2 * SELF.zCW
+      itemw = pw + sw + SELF.zPad + LEN(CLIP(txt)) * SELF.zCW + 2 * SELF.zCW
       IF lx + itemw > SELF.zX + SELF.zW - SELF.zPad AND lx > SELF.zX + SELF.zPad
         lx = SELF.zX + SELF.zPad
         ly += SELF.zCH + SELF.zPad
         IF ly + SELF.zCH > SELF.zY + SELF.zH THEN BREAK.
       END
-      SELF.FillBox(lx, ly + INT((SELF.zCH-sw)/2), sw, sw, c)
-      SELF.TextAt(lx + sw + SELF.zPad, ly, txt, SELF.TextColor)
+      IF useCat = 1 THEN SELF.TextAt(lx, ly, ptxt, SELF.TextColor).
+      SELF.FillBox(lx + pw, ly + INT((SELF.zCH-sw)/2), sw, sw, c)
+      SELF.TextAt(lx + pw + sw + SELF.zPad, ly, txt, SELF.TextColor)
       lx += itemw
     END
   END

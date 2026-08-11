@@ -89,6 +89,8 @@ GraficaBarraClass CLASS,TYPE,MODULE('GraficaBarraClass.CLW'),LINK('GraficaBarraC
 ! ---- what to draw ----
 ChartType          LONG                                        ! Chart:Column ... Chart:Radar
 Title              CSTRING(64)                                 ! centered above the plot
+ValueLabel         CSTRING(64)                                 ! name of the value column - the legend prints
+                                                                ! "<label> = <value>" per line when this is set
 ! ---- features on/off ----
 ShowValues         BYTE                                        ! numeric value on each bar / point / slice
 ValueDP            LONG                                        ! decimals on values
