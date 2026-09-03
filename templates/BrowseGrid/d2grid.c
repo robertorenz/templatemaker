@@ -1,6 +1,6 @@
 /* ============================================================================
  *  d2grid.c - a grid drawn with Direct2D and DirectWrite, for Clarion.
- *  v1.25 - it ships with the BrowseGrid template of the same number, and the
+ *  v1.36 - it ships with the BrowseGrid template of the same number, and the
  *  two are versioned together because the template declares every export here.
  *
  *  WHY. Clarion's LIST is drawn by the runtime and looks it. This draws every
@@ -211,6 +211,8 @@ typedef struct {
        2 Overlay  both drawn, thinner, ON TOP of the rows and only while the
                   pointer is over the grid - so nothing is taken from the data */
     int   barStyle;
+    int   gdiText;              /* 1 = dibujar el texto como lo dibuja GDI  */
+    int   txDiag[6];            /* que devolvieron las llamadas, para el log */
     int   hBar, hPos, hPage, hTotal;   /* the drawn horizontal one           */
     int   barsShow;                    /* overlay: is the pointer over us?   */
 
@@ -443,6 +445,49 @@ static void wide(const char* src, WCHAR* dst, int cap) {
    smaller than the rest of the application. */
 #define D2G_PT2DIP(pt) ((pt) * 96.0f / 72.0f)
 
+static int g_weight = 0;        /* 0 = el normal; si no, el peso pedido */
+
+/* EL NOMBRE DE FAMILIA PUEDE LLEVAR EL PESO ADENTRO. "Roboto Medium" es una
+   familia para GDI, que resuelve a la cara Medium; DirectWrite puede darle a
+   esa misma familia el miembro de peso 400. Cuando pasa, no se esta viendo el
+   mismo texto renderizado distinto: se estan viendo dos CARAS distintas, y no
+   hay contraste ni hinting que las iguale. Poder pedir el peso a mano es la
+   salida, porque el nombre solo no basta para decidirlo. */
+/* SIN RANURA. El peso se necesita ANTES del attach, que es cuando se crean las
+   tipografias, y en ese momento todavia no hay grid: pedir slot(h) con un
+   handle que aun no existe devuelve nulo y el peso se descartaba callado, que
+   es como se ve un prompt que no hace nada. Es un global porque gobierna la
+   CREACION de la fuente, no un grid en particular. */
+void d2g_Weight(int h, int w) { g_weight = w; }
+
+/* EL PESO QUE DICE EL NOMBRE. "Roboto Medium", "Segoe UI Light": para GDI son
+   familias y las resuelve a esa cara; DirectWrite le da a la misma familia su
+   miembro de peso 400, mas liviano, y el grid se ve mas fino que el LIST de al
+   lado con la misma tipografia configurada. No es renderizado: son dos caras
+   distintas, y ningun contraste ni hinting las iguala.
+   Se mira la ULTIMA palabra, que es donde va el peso en estos nombres. Si no
+   dice ninguno, 0 y queda el normal. */
+static int weightFromName(const char* face) {
+    const char* w;
+    int i, n = 0;
+    while (face[n]) n++;
+    while (n > 0 && face[n - 1] != ' ') n--;
+    if (n == 0) return 0;                       /* una sola palabra: nada que leer */
+    w = face + n;
+    { struct { const char* s; int v; } tbl[] = {
+        {"Thin",100},{"ExtraLight",200},{"UltraLight",200},{"Light",300},
+        {"SemiLight",350},{"Medium",500},{"SemiBold",600},{"DemiBold",600},
+        {"Bold",700},{"ExtraBold",800},{"UltraBold",800},{"Black",900},
+        {"Heavy",900},{0,0} };
+      for (i = 0; tbl[i].s; i++) {
+          int j = 0;
+          while (tbl[i].s[j] && w[j] == tbl[i].s[j]) j++;
+          if (!tbl[i].s[j] && !w[j]) return tbl[i].v;
+      }
+    }
+    return 0;
+}
+
 static void* d2g_Font(const char* face, float size, int bold) {
     WCHAR wf[64], wl[8];
     void* fmt = 0;
@@ -452,12 +497,95 @@ static void* d2g_Font(const char* face, float size, int bold) {
     /* IDWriteFactory::CreateTextFormat - slot 15 */
     if (((HRESULT (WINAPI*)(void*, const WCHAR*, void*, int, int, int, float,
                             const WCHAR*, void**))VT(g_dw)[15])
-        (g_dw, wf, 0, bold ? FONT_BOLD : FONT_NORMAL, STYLE_NORMAL,
+        (g_dw, wf, 0, bold ? FONT_BOLD :
+              (g_weight ? g_weight :
+               (weightFromName(face) ? weightFromName(face) : FONT_NORMAL)),
+         STYLE_NORMAL,
          STRETCH_NORMAL, D2G_PT2DIP(size), wl, &fmt) < 0) return 0;
     /* down the middle of the row, and one line only */
     ((HRESULT (WINAPI*)(void*, int))VT(fmt)[4])(fmt, DW_PARA_CENTER);
     ((HRESULT (WINAPI*)(void*, int))VT(fmt)[5])(fmt, DW_NO_WRAP);
     return fmt;
+}
+
+/* MISMA FUENTE, MISMO TAMANO, DISTINTO GROSOR.
+
+   Un LIST de Clarion lo dibuja GDI y el grid lo dibuja DirectWrite, y no
+   renderizan igual: GDI ajusta los trazos a la grilla de pixeles y les aplica
+   contraste realzado, con lo que engordan; DirectWrite por omision posiciona
+   con precision subpixel y deja los trazos donde caen, mas finos. Puestos uno
+   al lado del otro en la misma ventana, el grid se ve mas delgado aunque la
+   tipografia y el tamano sean identicos - y es lo primero que nota quien mira
+   las dos cosas juntas.
+
+   DWRITE_RENDERING_MODE_GDI_CLASSIC es el modo que existe justamente para
+   esto: mismo hinting y mismo ajuste a la grilla que GDI.
+
+   Los otros cuatro parametros salen de la configuracion de la MAQUINA, no de
+   constantes: gamma, contraste, nivel de ClearType y orden de subpixeles son
+   lo que el usuario dejo en el panel de ClearType, y pisarlos con numeros
+   propios seria arreglar el grosor rompiendo el color del texto en pantallas
+   que no son RGB. Solo se cambia el MODO. */
+#define DW_MODE_GDI_CLASSIC 2
+
+static void applyTextMode(Grid* c) {
+    void *def = 0, *par = 0;
+    float gamma, contrast, level;
+    int   geom, i;
+    for (i = 0; i < 6; i++) c->txDiag[i] = -999;
+    if (!c->rt || !g_dw || !c->gdiText) return;
+    /* IDWriteFactory::CreateRenderingParams - slot 10: lo de esta maquina */
+    c->txDiag[0] = ((HRESULT (WINAPI*)(void*, void**))VT(g_dw)[10])(g_dw, &def);
+    if (c->txDiag[0] < 0 || !def) return;
+    gamma    = ((float (WINAPI*)(void*))VT(def)[3])(def);   /* GetGamma            */
+    contrast = ((float (WINAPI*)(void*))VT(def)[4])(def);   /* GetEnhancedContrast */
+    level    = ((float (WINAPI*)(void*))VT(def)[5])(def);   /* GetClearTypeLevel   */
+    geom     = ((int   (WINAPI*)(void*))VT(def)[6])(def);   /* GetPixelGeometry    */
+    c->txDiag[1] = (int)(gamma    * 100.0f);
+    c->txDiag[2] = (int)(contrast * 100.0f);
+    c->txDiag[3] = (int)(level    * 100.0f);
+    c->txDiag[4] = geom;
+/*  EL CONTRASTE ES LO QUE ENGORDA, mas que el hinting. GDI dibuja su ClearType
+    con un realce mas fuerte que el que suele traer DirectWrite, y ese realce es
+    la mitad de por que un LIST se ve mas grueso. Cambiar solo el MODO fue
+    quedarse a mitad de camino: arregla el ajuste de los trazos a la grilla y no
+    toca su peso. */
+    if (contrast < 1.0f) contrast = 1.0f;
+    /* IDWriteFactory::CreateCustomRenderingParams - slot 12 */
+    c->txDiag[5] = ((HRESULT (WINAPI*)(void*, float, float, float, int, int, void**))VT(g_dw)[12])
+                   (g_dw, gamma, contrast, level, geom, DW_MODE_GDI_CLASSIC, &par);
+    if (c->txDiag[5] >= 0 && par) {
+        /* ID2D1RenderTarget::SetTextRenderingParams - slot 36 */
+        ((void (WINAPI*)(void*, void*))VT(c->rt)[36])(c->rt, par);
+/*      Y CLEARTYPE EXPLICITO. Gamma, contraste y nivel de arriba solo pesan
+        cuando el antialiasing es ClearType; con el modo en DEFAULT lo elige
+        Direct2D, y si elige escala de grises los parametros quedan casi sin
+        efecto - que es como se ve pedirlos y que no pase nada.
+        SetTextAntialiasMode - slot 34, CLEARTYPE = 1 */
+        ((void (WINAPI*)(void*, int))VT(c->rt)[34])(c->rt, 1);
+        ((unsigned long (WINAPI*)(void*))VT(par)[2])(par);          /* Release */
+    }
+    ((unsigned long (WINAPI*)(void*))VT(def)[2])(def);              /* Release */
+}
+
+/* 1 = como GDI, 0 = como DirectWrite por omision. Se puede pedir antes de que
+   exista la superficie, asi que se guarda y se aplica cuando exista. */
+/* Lo que devolvieron las llamadas y con que valores se armaron los parametros.
+   0 = hr de CreateRenderingParams, 1..3 = gamma/contraste/nivel por cien,
+   4 = geometria de subpixeles, 5 = hr de CreateCustomRenderingParams.
+   -999 significa que ni se intento. */
+int d2g_TextInfo(int h, int what) {
+    Grid* c = slot(h);
+    if (!c || what < 0 || what > 5) return -998;
+    return c->txDiag[what];
+}
+
+void d2g_TextMode(int h, int gdi) {
+    Grid* c = slot(h);
+    if (!c) return;
+    c->gdiText = gdi ? 1 : 0;
+    applyTextMode(c);
+    if (c->rt) InvalidateRect(c->hwnd, 0, 0);
 }
 
 static int d2g_MakeTarget(Grid* c) {
@@ -486,6 +614,7 @@ static int d2g_MakeTarget(Grid* c) {
     /* ID2D1RenderTarget::CreateSolidColorBrush - slot 8 */
     ((HRESULT (WINAPI*)(void*, const COLORF*, const void*, void**))
      VT(c->rt)[8])(c->rt, &col, 0, &c->brush);
+    applyTextMode(c);                  /* la superficie es nueva: hay que repetirlo */
     return c->brush ? 1 : 0;
 }
 
@@ -965,7 +1094,7 @@ int d2g_Attach(void* hwnd, const char* face, int pt) {
     c->sortCol = -1; c->sortDir = 1;
     { int k; for (k = 0; k < G_COLS; k++) c->colFilt[k] = 0; }
     c->grps = 0; c->lines = 1; c->wrapLines = 1; c->btns = 0;
-    c->barStyle = 0; c->hBar = 0; c->barsShow = 0;
+    c->barStyle = 0; c->hBar = 0; c->barsShow = 0; c->gdiText = 0;
     c->cols = 0; c->frozen = 0; c->visRows = 0; c->firstRow = 0;
     c->totalRows = 0; c->selRow = -1; c->scrollX = 0;
     c->rowH = D2G_ROWFOR(pt); c->hdrH = D2G_HDRFOR(pt);

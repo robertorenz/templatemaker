@@ -68,17 +68,19 @@
 <body>
 <div class="wrap">
   <nav>
-    <div class="brand"><h1>BrowseGrid</h1><span>Programmer's Documentation &middot; v1.25</span></div>
+    <div class="brand"><h1>BrowseGrid</h1><span>Programmer's Documentation &middot; v1.36</span></div>
     <a href="#over">Overview</a>
     <div class="grp">Using it</div>
     <a href="#install" class="h2">Install &amp; register</a>
     <a href="#exts" class="h2">The two extensions</a>
+    <a href="#global" class="h2">Settings shared by every browse</a>
     <a href="#browse" class="h2">Browse tab</a>
     <a href="#columns" class="h2">Columns &amp; Heading menu</a>
     <a href="#look" class="h2">Look, Colours, Variables</a>
     <a href="#mouse" class="h2">Mouse tab</a>
     <div class="grp">At run time</div>
     <a href="#user" class="h2">What the end user gets</a>
+    <a href="#layouts" class="h2">Column layouts</a>
     <a href="#hooks" class="h2">Hooks for your code</a>
     <div class="grp">Reference</div>
     <a href="#limits" class="h2">Limits &amp; costs</a>
@@ -154,6 +156,34 @@
         needs its own <b>Object name</b>.</p>
       <div class="callout note"><b>The AppGen prompts stay in English whichever language you pick</b>
         A programmer reads them; an end user never does.</div>
+    </section>
+
+    <section id="global">
+      <h2>Settings shared by every browse <a href="#global" class="top">#</a></h2>
+      <p class="lead">Most of what you configure has nothing to do with <i>which</i> browse it is. That
+        part can be set once, on the global extension, and inherited.</p>
+      <p>Three groups, each with its own tab on <code>BrowseGridGlobal</code> and its own tick on the
+        browse:</p>
+      <table>
+        <tr><th>Group</th><th>Covers</th><th>Tick on the browse</th></tr>
+        <tr><td><b>Heading menu</b></td><td>The nine menu options, the drop-down button, auto-fit and its look-ahead</td><td>Heading menu tab</td></tr>
+        <tr><td><b>Look</b></td><td>Typeface, SDAspecto, GDI rendering, weight, wrapping, heights, the eight colours <i>and</i> the eleven variables</td><td>Look tab</td></tr>
+        <tr><td><b>Mouse</b></td><td>Scrollbars and their style, the browse popup, double-click, wheel, tooltips</td><td>Mouse tab</td></tr>
+      </table>
+      <div class="callout note"><b>Look, Colours and Variables are inherited together, by one tick</b>
+        <i>Variables</i> overrides the other two &mdash; a variable name put there wins over the fixed
+        value above it &mdash; so inheriting one of the three alone would leave the grid with half of one
+        theme and half of another, and which half won would depend on the field. A theme is one thing or
+        it is nothing.</div>
+      <div class="callout warn"><b>What is deliberately <i>not</i> inherited</b>
+        <b>LIST columns that also get the click.</b> Those are column numbers belonging to <i>that</i>
+        browse and mean nothing in another one; inheriting them would send the event to the wrong
+        column, which is worse than not sending it.</div>
+      <div class="callout note"><b>The global's values are factory defaults until you touch them</b>
+        In particular the drop-down button is <b>off</b> there too, so ticking the menu inheritance
+        without switching it on in the global leaves that browse with no heading menu at all. With the
+        tick set but no global extension in the application, the local settings stand: borrowing from
+        something that is not there cannot switch a menu off.</div>
     </section>
 
     <section id="browse">
@@ -248,7 +278,26 @@
         <tr><td>Colours</td><td>eight</td><td>Background, banding, lines, text, heading background and text, and the selected row. A system colour (<code>COLOR:Window</code> and family) is resolved with <code>GetSysColor</code>, so the grid follows the machine's theme.</td></tr>
         <tr><td>Take any of these from a variable instead</td><td>off</td><td>Enables eleven fields: typeface, size and the eight colours. One left blank keeps the fixed value above; one carrying a name is <b>emitted as code</b>, so a global theme can drive the grid. Read once, at start-up.</td></tr>
         <tr><td>Take the typeface from SD Aspecto</td><td>off</td><td>Typeface and size come from <b>SDAspecto</b>, and the two fields above are disabled. Colours are not affected.</td></tr>
+        <tr><td>Draw the text the way the LIST does (GDI)</td><td>on</td><td>A <code>LIST</code> is drawn by GDI and the grid by DirectWrite, and they do not render alike. See the note below.</td></tr>
+        <tr><td>Font weight</td><td>as the name says</td><td>Which face of the family to ask for. See the note below &mdash; this one is not cosmetic.</td></tr>
       </table>
+      <div class="callout warn"><b>A family name can carry the weight inside it, and that is not a rendering difference</b>
+        <code>"Roboto Medium"</code> is a <i>family</i> to GDI, which resolves it to the Medium face.
+        DirectWrite hands that same family its <b>400-weight member</b> instead, which is lighter. Put a
+        <code>LIST</code> and a grid side by side with the same typeface configured and the grid reads as
+        thinner &mdash; and no amount of contrast or hinting will match them, because <b>they are two
+        different faces</b>, not two renderings of the same text.
+        <br><br>
+        Left at <i>as the name says</i>, the last word of the family name &mdash; Medium, Light,
+        SemiBold, Black, Thin &mdash; is read and that weight is asked for. Name it explicitly when the
+        family name does not say.</div>
+      <div class="callout note"><b>GDI and DirectWrite really do render differently</b>
+        GDI snaps the stems to the pixel grid and adds contrast, so they look thicker. Ticked, the grid
+        asks DirectWrite for <code>GDI_CLASSIC</code> hinting with ClearType and GDI's enhanced contrast.
+        Gamma, ClearType level and subpixel order come from <b>the machine's own settings</b> rather than
+        constants &mdash; they are what the user left in the ClearType panel, and overriding them would
+        fix the weight and break the colour of the text on displays that are not RGB.</div>
+
       <div class="callout note"><b>SDAspecto's typography is resolved at run time, not at generate time</b>
         The grid asks the global instance &mdash; <code>GLO_SDAspecto.FuenteNombre</code> and
         <code>.FuenteTamano</code> &mdash; rather than copying its prompts. It has to: SDAspecto's
@@ -280,7 +329,7 @@
       <h2>What the end user gets <a href="#user" class="top">#</a></h2>
       <p>None of this needs code from you.</p>
       <h3>The heading menu</h3>
-      <p>With the drop-down button switched on, every heading opens up to ten options &mdash;
+      <p>With the drop-down button switched on, every heading opens up to eleven options &mdash;
         <i>Filter by value&hellip;</i> can be left out from the prompts:</p>
       <table>
         <tr><th>Option</th><th>What it does</th></tr>
@@ -292,6 +341,7 @@
         <tr><td>Clear all filters</td><td>Every column's.</td></tr>
         <tr><td>Columns&hellip;</td><td>Show, hide, and choose which columns carry a total.</td></tr>
         <tr><td>Auto-fit widths</td><td>Sizes every visible column to the widest of its heading and its values, in one go.</td></tr>
+        <tr><td>Layouts&hellip;</td><td>Save the columns you are using under a name, and bring them back later. See <a href="#layouts">Column layouts</a>.</td></tr>
         <tr><td>Reset layout</td><td>Back to the design widths, and forget what was remembered.</td></tr>
       </table>
       <p>Filters are <b>per column and they accumulate</b>: filtering a second column does not replace
@@ -303,6 +353,49 @@
         and there are buttons for whoever prefers to press one. Columns will not let you accept with
         everything hidden: a grid with no columns has nowhere to click to undo it. <i>Find text</i> is a
         single line plus the tick that widens the search to every column.</p>
+    </section>
+
+    <section id="layouts">
+      <h2>Column layouts <a href="#layouts" class="top">#</a></h2>
+      <p class="lead">One user works with columns A, B and C; another prefers A, C and D. Each saves
+        their own under a name and brings it back.</p>
+      <p><b>Layouts&hellip;</b> on the heading menu opens a small dialog: the list of saved layouts, a
+        name, and <i>Save</i> / <i>Load</i> / <i>Delete</i>. It stores <b>each column's width, which
+        columns are visible, and which ones carry a total</b>. Up to twenty.</p>
+      <p>It needs <i>Remember this grid's layout between runs</i>, which is where the storage lives, and
+        it inherits from the global like the rest of the menu.</p>
+      <div class="callout tip"><b>It invents no storage</b>
+        A layout is exactly what the grid already remembered between runs, written to a named section
+        instead of the usual one. Loading copies that section over the usual one and reopens &mdash; so a
+        loaded layout is <b>also</b> the one that comes back on its own next time, with no second place
+        where the truth could differ.</div>
+      <div class="callout warn"><b>No filters, and no column order</b>
+        Filters are not saved for the same reason they are not remembered: a filter is an expression, and
+        one that will not parse is a <i>run-time</i> error at window open, before there is anything on
+        screen to explain it. A wrong width looks odd; a wrong filter locks you out. Order is not saved
+        because the grid does not reorder columns.</div>
+
+      <h3>From your own code</h3>
+      <p>The same two operations are routines, so an embed can drive them &mdash; the dialog calls these
+        very routines, rather than keeping a second copy that could drift:</p>
+      <pre><code>Grid1:SchName = 'Sales'
+DO BG:SchLoad:Grid1
+IF ~Grid1:SchDid                     <span class="c">! nothing stored under that name</span>
+
+Grid1:SchName = 'Sales'
+DO BG:SchSave:Grid1                  <span class="c">! and it joins the list</span></code></pre>
+      <p>There is also a <b>code template</b> &mdash; <code>BrowseGrid - load a column layout</code> &mdash;
+        to drag onto an embed. It takes the grid's object name and the layout name, with a tick saying
+        whether that name is a <b>variable</b> or a literal.</p>
+      <div class="callout tip"><b>What the code template is for</b>
+        The layout that follows from <i>who opened the window</i> &mdash; their department, their role
+        &mdash; which is not something the user can choose by pressing a button. Point it at a variable,
+        name the saved layouts after the values that variable takes, and each user arrives with their own
+        columns.
+        <br><br>
+        Put it on an embed that runs <b>after the grid exists</b> (<code>ThisWindow.Init</code>, after the
+        parent call, is the natural place). Earlier there is nothing to rearrange and the call leaves
+        quietly.</div>
     </section>
 
     <section id="hooks">
@@ -408,7 +501,7 @@
     </section>
 
     </div>
-    <footer>BrowseGrid v1.25 &mdash; the change history, with the reasoning behind each decision, is in <code>CHANGELOG.md</code>.</footer>
+    <footer>BrowseGrid v1.36 &mdash; the change history, with the reasoning behind each decision, is in <code>CHANGELOG.md</code>.</footer>
   </main>
 </div>
 </body>

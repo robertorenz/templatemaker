@@ -593,6 +593,36 @@ was loaded, drawn, and then clipped away behind the bar: selectable with the arr
 see. The **Overlay** style was never affected, because that bar floats over the rows and takes no height
 from anything.
 
+**What v1.28 fixed.** *Find text* across several columns built a filter that would not parse. The clause
+was joined in two steps &mdash; `expr = CLIP(expr) & ' OR '` and then `expr = CLIP(expr) & CLIP(one)` &mdash;
+and the second `CLIP` eats the space the first one had just added, so the expression came out as
+`...1,1) ORINSTRING(...)`. The evaluator reads that run-together token as one identifier and the view
+opens with *BIND has not been called for ORINSTRING (1011)*, filters and ranges ignored. It is built as a
+single expression now. Only *In all columns* reproduced it &mdash; with one column there is no `OR` to run
+together, which is why the same field of a related table searched fine on its own.
+
+**What v1.36 adds and fixes.** Three fixes first, because they are defects rather than features. The
+**selected row landed in the two-pixel sliver**: `BG:Fill` mixed the count of rows that fit *entirely*
+with the count it *draws* — one more, painted deliberately so scrolling can be by pixel — and used the
+drawing count for the scroll arithmetic, so arrowing past the last whole row put the selection somewhere
+it could not be seen. The **grid read thinner than the LIST beside it** with the same typeface
+configured, and that was neither contrast nor hinting: `"Roboto Medium"` is a *family* to GDI, which
+resolves it to the Medium face, while DirectWrite hands that family its 400-weight member — two
+different **faces**, not two renderings. The weight is now read from the last word of the family name.
+And **saved column layouts were saved empty**: their loops sat inside the dialog's `ACCEPT`, where a
+field equate resolves against *that* window, so `%bgList` read a control of the dialog and wrote nothing
+— without erroring.
+
+Then the features. **Settings shared by every browse**: three groups — the heading menu, the look
+(Look + Colours + Variables, inherited together because Variables overrides the other two), and the
+mouse — set once on the global extension and inherited with one tick each. Column numbers that also get
+the click are deliberately excluded: they belong to *that* browse. **Column layouts**, saved under a
+name and recalled, storing widths, which columns are visible and which carry a total — no filters (an
+expression that will not parse is a run-time error at window open) and no order (the grid does not
+reorder). Drivable from an embed (`Grid1:SchName` + `DO BG:SchLoad:Grid1`) and from a **code template**,
+for the layout that follows from who opened the window rather than from a button. Plus **GDI text
+rendering**, a **font weight** prompt, and each heading-menu option can be switched off individually.
+
 Measured on a real application: a fill costs **under 200 µs** — 1.2 % of a 60 Hz frame — and the generated
 code makes **three file accesses**, none of them on the drawing path. The one to know about is *Filter by
 value*, which scans the file sequentially in the foreground; it can be taken off the menu from the prompts.

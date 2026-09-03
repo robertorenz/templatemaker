@@ -1,4 +1,4 @@
-#TEMPLATE(BrowseGrid,'BrowseGrid - draw any browse with Direct2D - v1.25'),FAMILY('ABC')
+#TEMPLATE(BrowseGrid,'BrowseGrid - draw any browse with Direct2D - v1.36'),FAMILY('ABC')
 #!-----------------------------------------------------------------------------
 #!  BrowseGrid  -  a browse that does not look like 1995.
 #!
@@ -34,7 +34,7 @@
 #SHEET
   #TAB('General')
     #BOXED('BrowseGrid')
-      #DISPLAY('BrowseGrid - Version 1.25')
+      #DISPLAY('BrowseGrid - Version 1.36')
       #DISPLAY('Draws an ABC browse with Direct2D and DirectWrite instead of')
       #DISPLAY('the runtime LIST, without touching the browse underneath.')
       #DISPLAY('')
@@ -55,6 +55,78 @@
       #DISPLAY('reads them, not the user. So does the diagnostics line, which is a')
       #DISPLAY('debugging tool rather than part of the product.')
     #ENDBOXED
+  #ENDTAB
+  #TAB('Heading menu')
+    #DISPLAY('Lo que ofrece el menu del encabezado, para toda la aplicacion.')
+    #DISPLAY('Cada browse decide si usa esto o lo suyo, con un tilde en su')
+    #DISPLAY('propia solapa Heading menu.')
+    #DISPLAY('')
+    #PROMPT('Excel-style drop-down &button on every heading',CHECK),%bgGFilterBtn,DEFAULT(0),AT(10)
+    #PROMPT('  Offer Filter by &value... on that menu',CHECK),%bgGFilterVals,DEFAULT(1),AT(10)
+    #PROMPT('  Offer Fi&nd text... on that menu',CHECK),%bgGFilterText,DEFAULT(1),AT(10)
+    #PROMPT('&Columns... (show and hide columns)',CHECK),%bgGChooser,DEFAULT(1),AT(10)
+    #PROMPT('&Sort Ascending / Descending',CHECK),%bgGMnSort,DEFAULT(1),AT(10)
+    #PROMPT('Filter on &this value',CHECK),%bgGMnFiltOn,DEFAULT(1),AT(10)
+    #PROMPT('Clear this f&ilter',CHECK),%bgGMnClrThis,DEFAULT(1),AT(10)
+    #PROMPT('Clear &all filters',CHECK),%bgGMnClrAll,DEFAULT(1),AT(10)
+    #PROMPT('&Reset layout',CHECK),%bgGMnReset,DEFAULT(1),AT(10)
+    #PROMPT('La&youts... (save and recall column layouts)',CHECK),%bgGSchemes,DEFAULT(0),AT(10)
+    #PROMPT('A&uto-fit column widths on the heading menu',CHECK),%bgGAutoFit,DEFAULT(1),AT(10)
+    #PROMPT('  Records to look &ahead:',SPIN(@n7,0,100000,500)),%bgGFitScan,DEFAULT(1000)
+  #ENDTAB
+  #TAB('Look')
+    #DISPLAY('Tipografia y colores para toda la aplicacion. Cada browse decide')
+    #DISPLAY('si usa esto o lo suyo, con un tilde en su solapa Look.')
+    #DISPLAY('')
+    #PROMPT('Take the typeface from SD &Aspecto',CHECK),%bgGSDAsp,DEFAULT(0),AT(10)
+    #PROMPT('&Font:',@s32),%bgGFont,DEFAULT('Segoe UI')
+    #PROMPT('&Size (points):',SPIN(@n3,6,24,1)),%bgGSize,DEFAULT(9)
+    #PROMPT('Draw the text the way the LIST does (&GDI)',CHECK),%bgGGdiText,DEFAULT(1),AT(10)
+    #PROMPT('Font wei&ght:',DROP('As the name says[0]|Light[300]|Regular[400]|Medium[500]|SemiBold[600]|Bold[700]')),%bgGWeight,DEFAULT('0')
+    #PROMPT('&Wrap text that is too long for its column',CHECK),%bgGWrap,DEFAULT(0),AT(10)
+    #PROMPT('  &Lines a cell may use:',SPIN(@n1,2,4,1)),%bgGWrapLines,DEFAULT(2)
+    #PROMPT('&Row height (pixels, 0 = follow the browse):',SPIN(@n3,0,80,1)),%bgGRowH,DEFAULT(0)
+    #PROMPT('&Header height (pixels, 0 = from the font):',SPIN(@n3,0,80,1)),%bgGHdrH,DEFAULT(0)
+  #ENDTAB
+  #TAB('Colours')
+    #DISPLAY('Los ocho colores del grid, para toda la aplicacion.')
+    #DISPLAY('')
+    #PROMPT('&Background:',COLOR),%bgGCBack,DEFAULT(00FFFFFFH)
+    #PROMPT('B&anding (every other row):',COLOR),%bgGCBand,DEFAULT(00FAF7F5H)
+    #PROMPT('&Gridlines:',COLOR),%bgGCGrid,DEFAULT(00EAE5E1H)
+    #PROMPT('&Text:',COLOR),%bgGCText,DEFAULT(0033291FH)
+    #PROMPT('Header bac&kground:',COLOR),%bgGCHdrBack,DEFAULT(004A3A2BH)
+    #PROMPT('Header te&xt:',COLOR),%bgGCHdrText,DEFAULT(00FFFFFFH)
+    #PROMPT('Selected ro&w:',COLOR),%bgGCSelBack,DEFAULT(00B56F2FH)
+    #PROMPT('Selected t&ext:',COLOR),%bgGCSelText,DEFAULT(00FFFFFFH)
+  #ENDTAB
+  #TAB('Variables')
+    #DISPLAY('Tipografia y colores desde variables del programa, para toda la')
+    #DISPLAY('aplicacion. Un campo en blanco conserva el valor fijo de las otras')
+    #DISPLAY('dos solapas; uno con un nombre se emite como codigo.')
+    #DISPLAY('')
+    #PROMPT('Take any of these from a &variable instead',CHECK),%bgGVars,DEFAULT(0),AT(10)
+    #PROMPT('  Font name:',@s64),%bgGVFont,DEFAULT('')
+    #PROMPT('  Size:',@s64),%bgGVSize,DEFAULT('')
+    #PROMPT('  Background:',@s64),%bgGVCBack,DEFAULT('')
+    #PROMPT('  Banding:',@s64),%bgGVCBand,DEFAULT('')
+    #PROMPT('  Gridlines:',@s64),%bgGVCGrid,DEFAULT('')
+    #PROMPT('  Text:',@s64),%bgGVCText,DEFAULT('')
+    #PROMPT('  Header background:',@s64),%bgGVCHdrBack,DEFAULT('')
+    #PROMPT('  Header text:',@s64),%bgGVCHdrText,DEFAULT('')
+    #PROMPT('  Selected row:',@s64),%bgGVCSelBack,DEFAULT('')
+    #PROMPT('  Selected text:',@s64),%bgGVCSelText,DEFAULT('')
+  #ENDTAB
+  #TAB('Mouse')
+    #DISPLAY('Barras y clicks para toda la aplicacion. Las columnas que ademas')
+    #DISPLAY('reciben el click quedan por browse: son numeros de ESE browse.')
+    #DISPLAY('')
+    #PROMPT('Scroll&bars on the grid',CHECK),%bgGBars,DEFAULT(1),AT(10)
+    #PROMPT('  St&yle:',DROP('Windows|Slim|Overlay')),%bgGBarStyle,DEFAULT('Windows')
+    #PROMPT('Hand a right-click back to the browse &popup',CHECK),%bgGPopup,DEFAULT(1),AT(10)
+    #PROMPT('A &double click opens the record',CHECK),%bgGDouble,DEFAULT(1),AT(10)
+    #PROMPT('Scroll with the mouse &wheel',CHECK),%bgGWheel,DEFAULT(1),AT(10)
+    #PROMPT('Show the whole value in a t&ooltip when it does not fit',CHECK),%bgGTips,DEFAULT(1),AT(10)
   #ENDTAB
 #ENDSHEET
 #!-----------------------------------------------------------------------------
@@ -102,6 +174,7 @@ BG:FitPad            EQUATE(10)                               ! the 8 a cell is 
 BG:FitMin            EQUATE(16)                               ! a column narrower than this is a line
 BG:FitMax            EQUATE(600)                              ! and one wider is a paragraph
 BG:FitBox            EQUATE(28)                               ! a tick box: the square, not its text
+BG:MaxSch            EQUATE(20)                               ! esquemas de columnas guardados
 BG:MaxExpr           EQUATE(950)                              ! how long a filter expression may get
 BG:MaxVals           EQUATE(500)                              ! distinct values offered
 BG:VkLButton         EQUATE(1)
@@ -172,6 +245,9 @@ d2g_FilterBtns(LONG h,LONG on),NAME('_d2g_FilterBtns')
 d2g_HitBtn(LONG h,LONG x,LONG y),LONG,NAME('_d2g_HitBtn')
 d2g_FilterOn(LONG h,LONG col,LONG on),NAME('_d2g_FilterOn')
 d2g_BarStyle(LONG h,LONG style),NAME('_d2g_BarStyle')
+d2g_TextMode(LONG h,LONG gdi),NAME('_d2g_TextMode')
+d2g_TextInfo(LONG h,LONG what),LONG,NAME('_d2g_TextInfo')
+d2g_Weight(LONG h,LONG w),NAME('_d2g_Weight')
 d2g_BarsShow(LONG h,LONG on),NAME('_d2g_BarsShow')
 d2g_HBar(LONG h,LONG show,LONG pos,LONG page,LONG total),NAME('_d2g_HBar')
 d2g_HitHBar(LONG h,LONG x,LONG y),LONG,NAME('_d2g_HitHBar')
@@ -527,6 +603,33 @@ c LONG,AUTO
 #! realmente comparten.
 #!-----------------------------------------------------------------------------
   #TAB('Heading menu')
+    #BOXED('What the menu offers')
+      #DISPLAY('Cada opcion se puede sacar. El menu se arma con las que queden y')
+      #DISPLAY('el CASE se renumera solo, asi que sacar una no descoloca al resto.')
+      #DISPLAY('Sin ninguna, no se abre menu.')
+      #PROMPT('Take these from the &global extension',CHECK),%bgGlobMenu,DEFAULT(0),AT(10)
+      #DISPLAY('Todo lo de esta solapa - y el boton desplegable - sale de la')
+      #DISPLAY('extension global, para no repetirlo browse por browse. Si la')
+      #DISPLAY('extension global no esta, se usa lo de aca abajo.')
+      #DISPLAY('')
+      #DISPLAY('OJO: el boton desplegable viene APAGADO tambien en la global, asi')
+      #DISPLAY('que tildar esto sin haberlo encendido alla deja el browse sin menu.')
+      #DISPLAY('Los valores de la global son los de fabrica hasta que los toques.')
+      #ENABLE(%bgGlobMenu = 0)
+      #PROMPT('&Sort Ascending / Descending',CHECK),%bgMnSort,DEFAULT(1),AT(10)
+      #PROMPT('Filter on &this value',CHECK),%bgMnFiltOn,DEFAULT(1),AT(10)
+      #PROMPT('Clear this f&ilter',CHECK),%bgMnClrThis,DEFAULT(1),AT(10)
+      #PROMPT('Clear &all filters',CHECK),%bgMnClrAll,DEFAULT(1),AT(10)
+      #PROMPT('&Reset layout',CHECK),%bgMnReset,DEFAULT(1),AT(10)
+      #PROMPT('La&youts... (save and recall column layouts)',CHECK),%bgSchemes,DEFAULT(0),AT(10)
+      #DISPLAY('  Guarda las columnas visibles, sus anchos y cuales totalizan,')
+      #DISPLAY('  con un nombre. Necesita que este puesto Remember this grid<39>s')
+      #DISPLAY('  layout between runs, que es donde vive el almacenamiento.')
+      #ENDENABLE
+      #DISPLAY('')
+      #DISPLAY('Columns... sale del tilde de la solapa Columns, Filter by value y')
+      #DISPLAY('Find text de los de aca abajo, y Auto-fit del de su recuadro.')
+    #ENDBOXED
     #BOXED('Filtering')
       #PROMPT('&Excel-style drop-down button on every heading',CHECK),%bgFilterBtn,DEFAULT(0),AT(10)
       #ENABLE(%bgFilterBtn)
@@ -551,6 +654,11 @@ c LONG,AUTO
         #DISPLAY('  Sizes every visible column to the widest of its heading and its')
         #DISPLAY('  values, in one go. Needs the drop-down button, which is where')
         #DISPLAY('  the option lives.')
+        #DISPLAY('')
+        #DISPLAY('  Needs a FLATTENED format too. In a grouped one the width that')
+        #DISPLAY('  governs the layout belongs to the GROUP, and sizing the fields')
+        #DISPLAY('  inside it without touching that would leave the spanning heading')
+        #DISPLAY('  at its old width. With Flatten off the option is not offered.')
         #ENABLE(%bgAutoFit)
           #PROMPT('  Records to look &ahead:',SPIN(@n7,0,100000,500)),%bgFitScan,DEFAULT(1000)
           #DISPLAY('  The loaded page is measured exactly and costs nothing - it is')
@@ -562,7 +670,13 @@ c LONG,AUTO
     #ENDBOXED
   #ENDTAB
   #TAB('Look')
+    #ENABLE(%bgGlobLook = 0)
     #BOXED('Type')
+      #PROMPT('Take all of this from the &global extension',CHECK),%bgGlobLook,DEFAULT(0),AT(10)
+      #DISPLAY('Tipografia, colores y variables salen de la extension global, para')
+      #DISPLAY('no repetirlos browse por browse. Las tres solapas juntas, porque')
+      #DISPLAY('Variables pisa a Look y a Colours: heredar una sola dejaria mitad')
+      #DISPLAY('de un tema y mitad de otro. Sin extension global, se usa lo de aca.')
       #PROMPT('Take the typeface from SD &Aspecto',CHECK),%bgSDAsp,DEFAULT(0),AT(10)
       #DISPLAY('Font and size come from that application<39>s SDAspecto extension, so')
       #DISPLAY('the grid follows the same typography as everything else. The colours')
@@ -574,6 +688,22 @@ c LONG,AUTO
         #PROMPT('&Font:',@s32),%bgFont,DEFAULT('Segoe UI')
         #PROMPT('&Size (points):',SPIN(@n3,6,24,1)),%bgSize,DEFAULT(9)
       #ENDENABLE
+      #PROMPT('Draw the text the way the LIST does (&GDI)',CHECK),%bgGdiText,DEFAULT(1),AT(10)
+      #PROMPT('Font wei&ght:',DROP('As the name says[0]|Light[300]|Regular[400]|Medium[500]|SemiBold[600]|Bold[700]')),%bgWeight,DEFAULT('0')
+      #DISPLAY('A family name can carry the weight in it. <39>Roboto Medium<39> is a')
+      #DISPLAY('family to GDI, which resolves it to the Medium face; DirectWrite')
+      #DISPLAY('may hand that same family its 400-weight member instead. When it')
+      #DISPLAY('does you are not seeing the same text rendered differently - you')
+      #DISPLAY('are seeing two different FACES, and no amount of contrast will')
+      #DISPLAY('match them. Name the weight here and the guessing stops.')
+      #DISPLAY('A LIST is drawn by GDI and the grid by DirectWrite, and they do not')
+      #DISPLAY('render alike: GDI snaps the stems to the pixel grid and adds')
+      #DISPLAY('contrast, so they look thicker. Side by side in one window the')
+      #DISPLAY('grid reads as thinner even though the typeface and the size are')
+      #DISPLAY('identical. Ticked, the grid is told to hint the way GDI does.')
+      #DISPLAY('')
+      #DISPLAY('Untick it to get DirectWrite<39>s own rendering, which is smoother')
+      #DISPLAY('and lighter - better on its own, different from everything else.')
       #PROMPT('&Wrap text that is too long for its column',CHECK),%bgWrap,DEFAULT(0),AT(10)
       #ENABLE(%bgWrap)
         #PROMPT('  &Lines a cell may use:',SPIN(@n1,2,4,1)),%bgWrapLines,DEFAULT(2)
@@ -582,8 +712,10 @@ c LONG,AUTO
       #PROMPT('&Row height (pixels, 0 = follow the browse):',SPIN(@n3,0,80,1)),%bgRowH,DEFAULT(0)
       #PROMPT('&Header height (pixels, 0 = from the font):',SPIN(@n3,0,80,1)),%bgHdrH,DEFAULT(0)
     #ENDBOXED
+    #ENDENABLE
   #ENDTAB
   #TAB('Colours')
+    #ENABLE(%bgGlobLook = 0)
     #BOXED('Colours')
       #PROMPT('&Background:',COLOR),%bgCBack,DEFAULT(00FFFFFFH)
       #PROMPT('B&anding (every other row):',COLOR),%bgCBand,DEFAULT(00FAF7F5H)
@@ -595,8 +727,10 @@ c LONG,AUTO
       #PROMPT('Selected t&ext:',COLOR),%bgCSelText,DEFAULT(00FFFFFFH)
       #DISPLAY('A column or a cell with its own colour overrides these.')
     #ENDBOXED
+    #ENDENABLE
   #ENDTAB
   #TAB('Variables')
+    #ENABLE(%bgGlobLook = 0)
     #BOXED('From application variables')
       #PROMPT('Take any of these from a &variable instead',CHECK),%bgVars,DEFAULT(0),AT(10)
       #DISPLAY('A field left blank keeps the setting above. One with a name in it is')
@@ -618,9 +752,14 @@ c LONG,AUTO
       #DISPLAY('Read once, when the grid starts. Changing a variable afterwards does')
       #DISPLAY('not repaint it on its own.')
     #ENDBOXED
+    #ENDENABLE
   #ENDTAB
   #TAB('Mouse')
+    #ENABLE(%bgGlobMouse = 0)
     #BOXED('Scrollbars')
+      #PROMPT('Take these from the g&lobal extension',CHECK),%bgGlobMouse,DEFAULT(0),AT(10)
+      #DISPLAY('Las columnas que ademas reciben el click NO se heredan: son')
+      #DISPLAY('numeros de columna de ESTE browse y no significan nada en otro.')
       #PROMPT('Scroll&bars on the grid',CHECK),%bgBars,DEFAULT(1),AT(10)
       #ENABLE(%bgBars)
         #PROMPT('  St&yle:',DROP('Windows|Slim|Overlay')),%bgBarStyle,DEFAULT('Windows')
@@ -642,6 +781,7 @@ c LONG,AUTO
       #DISPLAY('grid covers the LIST so that click never reaches it. Blank unless you')
       #DISPLAY('need it.')
     #ENDBOXED
+    #ENDENABLE
   #ENDTAB
 #ENDSHEET
 #!-----------------------------------------------------------------------------
@@ -714,7 +854,184 @@ c LONG,AUTO
 !  diciendo lo mismo. Este template ya se comio ese error una vez, con los
 !  separadores que contaban como items: limpiar un filtro terminaba aplicando
 !  uno. Calculados aca, la lista y el CASE no pueden discrepar.
+!  LOCAL O GLOBAL, para la apariencia y el raton. Mismo criterio que el menu:
+!  resuelto en un solo punto, porque cada uno de estos gobierna varios #IF de
+!  generacion y dos usos que discrepen dan codigo incoherente.
+  #DECLARE(%bgSDAspU)
+  #DECLARE(%bgFontU)
+  #DECLARE(%bgSizeU)
+  #DECLARE(%bgGdiTextU)
+  #DECLARE(%bgWeightU)
+  #DECLARE(%bgWrapU)
+  #DECLARE(%bgWrapLinesU)
+  #DECLARE(%bgRowHU)
+  #DECLARE(%bgHdrHU)
+  #DECLARE(%bgCBackU)
+  #DECLARE(%bgCBandU)
+  #DECLARE(%bgCGridU)
+  #DECLARE(%bgCTextU)
+  #DECLARE(%bgCHdrBackU)
+  #DECLARE(%bgCHdrTextU)
+  #DECLARE(%bgCSelBackU)
+  #DECLARE(%bgCSelTextU)
+  #DECLARE(%bgVarsU)
+  #DECLARE(%bgVFontU)
+  #DECLARE(%bgVSizeU)
+  #DECLARE(%bgVCBackU)
+  #DECLARE(%bgVCBandU)
+  #DECLARE(%bgVCGridU)
+  #DECLARE(%bgVCTextU)
+  #DECLARE(%bgVCHdrBackU)
+  #DECLARE(%bgVCHdrTextU)
+  #DECLARE(%bgVCSelBackU)
+  #DECLARE(%bgVCSelTextU)
+  #DECLARE(%bgBarsU)
+  #DECLARE(%bgBarStyleU)
+  #DECLARE(%bgPopupU)
+  #DECLARE(%bgDoubleU)
+  #DECLARE(%bgWheelU)
+  #DECLARE(%bgTipsU)
+  #DECLARE(%bgAutoFitU)
+  #DECLARE(%bgSchemesU)
+  #DECLARE(%bgFitScanU)
+  #SET(%bgSDAspU,%bgSDAsp)
+  #SET(%bgFontU,%bgFont)
+  #SET(%bgSizeU,%bgSize)
+  #SET(%bgGdiTextU,%bgGdiText)
+  #SET(%bgWeightU,%bgWeight)
+  #SET(%bgWrapU,%bgWrap)
+  #SET(%bgWrapLinesU,%bgWrapLines)
+  #SET(%bgRowHU,%bgRowH)
+  #SET(%bgHdrHU,%bgHdrH)
+  #SET(%bgCBackU,%bgCBack)
+  #SET(%bgCBandU,%bgCBand)
+  #SET(%bgCGridU,%bgCGrid)
+  #SET(%bgCTextU,%bgCText)
+  #SET(%bgCHdrBackU,%bgCHdrBack)
+  #SET(%bgCHdrTextU,%bgCHdrText)
+  #SET(%bgCSelBackU,%bgCSelBack)
+  #SET(%bgCSelTextU,%bgCSelText)
+  #SET(%bgVarsU,%bgVars)
+  #SET(%bgVFontU,%bgVFont)
+  #SET(%bgVSizeU,%bgVSize)
+  #SET(%bgVCBackU,%bgVCBack)
+  #SET(%bgVCBandU,%bgVCBand)
+  #SET(%bgVCGridU,%bgVCGrid)
+  #SET(%bgVCTextU,%bgVCText)
+  #SET(%bgVCHdrBackU,%bgVCHdrBack)
+  #SET(%bgVCHdrTextU,%bgVCHdrText)
+  #SET(%bgVCSelBackU,%bgVCSelBack)
+  #SET(%bgVCSelTextU,%bgVCSelText)
+  #SET(%bgBarsU,%bgBars)
+  #SET(%bgBarStyleU,%bgBarStyle)
+  #SET(%bgPopupU,%bgPopup)
+  #SET(%bgDoubleU,%bgDouble)
+  #SET(%bgWheelU,%bgWheel)
+  #SET(%bgTipsU,%bgTips)
+  #SET(%bgAutoFitU,%bgAutoFit)
+  #SET(%bgSchemesU,%bgSchemes)
+  #SET(%bgFitScanU,%bgFitScan)
+  #IF(%bgGlobLook)
+    #CONTEXT(%Application)
+      #IF(VAREXISTS(%bgGSDAsp))
+        #SET(%bgSDAspU,%bgGSDAsp)
+        #SET(%bgFontU,%bgGFont)
+        #SET(%bgSizeU,%bgGSize)
+        #SET(%bgGdiTextU,%bgGGdiText)
+        #SET(%bgWeightU,%bgGWeight)
+        #SET(%bgWrapU,%bgGWrap)
+        #SET(%bgWrapLinesU,%bgGWrapLines)
+        #SET(%bgRowHU,%bgGRowH)
+        #SET(%bgHdrHU,%bgGHdrH)
+        #SET(%bgCBackU,%bgGCBack)
+        #SET(%bgCBandU,%bgGCBand)
+        #SET(%bgCGridU,%bgGCGrid)
+        #SET(%bgCTextU,%bgGCText)
+        #SET(%bgCHdrBackU,%bgGCHdrBack)
+        #SET(%bgCHdrTextU,%bgGCHdrText)
+        #SET(%bgCSelBackU,%bgGCSelBack)
+        #SET(%bgCSelTextU,%bgGCSelText)
+        #SET(%bgVarsU,%bgGVars)
+        #SET(%bgVFontU,%bgGVFont)
+        #SET(%bgVSizeU,%bgGVSize)
+        #SET(%bgVCBackU,%bgGVCBack)
+        #SET(%bgVCBandU,%bgGVCBand)
+        #SET(%bgVCGridU,%bgGVCGrid)
+        #SET(%bgVCTextU,%bgGVCText)
+        #SET(%bgVCHdrBackU,%bgGVCHdrBack)
+        #SET(%bgVCHdrTextU,%bgGVCHdrText)
+        #SET(%bgVCSelBackU,%bgGVCSelBack)
+        #SET(%bgVCSelTextU,%bgGVCSelText)
+      #ENDIF
+    #ENDCONTEXT
+  #ENDIF
+  #IF(%bgGlobMouse)
+    #CONTEXT(%Application)
+      #IF(VAREXISTS(%bgGBars))
+        #SET(%bgBarsU,%bgGBars)
+        #SET(%bgBarStyleU,%bgGBarStyle)
+        #SET(%bgPopupU,%bgGPopup)
+        #SET(%bgDoubleU,%bgGDouble)
+        #SET(%bgWheelU,%bgGWheel)
+        #SET(%bgTipsU,%bgGTips)
+      #ENDIF
+    #ENDCONTEXT
+  #ENDIF
+  #IF(%bgGlobMenu)
+    #CONTEXT(%Application)
+      #IF(VAREXISTS(%bgGAutoFit))
+        #SET(%bgAutoFitU,%bgGAutoFit)
+        #SET(%bgFitScanU,%bgGFitScan)
+        #SET(%bgSchemesU,%bgGSchemes)
+      #ENDIF
+    #ENDCONTEXT
+  #ENDIF
+!  LOCAL O GLOBAL, resuelto UNA VEZ y en simbolos propios.
+!
+!  No se puede resolver donde se emite cada cosa: estos prompts gobiernan
+!  #IF de GENERACION - que rutina se escribe, que opcion entra en el menu, como
+!  se numera el CASE - y aparecen en varios lugares cada uno. Resueltos aca, no
+!  hay forma de que dos usos del mismo prompt discrepen.
+!
+!  Con el tilde puesto pero sin extension global en la aplicacion, queda lo
+!  local: pedir prestado a algo que no existe no puede apagar un menu entero.
+  #DECLARE(%bgFilterBtnU)
+  #DECLARE(%bgFilterValsU)
+  #DECLARE(%bgFilterTextU)
+  #DECLARE(%bgChooserU)
+  #DECLARE(%bgMnSortU)
+  #DECLARE(%bgMnFiltOnU)
+  #DECLARE(%bgMnClrThisU)
+  #DECLARE(%bgMnClrAllU)
+  #DECLARE(%bgMnResetU)
+  #SET(%bgFilterBtnU,%bgFilterBtn)
+  #SET(%bgFilterValsU,%bgFilterVals)
+  #SET(%bgFilterTextU,%bgFilterText)
+  #SET(%bgChooserU,%bgChooser)
+  #SET(%bgMnSortU,%bgMnSort)
+  #SET(%bgMnFiltOnU,%bgMnFiltOn)
+  #SET(%bgMnClrThisU,%bgMnClrThis)
+  #SET(%bgMnClrAllU,%bgMnClrAll)
+  #SET(%bgMnResetU,%bgMnReset)
+  #IF(%bgGlobMenu)
+    #CONTEXT(%Application)
+      #IF(VAREXISTS(%bgGMnSort))
+        #SET(%bgFilterBtnU,%bgGFilterBtn)
+        #SET(%bgFilterValsU,%bgGFilterVals)
+        #SET(%bgFilterTextU,%bgGFilterText)
+        #SET(%bgChooserU,%bgGChooser)
+        #SET(%bgMnSortU,%bgGMnSort)
+        #SET(%bgMnFiltOnU,%bgGMnFiltOn)
+        #SET(%bgMnClrThisU,%bgGMnClrThis)
+        #SET(%bgMnClrAllU,%bgGMnClrAll)
+        #SET(%bgMnResetU,%bgGMnReset)
+      #ENDIF
+    #ENDCONTEXT
+  #ENDIF
   #DECLARE(%bgMiN)
+  #DECLARE(%bgMiAsc)
+  #DECLARE(%bgMiDesc)
+  #DECLARE(%bgMiFiltOn)
   #DECLARE(%bgMiFiltBy)
   #DECLARE(%bgMiFindTx)
   #DECLARE(%bgMiClrThis)
@@ -722,32 +1039,68 @@ c LONG,AUTO
   #DECLARE(%bgMiCols)
   #DECLARE(%bgMiAutoFit)
   #DECLARE(%bgMiReset)
+  #DECLARE(%bgMiSchemes)
 !  Un contador, no numeros escritos a mano. Cada opcion opcional que se agrega
 !  o se saca corre a todas las que siguen, y escribirlos sueltos es esperar a
 !  que alguna vez no coincidan.
-#!  Los tres fijos: ordenar ascendente, descendente, y filtrar por este valor.
-  #SET(%bgMiN,3)
-  #IF(%bgFilterVals)
+#!  NINGUNO ES FIJO. Antes los tres primeros - ordenar asc, desc y filtrar por
+#!  este valor - se daban por puestos y el contador arrancaba en 3, con el CASE
+#!  usando OF 1, OF 2 y OF 3 escritos a mano. Poder sacar cualquiera obliga a que
+#!  TODOS salgan del mismo contador: un numero escrito a mano entre numeros
+#!  calculados es el error que este menu ya se comio una vez.
+  #SET(%bgMiN,0)
+  #SET(%bgMiAsc,0)
+  #SET(%bgMiDesc,0)
+  #SET(%bgMiFiltOn,0)
+  #SET(%bgMiFiltBy,0)
+  #SET(%bgMiFindTx,0)
+  #SET(%bgMiClrThis,0)
+  #SET(%bgMiClrAll,0)
+  #SET(%bgMiCols,0)
+  #SET(%bgMiAutoFit,0)
+  #SET(%bgMiReset,0)
+  #SET(%bgMiSchemes,0)
+  #IF(%bgMnSortU)
+    #SET(%bgMiN,%bgMiN + 1)
+    #SET(%bgMiAsc,%bgMiN)
+    #SET(%bgMiN,%bgMiN + 1)
+    #SET(%bgMiDesc,%bgMiN)
+  #ENDIF
+  #IF(%bgMnFiltOnU)
+    #SET(%bgMiN,%bgMiN + 1)
+    #SET(%bgMiFiltOn,%bgMiN)
+  #ENDIF
+  #IF(%bgFilterValsU)
     #SET(%bgMiN,%bgMiN + 1)
     #SET(%bgMiFiltBy,%bgMiN)
-  #ELSE
-    #SET(%bgMiFiltBy,0)
   #ENDIF
-  #IF(%bgFilterText)
+  #IF(%bgFilterTextU)
     #SET(%bgMiN,%bgMiN + 1)
     #SET(%bgMiFindTx,%bgMiN)
-  #ELSE
-    #SET(%bgMiFindTx,0)
   #ENDIF
-  #SET(%bgMiClrThis,%bgMiN + 1)
-  #SET(%bgMiClrAll,%bgMiN + 2)
-  #SET(%bgMiCols,%bgMiN + 3)
-  #IF(%bgAutoFit)
-    #SET(%bgMiAutoFit,%bgMiN + 4)
-    #SET(%bgMiReset,%bgMiN + 5)
-  #ELSE
-    #SET(%bgMiAutoFit,0)
-    #SET(%bgMiReset,%bgMiN + 4)
+  #IF(%bgMnClrThisU)
+    #SET(%bgMiN,%bgMiN + 1)
+    #SET(%bgMiClrThis,%bgMiN)
+  #ENDIF
+  #IF(%bgMnClrAllU)
+    #SET(%bgMiN,%bgMiN + 1)
+    #SET(%bgMiClrAll,%bgMiN)
+  #ENDIF
+  #IF(%bgChooserU)
+    #SET(%bgMiN,%bgMiN + 1)
+    #SET(%bgMiCols,%bgMiN)
+  #ENDIF
+  #IF(%bgAutoFitU AND %bgFlatten)
+    #SET(%bgMiN,%bgMiN + 1)
+    #SET(%bgMiAutoFit,%bgMiN)
+  #ENDIF
+  #IF(%bgSchemesU AND %bgRemember)
+    #SET(%bgMiN,%bgMiN + 1)
+    #SET(%bgMiSchemes,%bgMiN)
+  #ENDIF
+  #IF(%bgMnResetU)
+    #SET(%bgMiN,%bgMiN + 1)
+    #SET(%bgMiReset,%bgMiN)
   #ENDIF
 !  LITERAL O EXPRESION. Un valor puesto en el prompt es una constante y se
 !  emite entre comillas; un nombre de variable tiene que salir TAL CUAL para
@@ -778,7 +1131,7 @@ c LONG,AUTO
   #SET(%bgFontUsed,'')
   #SET(%bgSizeUsed,'')
   #SET(%bgSDAObj,'')
-  #IF(%bgSDAsp)
+  #IF(%bgSDAspU)
     #CONTEXT(%Application)
 !  VAREXISTS por si SDAspecto no esta en esta aplicacion: entonces sus
 !  simbolos no existen y preguntarles seria un identificador desconocido.
@@ -790,58 +1143,58 @@ c LONG,AUTO
     #ENDCONTEXT
   #ENDIF
   #IF(~%bgFontUsed)
-    #IF(%bgVars AND %bgVFont)
-      #SET(%bgFontUsed,%bgVFont)
+    #IF(%bgVarsU AND %bgVFontU)
+      #SET(%bgFontUsed,%bgVFontU)
     #ELSE
-      #SET(%bgFontUsed,'''' & %bgFont & '''')
+      #SET(%bgFontUsed,'''' & %bgFontU & '''')
     #ENDIF
   #ENDIF
   #IF(~%bgSizeUsed)
-    #IF(%bgVars AND %bgVSize)
-      #SET(%bgSizeUsed,%bgVSize)
+    #IF(%bgVarsU AND %bgVSizeU)
+      #SET(%bgSizeUsed,%bgVSizeU)
     #ELSE
-      #SET(%bgSizeUsed,%bgSize)
+      #SET(%bgSizeUsed,%bgSizeU)
     #ENDIF
   #ENDIF
-  #IF(%bgVars AND %bgVCBack)
-    #SET(%bgCBackUsed,%bgVCBack)
+  #IF(%bgVarsU AND %bgVCBackU)
+    #SET(%bgCBackUsed,%bgVCBackU)
   #ELSE
-    #SET(%bgCBackUsed,%bgCBack)
+    #SET(%bgCBackUsed,%bgCBackU)
   #ENDIF
-  #IF(%bgVars AND %bgVCBand)
-    #SET(%bgCBandUsed,%bgVCBand)
+  #IF(%bgVarsU AND %bgVCBandU)
+    #SET(%bgCBandUsed,%bgVCBandU)
   #ELSE
-    #SET(%bgCBandUsed,%bgCBand)
+    #SET(%bgCBandUsed,%bgCBandU)
   #ENDIF
-  #IF(%bgVars AND %bgVCGrid)
-    #SET(%bgCGridUsed,%bgVCGrid)
+  #IF(%bgVarsU AND %bgVCGridU)
+    #SET(%bgCGridUsed,%bgVCGridU)
   #ELSE
-    #SET(%bgCGridUsed,%bgCGrid)
+    #SET(%bgCGridUsed,%bgCGridU)
   #ENDIF
-  #IF(%bgVars AND %bgVCText)
-    #SET(%bgCTextUsed,%bgVCText)
+  #IF(%bgVarsU AND %bgVCTextU)
+    #SET(%bgCTextUsed,%bgVCTextU)
   #ELSE
-    #SET(%bgCTextUsed,%bgCText)
+    #SET(%bgCTextUsed,%bgCTextU)
   #ENDIF
-  #IF(%bgVars AND %bgVCHdrBack)
-    #SET(%bgCHdrBackUsed,%bgVCHdrBack)
+  #IF(%bgVarsU AND %bgVCHdrBackU)
+    #SET(%bgCHdrBackUsed,%bgVCHdrBackU)
   #ELSE
-    #SET(%bgCHdrBackUsed,%bgCHdrBack)
+    #SET(%bgCHdrBackUsed,%bgCHdrBackU)
   #ENDIF
-  #IF(%bgVars AND %bgVCHdrText)
-    #SET(%bgCHdrTextUsed,%bgVCHdrText)
+  #IF(%bgVarsU AND %bgVCHdrTextU)
+    #SET(%bgCHdrTextUsed,%bgVCHdrTextU)
   #ELSE
-    #SET(%bgCHdrTextUsed,%bgCHdrText)
+    #SET(%bgCHdrTextUsed,%bgCHdrTextU)
   #ENDIF
-  #IF(%bgVars AND %bgVCSelBack)
-    #SET(%bgCSelBackUsed,%bgVCSelBack)
+  #IF(%bgVarsU AND %bgVCSelBackU)
+    #SET(%bgCSelBackUsed,%bgVCSelBackU)
   #ELSE
-    #SET(%bgCSelBackUsed,%bgCSelBack)
+    #SET(%bgCSelBackUsed,%bgCSelBackU)
   #ENDIF
-  #IF(%bgVars AND %bgVCSelText)
-    #SET(%bgCSelTextUsed,%bgVCSelText)
+  #IF(%bgVarsU AND %bgVCSelTextU)
+    #SET(%bgCSelTextUsed,%bgVCSelTextU)
   #ELSE
-    #SET(%bgCSelTextUsed,%bgCSelText)
+    #SET(%bgCSelTextUsed,%bgCSelTextU)
   #ENDIF
   #DECLARE(%bgFileUsed)
   #SET(%bgFileUsed,%bgFile)
@@ -867,6 +1220,19 @@ c LONG,AUTO
   #DECLARE(%bgTClearThis)
   #DECLARE(%bgTClearAll)
   #DECLARE(%bgTColumns)
+  #DECLARE(%bgTSchMenu)
+  #DECLARE(%bgTSchTitle)
+  #DECLARE(%bgTSchHint)
+  #DECLARE(%bgTSchName)
+  #DECLARE(%bgTSchAs)
+  #DECLARE(%bgTSchSave)
+  #DECLARE(%bgTSchLoad)
+  #DECLARE(%bgTSchDel)
+  #DECLARE(%bgTSchClose)
+  #DECLARE(%bgTSchNoName)
+  #DECLARE(%bgTSchNone)
+  #DECLARE(%bgTSchFull)
+  #DECLARE(%bgTSchEmpty)
   #DECLARE(%bgTAutoFit)
   #DECLARE(%bgTReset)
   #DECLARE(%bgTNoObject)
@@ -906,6 +1272,19 @@ c LONG,AUTO
     #SET(%bgTClearThis,'Clear &this filter')
     #SET(%bgTClearAll,'Clear all f&ilters')
     #SET(%bgTColumns,'&Columns...')
+    #SET(%bgTSchMenu,'La&youts...')
+    #SET(%bgTSchTitle,'Column layouts')
+    #SET(%bgTSchHint,'Save the columns you are using under a name, and bring it back later.')
+    #SET(%bgTSchName,'Layout')
+    #SET(%bgTSchAs,'&Name:')
+    #SET(%bgTSchSave,'&Save')
+    #SET(%bgTSchLoad,'&Load')
+    #SET(%bgTSchDel,'&Delete')
+    #SET(%bgTSchClose,'&Close')
+    #SET(%bgTSchNoName,'Give the layout a name first.')
+    #SET(%bgTSchNone,'Choose a layout from the list first.')
+    #SET(%bgTSchFull,'No room for another layout. Delete one you do not use.')
+    #SET(%bgTSchEmpty,'That layout has nothing stored in it.')
     #SET(%bgTAutoFit,'Auto-fit &widths')
     #SET(%bgTReset,'&Reset layout')
     #SET(%bgTNoObject,'This grid could not work out which browse object to filter through, because its queue is not named the way ABC names one. Put the object name - BRW1, usually - in Browse object on the BrowseGrid prompts.')
@@ -949,6 +1328,19 @@ c LONG,AUTO
     #SET(%bgTClearThis,'Limpiar este f&iltro')
     #SET(%bgTClearAll,'Limpiar &todos los filtros')
     #SET(%bgTColumns,'&Columnas...')
+    #SET(%bgTSchMenu,'&Esquemas...')
+    #SET(%bgTSchTitle,'Esquemas de columnas')
+    #SET(%bgTSchHint,'Guarde las columnas que está usando con un nombre, y recupérelas después.')
+    #SET(%bgTSchName,'Esquema')
+    #SET(%bgTSchAs,'&Nombre:')
+    #SET(%bgTSchSave,'&Guardar')
+    #SET(%bgTSchLoad,'&Recuperar')
+    #SET(%bgTSchDel,'&Borrar')
+    #SET(%bgTSchClose,'&Cerrar')
+    #SET(%bgTSchNoName,'Escriba primero un nombre para el esquema.')
+    #SET(%bgTSchNone,'Elija primero un esquema de la lista.')
+    #SET(%bgTSchFull,'No entra otro esquema. Borre alguno que no use.')
+    #SET(%bgTSchEmpty,'Ese esquema no tiene nada guardado.')
     #SET(%bgTAutoFit,'A&ncho automático')
     #SET(%bgTReset,'&Restablecer disposición')
     #SET(%bgTNoObject,'Este grid no pudo deducir por cuál objeto browse filtrar, porque su queue no está nombrado como los nombra ABC. Escriba el nombre del objeto - BRW1, normalmente - en Browse object, en los prompts de BrowseGrid.')
@@ -1012,7 +1404,7 @@ BG:ClrHit:%bgObject  EQUATE(EVENT:User + 40 + %ActiveTemplateInstance)
 %bgObject:SumN       LONG                                     ! records added, for the cap
 %bgObject:SumDue     BYTE                                     ! do the totals need doing?
 #ENDIF
-#IF(%bgTips)
+#IF(%bgTipsU)
 %bgObject:Meas       SIGNED                                   ! a hidden STRING, used as a ruler
 %bgObject:TipRow     LONG                                     ! what the pointer was last over,
 %bgObject:TipCol     LONG                                     ! so it is measured once, not per pixel
@@ -1022,6 +1414,8 @@ BG:ClrHit:%bgObject  EQUATE(EVENT:User + 40 + %ActiveTemplateInstance)
 %bgObject:MapWas     CSTRING(201)                             ! the last map written to the log
 #ENDIF
 %bgObject:Pic        STRING(32),DIM(BG:MaxCols)               ! and its picture, if it has one
+%bgObject:SchName    CSTRING(33)                              ! el esquema a guardar o recuperar
+%bgObject:SchDid     LONG                                     ! 1 = habia algo guardado
 %bgObject:Face       CSTRING(33)
 %bgObject:Pt         LONG                                     ! tamano ya resuelto, en puntos
 %bgObject:Cell       CSTRING(129)                              ! as long as the C side G_TEXT
@@ -1061,6 +1455,9 @@ BG:ClrHit:%bgObject  EQUATE(EVENT:User + 40 + %ActiveTemplateInstance)
 !  straddles the wrap comes out negative and is thrown away rather than
 !  reported as a lie.
 %bgObject:Dpi        LONG                                     ! puntos por pulgada de la pantalla
+%bgObject:LgQ        LONG                                     ! ultimo q registrado, para no repetir
+%bgObject:LgR        LONG                                     ! ultimo rows registrado
+%bgObject:LgL        LONG                                     ! ultimo alto de linea registrado
 %bgObject:T1         LONG,DIM(2)                              ! before the fill
 %bgObject:T2         LONG,DIM(2)                              ! and after it
 %bgObject:Freq       LONG,DIM(2)                              ! ticks per second, asked once
@@ -1106,13 +1503,13 @@ BG:ClrHit:%bgObject  EQUATE(EVENT:User + 40 + %ActiveTemplateInstance)
 !  puts the move at the back of the queue, by which time the resizer has
 !  finished and the LIST is the size it is going to be.
     POST(BG:Resized:%bgObject)
-#IF(%bgBars OR %bgWheel)
+#IF(%bgBarsU OR %bgWheelU)
   OF BG:Scrolled
     IF %bgObject:G AND %bgObject:Barred
       DO BG:Scroll:%bgObject
     END
 #ENDIF
-#IF(%bgPopup)
+#IF(%bgPopupU)
   OF BG:Popup:%bgObject
 !  By now the SELECT has taken effect and the LIST really has the focus, so the
 !  keystroke reaches it. Done in the same breath as the SELECT it would still
@@ -1134,7 +1531,7 @@ BG:ClrHit:%bgObject  EQUATE(EVENT:User + 40 + %ActiveTemplateInstance)
   OF BG:ClrHit:%bgObject
     %bgList{PROPLIST:MouseDownRow} = 0                    ! un solo uso por click
 #ENDIF
-#IF(%bgDouble)
+#IF(%bgDoubleU)
   OF BG:Dbl:%bgObject
 !  Same trick as the popup, and for the same reason: by now the SELECT has
 !  taken effect and the LIST really has the focus, so the keystroke reaches
@@ -1190,33 +1587,33 @@ BG:ClrHit:%bgObject  EQUATE(EVENT:User + 40 + %ActiveTemplateInstance)
     CASE EVENT()
     OF EVENT:MouseDown
       DO BG:Hit:%bgObject
-#IF(%bgPopup)
+#IF(%bgPopupU)
     OF EVENT:AlertKey
       IF KEYCODE() = MouseRightUp
         DO BG:Right:%bgObject
       END
 #ENDIF
-#IF(%bgDouble AND ~%bgPopup)
+#IF(%bgDoubleU AND ~%bgPopupU)
     OF EVENT:AlertKey
 #ENDIF
-#IF(%bgDouble)
+#IF(%bgDoubleU)
       IF KEYCODE() = MouseLeft2
         DO BG:Double:%bgObject
       END
 #ENDIF
-#IF(%bgBarStyle = 'Overlay')
+#IF(%bgBarStyleU = 'Overlay')
     OF EVENT:MouseIn
       d2g_BarsShow(%bgObject:G,1)
     OF EVENT:MouseOut
       d2g_BarsShow(%bgObject:G,0)
 #ENDIF
-#IF(%bgSizeable OR %bgTips)
+#IF(%bgSizeable OR %bgTipsU)
     OF EVENT:MouseMove
 #ENDIF
 #IF(%bgSizeable)
       DO BG:Sizing:%bgObject
 #ENDIF
-#IF(%bgTips)
+#IF(%bgTipsU)
       DO BG:Tip:%bgObject
 #ENDIF
 #IF(%bgSizeable)
@@ -1300,7 +1697,7 @@ h  SIGNED,AUTO
     END
   END
 #ENDIF
-#IF(%bgTips OR %bgAutoFit)
+#IF(%bgTipsU OR %bgAutoFitU)
 !  A RULER. To know whether a value fits its column it has to be measured, and
 !  measuring text is what Clarion does when it works out how wide a STRING
 !  needs to be: give one the font and the text, and PROP:Width is the answer.
@@ -1316,6 +1713,10 @@ h  SIGNED,AUTO
 #ENDIF
   DO BG:Place:%bgObject
   UNHIDE(%bgObject:Rgn)
+#IF(%bgWeightU <> '0')
+!  ANTES del attach, que es donde se crean las tipografias.
+  d2g_Weight(0,%bgWeightU)
+#ENDIF
   %bgObject:G = d2g_Attach(%bgObject:Rgn{PROP:Handle},%bgObject:Face,%bgObject:Pt)
 #IF(%bgDiag)
 !  CON QUE TIPOGRAFIA QUEDO CADA UNO. El motor arma su superficie clavada en
@@ -1359,21 +1760,21 @@ h  SIGNED,AUTO
 !  its queue, counting its visible rows and holding the selection, and the
 !  region sits on top of it. WS_CLIPSIBLINGS is what makes that stick - without
 !  it the LIST paints over the grid whenever it redraws.
-#IF(%bgWrap)
+#IF(%bgWrapU)
 !  Before BG:Rows, which asks the engine how tall a row has to be - and with
 !  wrapping on, that answer is several lines.
-  d2g_Wrap(%bgObject:G,1,%bgWrapLines)
+  d2g_Wrap(%bgObject:G,1,%bgWrapLinesU)
 #ENDIF
   DO BG:Rows:%bgObject
 #IF(%bgTotals)
   d2g_Footer(%bgObject:G,1)                                   ! after BG:Rows: it is a row tall
 #ENDIF
   DO BG:Items:%bgObject                                       ! load what there is room to draw
-#IF(%bgHdrH > 0)
-  d2g_HeaderHeight(%bgObject:G,%bgHdrH)
+#IF(%bgHdrHU > 0)
+  d2g_HeaderHeight(%bgObject:G,%bgHdrHU)
 #ENDIF
-#IF(%bgBars OR %bgWheel)
-#IF(%bgBarStyle = 'Windows')
+#IF(%bgBarsU OR %bgWheelU)
+#IF(%bgBarStyleU = 'Windows')
   IF BG_HookBars(%bgObject:Rgn{PROP:Handle},0)                ! the roller comes through here too
 #ELSE
   IF BG_HookBars(%bgObject:Rgn{PROP:Handle},1)                ! drawn bars: hooked only for the roller
@@ -1381,22 +1782,38 @@ h  SIGNED,AUTO
     %bgObject:Barred = 1
   END
 #ENDIF
-#IF(%bgPopup)
+#IF(%bgPopupU)
 !  The region is on top, so it - not the LIST - is what a right-click lands on.
 !  Alerting it here is what lets that click be handed back to the browse.
   %bgObject:Rgn{PROP:Alrt,250} = MouseRightUp
 #ENDIF
-#IF(%bgDouble)
+#IF(%bgDoubleU)
   %bgObject:Rgn{PROP:Alrt,251} = MouseLeft2                   ! and the double click, likewise
 #ENDIF
-#IF(%bgBarStyle = 'Slim')
+#IF(%bgGdiTextU)
+!  Antes de dibujar nada. El modo vive en la superficie, y si esta se rehace -
+!  un cambio de tamano la rehace - el motor lo vuelve a aplicar solo.
+  d2g_TextMode(%bgObject:G,1)
+#IF(%bgDiag)
+!  SI LAS LLAMADAS ANDUVIERON. Un HRESULT negativo dice que DirectWrite rechazo
+!  los parametros y no hay nada que mirar en pantalla; -999 dice que ni se
+!  intento, que es otro problema y otro arreglo.
+  BG_Log('%Procedure %bgObject texto: hrDef=' & d2g_TextInfo(%bgObject:G,0) &  |
+         ' gamma=' & d2g_TextInfo(%bgObject:G,1) &                             |
+         ' contraste=' & d2g_TextInfo(%bgObject:G,2) &                         |
+         ' nivel=' & d2g_TextInfo(%bgObject:G,3) &                             |
+         ' geom=' & d2g_TextInfo(%bgObject:G,4) &                              |
+         ' hrPar=' & d2g_TextInfo(%bgObject:G,5))
+#ENDIF
+#ENDIF
+#IF(%bgBarStyleU = 'Slim')
   d2g_BarStyle(%bgObject:G,1)
-#ELSIF(%bgBarStyle = 'Overlay')
+#ELSIF(%bgBarStyleU = 'Overlay')
   d2g_BarStyle(%bgObject:G,2)
 #ELSE
   d2g_BarStyle(%bgObject:G,0)
 #ENDIF
-#IF(%bgFilterBtn)
+#IF(%bgFilterBtnU)
   d2g_FilterBtns(%bgObject:G,1)
   d2g_FilterOn(%bgObject:G,-1,0)                              ! nothing is filtered to begin with
 #ENDIF
@@ -1780,7 +2197,7 @@ row LONG,AUTO
   0{PROP:Pixels} = sp
 !  The scrollbar first: it is drawn over everything else, so it is clicked
 !  before everything else.
-#IF(%bgBarStyle <> 'Windows')
+#IF(%bgBarStyleU <> 'Windows')
   CASE d2g_HitHBar(%bgObject:G,mx,my)                         ! the drawn sideways bar
   OF 4
     %bgObject:HDrag = 1
@@ -1816,7 +2233,7 @@ row LONG,AUTO
 !  A heading. On the edge of a column that is a resize; anywhere else it is a
 !  request to sort by that column. Either way it never changes the selection.
   IF my < d2g_HdrHeight(%bgObject:G)
-#IF(%bgFilterBtn)
+#IF(%bgFilterBtnU)
 !  The drop-down box is drawn over the right of the heading, so it is what a
 !  click there means - before the resize edge, which is in the same few pixels.
     col = d2g_HitBtn(%bgObject:G,mx,my)
@@ -1942,9 +2359,9 @@ need LONG,AUTO
 !  browse, so ABC worked out that nothing fitted, loaded no records, and the
 !  grid had nothing whatever to draw.
   need = d2g_RowNeed(%bgObject:G)
-#IF(%bgRowH > 0)
+#IF(%bgRowHU > 0)
 !  A row height was asked for, so the BROWSE is the one that gives way.
-  lh = %bgRowH
+  lh = %bgRowHU
 #ELSE
 !  Nothing was asked for: take the browse's own line height...
   lh = %bgList{PROP:LineHeight} * %bgObject:Lines             ! which is per LINE, not per record
@@ -1961,6 +2378,14 @@ need LONG,AUTO
   ELSE
     %bgList{PROP:LineHeight} = lh
   END
+#IF(%bgDiag)
+!  QUIEN ESCRIBE EL ALTO DE LINEA, y con que entro. Son tres rutinas las que lo
+!  tocan y una de ellas lo LEE para decidirlo, asi que sin saber cual escribio
+!  cual numero no se puede distinguir un ajuste de una realimentacion.
+  BG_Log('%Procedure %bgObject rows: need=' & need & ' lines=' &             |
+         %bgObject:Lines & ' lh=' & lh & ' -> listlh=' &                     |
+         %bgList{PROP:LineHeight} & ' rowh=' & d2g_RowH(%bgObject:G))
+#ENDIF
   0{PROP:Pixels} = sp
 
 BG:Items:%bgObject ROUTINE
@@ -2003,10 +2428,23 @@ fit   LONG,AUTO
 !  The line height reaches the same answer and touches nothing anyone can see:
 !  ABC divides the LIST height by it to decide how many records fit, so asking
 !  for  of them is arithmetic on a number that is already invisible.
+#IF(%bgDiag)
+!  LA GEOMETRIA CON LA QUE SE DECIDE, entera. El alto del area contra el que se
+!  mide, lo que se lleva el encabezado, lo que mide una fila, y cuantas dice el
+!  motor que entran. Si despues falta una fila abajo, la cuenta esta aca y no
+!  hay que deducirla de una captura.
+  BG_Log('%Procedure %bgObject items: alto=' & %bgObject:Rgn{PROP:Height} &   |
+         ' hdr=' & d2g_HdrHeight(%bgObject:G) &                               |
+         ' rowh=' & d2g_RowH(%bgObject:G) &                                   |
+         ' page=' & fit & ' listlh=' & lh & ' listitems=' & items)
+#ENDIF
   IF lh > 0 AND items > 0 AND fit > 0 AND fit <> items
     newlh = items * lh / fit
     IF newlh < 2 THEN newlh = 2.
     %bgList{PROP:LineHeight} = newlh
+#IF(%bgDiag)
+    BG_Log('%Procedure %bgObject items: baja el alto de linea a ' & newlh)
+#ENDIF
   END
   0{PROP:Pixels} = sp
 
@@ -2060,7 +2498,7 @@ BG:Mark:%bgObject ROUTINE
 sc LONG,AUTO
 i  LONG,AUTO
   CODE
-#IF(%bgFilterBtn)
+#IF(%bgFilterBtnU)
   d2g_FilterOn(%bgObject:G,-1,0)                              ! every mark, every refill
   LOOP i = 1 TO %bgObject:Cols
     IF %bgObject:ColFilt[i] THEN d2g_FilterOn(%bgObject:G,i - 1,1).
@@ -2089,10 +2527,11 @@ BG:Menu:%bgObject ROUTINE
 !  its fields with the file fields they came from, so WHO() on the browse queue
 !  answers "STU:LastName" - which is exactly what a filter expression wants,
 !  and means nothing has to be mapped by hand.
-#IF(%bgFilterBtn)
+#IF(%bgFilterBtnU)
   DATA
 pick LONG,AUTO
 fld  LONG,AUTO
+mnu  CSTRING(301)
 lc   LONG,AUTO
 nm   CSTRING(65)
 val  CSTRING(129)
@@ -2110,28 +2549,59 @@ val  CSTRING(129)
 !  every choice after the first was numbered one or two higher than it looked -
 !  "Filter on" was item 3 and matched nothing, and "Clear this filter" was item
 !  4, which is why CLEARING a filter is what applied one.
-  pick = POPUP('%bgTSortAsc|%bgTSortDesc|' |
-             & '%bgTFilterOn {{' & CLIP(val) & '}|' |
-#IF(%bgFilterVals)
-             & '%bgTFilterBy|' |
+!  ARMADO EN UNA CADENA, no en una expresion con las opciones intercaladas. Con
+!  todas obligatorias alcanzaba una constante; con todas opcionales hay que poder
+!  no agregar ninguna, y una expresion que puede quedarse sin terminos no se
+!  escribe. Cada una deja su separador atras y al final se saca el ultimo.
+  mnu = ''
+#IF(%bgMnSortU)
+  mnu = CLIP(mnu) & '%bgTSortAsc|%bgTSortDesc|'
 #ENDIF
-#IF(%bgFilterText)
-             & '%bgTFindMenu|' |
+#IF(%bgMnFiltOnU)
+  mnu = CLIP(mnu) & '%bgTFilterOn {{' & CLIP(val) & '}|'
 #ENDIF
-             & '%bgTClearThis|%bgTClearAll|%bgTColumns|' |
-#IF(%bgAutoFit)
-             & '%bgTAutoFit|' |
+#IF(%bgFilterValsU)
+  mnu = CLIP(mnu) & '%bgTFilterBy|'
 #ENDIF
-             & '%bgTReset')
+#IF(%bgFilterTextU)
+  mnu = CLIP(mnu) & '%bgTFindMenu|'
+#ENDIF
+#IF(%bgMnClrThisU)
+  mnu = CLIP(mnu) & '%bgTClearThis|'
+#ENDIF
+#IF(%bgMnClrAllU)
+  mnu = CLIP(mnu) & '%bgTClearAll|'
+#ENDIF
+#IF(%bgChooserU)
+  mnu = CLIP(mnu) & '%bgTColumns|'
+#ENDIF
+#IF(%bgAutoFitU AND %bgFlatten)
+  mnu = CLIP(mnu) & '%bgTAutoFit|'
+#ENDIF
+#IF(%bgSchemesU AND %bgRemember)
+  mnu = CLIP(mnu) & '%bgTSchMenu|'
+#ENDIF
+#IF(%bgMnResetU)
+  mnu = CLIP(mnu) & '%bgTReset|'
+#ENDIF
+!  SIN OPCIONES NO HAY MENU. Un POPUP con la cadena vacia igual abre algo, y ese
+!  algo es un rectangulo de nada que el usuario tiene que cerrar.
+  IF ~mnu THEN EXIT.
+!  Y fuera el ultimo separador, o POPUP cuenta una opcion vacia al final - que
+!  se veria como un renglon en blanco y correria la numeracion.
+  mnu = SUB(mnu,1,LEN(mnu) - 1)
+  pick = POPUP(mnu)
+  IF ~pick THEN EXIT.                                       ! se cerro sin elegir
   CASE pick
-  OF 1                                                        ! ascending
+#IF(%bgMnSortU)
+  OF %bgMiAsc                                                 ! ascending
     lc = %bgObject:Col[%bgObject:SortCol + 1]
     IF %bgObject:SortOn <> lc
       DO BG:Sort:%bgObject                                    ! a new heading starts ascending
     ELSIF %bgObject:SortDir < 0
       DO BG:Sort:%bgObject                                    ! it is descending: one press flips it
     END
-  OF 2                                                        ! descending
+  OF %bgMiDesc                                                ! descending
 !  Clearing SortOn first - which is what this used to do - makes BG:Sort take
 !  its "a new column" branch, and that branch always sets ascending. So both
 !  menu items came out ascending however many times they were pressed. Ask for
@@ -2143,7 +2613,9 @@ val  CSTRING(129)
     ELSIF %bgObject:SortDir > 0
       DO BG:Sort:%bgObject
     END
-  OF 3                                                        ! filter on this value
+#ENDIF
+#IF(%bgMnFiltOnU)
+  OF %bgMiFiltOn                                              ! filter on this value
     IF nm AND val
 !  Per column, and they add up - filtering a second column used to replace the
 !  first, so the browse quietly stopped being filtered on the one whose glyph
@@ -2154,19 +2626,23 @@ val  CSTRING(129)
       d2g_PaintNow(%bgObject:G)                               ! say so NOW, not when the data lands
       DO BG:Filter:%bgObject
     END
-#IF(%bgFilterVals)
+#ENDIF
+#IF(%bgFilterValsU)
   OF %bgMiFiltBy                                              ! pick from the values in the file
     DO BG:Values:%bgObject
 #ENDIF
-#IF(%bgFilterText)
+#IF(%bgFilterTextU)
   OF %bgMiFindTx                                              ! free text
     DO BG:Find:%bgObject
 #ENDIF
+#IF(%bgMnClrThisU)
   OF %bgMiClrThis                                             ! clear this column's
     %bgObject:ColFilt[%bgObject:SortCol + 1] = ''
     d2g_FilterOn(%bgObject:G,%bgObject:SortCol,0)
     d2g_PaintNow(%bgObject:G)
     DO BG:Filter:%bgObject
+#ENDIF
+#IF(%bgMnClrAllU)
   OF %bgMiClrAll                                              ! clear every column's
     LOOP fld = 1 TO BG:MaxCols                              ! quedaba clavado en 32
       %bgObject:ColFilt[fld] = ''
@@ -2174,14 +2650,23 @@ val  CSTRING(129)
     d2g_FilterOn(%bgObject:G,-1,0)
     d2g_PaintNow(%bgObject:G)
     DO BG:Filter:%bgObject
+#ENDIF
+#IF(%bgChooserU)
   OF %bgMiCols                                                ! which columns to show
     DO BG:Chooser:%bgObject
-#IF(%bgAutoFit)
+#ENDIF
+#IF(%bgAutoFitU AND %bgFlatten)
   OF %bgMiAutoFit                                             ! size every column to its content
     DO BG:AutoFit:%bgObject
 #ENDIF
+#IF(%bgSchemesU AND %bgRemember)
+  OF %bgMiSchemes                                             ! save / recall a layout
+    DO BG:Schemes:%bgObject
+#ENDIF
+#IF(%bgMnResetU)
   OF %bgMiReset                                               ! put everything back
     DO BG:Reset:%bgObject
+#ENDIF
   END
 #ELSE
   EXIT
@@ -2190,7 +2675,7 @@ val  CSTRING(129)
 BG:Filter:%bgObject ROUTINE
 !  Hand the filter to the browse itself. Nothing else can do it: the records
 !  come out of the VIEW, and only the browse object knows how to re-read them.
-#IF(%bgFilterBtn)
+#IF(%bgFilterBtnU)
 #IF(%bgBrowseUsed)
   DATA
 i LONG,AUTO
@@ -2306,6 +2791,286 @@ g  LONG,AUTO
   EXIT
 #ENDIF
 
+BG:SchSave:%bgObject ROUTINE
+!  Guardar la disposicion de ahora bajo el nombre que haya en %bgObject:SchName.
+!  Se puede llamar desde un embed:
+!
+!      %bgObject:SchName = 'Ventas'
+!      DO BG:SchSave:%bgObject
+!
+!  El dialogo llama a esta misma rutina. Dos copias de esto - una para el
+!  usuario y otra para el programador - es como Reset y la apertura se
+!  separaron, y ese error ya esta escrito mas abajo en este archivo.
+#IF(%bgSchemesU AND %bgRemember)
+  DATA
+sec CSTRING(193)
+c   LONG,AUTO
+ex  LONG,AUTO
+  CODE
+  IF ~%bgObject:G OR ~%bgObject:SchName THEN EXIT.
+  sec = 'BrowseGrid:%Procedure:%bgObject' & ':' & CLIP(%bgObject:SchName)
+  LOOP c = 1 TO 512
+    ex = %bgList{PROPLIST:Exists,c}
+    IF ~ex THEN BREAK.
+    INIMgr.Update(sec,'w' & c,%bgList{PROPLIST:Width,c})
+    INIMgr.Update(sec,'h' & c,CLIP(INIMgr.TryFetch('BrowseGrid:%Procedure:%bgObject','h' & c)))
+#IF(%bgTotals)
+    INIMgr.Update(sec,'t' & c,CLIP(INIMgr.TryFetch('BrowseGrid:%Procedure:%bgObject','t' & c)))
+#ENDIF
+  END
+!  AL INDICE TAMBIEN. Un esquema guardado desde codigo que no figure en la
+!  lista existe pero no se puede elegir, que es una forma rara de no existir.
+  DO BG:SchIndex:%bgObject
+#ELSE
+  EXIT
+#ENDIF
+
+BG:SchLoad:%bgObject ROUTINE
+!  Recuperar el esquema que nombre %bgObject:SchName. Desde un embed:
+!
+!      %bgObject:SchName = 'Ventas'
+!      DO BG:SchLoad:%bgObject
+!      IF ~%bgObject:SchDid ...no habia nada guardado con ese nombre...
+!
+!  Deja el browse redibujado. Sirve tambien al abrir la ventana, para que cada
+!  usuario entre con el suyo.
+#IF(%bgSchemesU AND %bgRemember)
+  DATA
+sec CSTRING(193)
+val CSTRING(33)
+c   LONG,AUTO
+ex  LONG,AUTO
+  CODE
+  %bgObject:SchDid = 0
+  IF ~%bgObject:G OR ~%bgObject:SchName THEN EXIT.
+  sec = 'BrowseGrid:%Procedure:%bgObject' & ':' & CLIP(%bgObject:SchName)
+!  DEL ESQUEMA A LO QUE SE RECUERDA, y de ahi a la pantalla. Copiarlo tambien a
+!  la seccion de siempre es lo que hace que el esquema recuperado sea ademas el
+!  que vuelve solo la proxima vez que se abra el browse.
+  LOOP c = 1 TO 512
+    ex = %bgList{PROPLIST:Exists,c}
+    IF ~ex THEN BREAK.
+    val = CLIP(INIMgr.TryFetch(sec,'w' & c))
+!  Y tiene que parecer un ancho antes de usarse como uno: un INI editado a mano
+!  no puede dejar el browse sin columnas.
+    IF val AND NUMERIC(val)
+      %bgList{PROPLIST:Width,c} = val
+      INIMgr.Update('BrowseGrid:%Procedure:%bgObject','w' & c,val)
+      %bgObject:SchDid = 1
+    END
+    INIMgr.Update('BrowseGrid:%Procedure:%bgObject','h' & c,CLIP(INIMgr.TryFetch(sec,'h' & c)))
+#IF(%bgTotals)
+    INIMgr.Update('BrowseGrid:%Procedure:%bgObject','t' & c,CLIP(INIMgr.TryFetch(sec,'t' & c)))
+#ENDIF
+  END
+  IF %bgObject:SchDid
+!  La misma secuencia que abrir la ventana, y en ese orden.
+    DO BG:Columns:%bgObject
+    DO BG:Rows:%bgObject
+    DO BG:Items:%bgObject
+    d2g_Resize(%bgObject:G)
+    DO BG:Fill:%bgObject
+    d2g_PaintNow(%bgObject:G)
+  END
+#ELSE
+  EXIT
+#ENDIF
+
+BG:SchIndex:%bgObject ROUTINE
+!  Meter %bgObject:SchName en el indice si no estaba. El indice es una lista
+!  separada por barras en la seccion de siempre; una clave por nombre obligaria
+!  a numerarlas y a renumerarlas al borrar una del medio.
+#IF(%bgSchemesU AND %bgRemember)
+  DATA
+lst CSTRING(1025)
+  CODE
+  IF ~%bgObject:SchName THEN EXIT.
+  lst = CLIP(INIMgr.TryFetch('BrowseGrid:%Procedure:%bgObject','esq'))
+!  Las barras del nombre, fuera: son el separador del indice y partirian el
+!  nombre en dos al releerlo.
+  IF INSTRING('|',CLIP(%bgObject:SchName),1,1) THEN EXIT.
+  IF ~INSTRING('|' & CLIP(%bgObject:SchName) & '|','|' & CLIP(lst) & '|',1,1)
+    IF lst
+      lst = CLIP(lst) & '|' & CLIP(%bgObject:SchName)
+    ELSE
+      lst = CLIP(%bgObject:SchName)
+    END
+    INIMgr.Update('BrowseGrid:%Procedure:%bgObject','esq',lst)
+  END
+#ELSE
+  EXIT
+#ENDIF
+
+BG:Schemes:%bgObject ROUTINE
+!  Guardar las columnas que se estan usando con un nombre, y recuperarlas.
+!
+!  NO INVENTA ALMACENAMIENTO. Lo que se guarda es exactamente lo que este grid
+!  ya recuerda entre corridas - ancho por columna, el ancho original de las
+!  ocultas, y cuales totalizan - nada mas que en una seccion con nombre en vez
+!  de en la de siempre. Recuperar copia de esa seccion a la de siempre y
+!  reabre; asi un esquema recuperado tambien es el que se recuerda la proxima
+!  vez, sin un segundo lugar donde la verdad pueda quedar distinta.
+!
+!  NO SE GUARDAN FILTROS. Es la misma razon por la que no se recuerdan: un
+!  filtro es una expresion, y una que no parsea es un error EN TIEMPO DE
+!  EJECUCION al abrir la ventana, antes de que haya nada en pantalla que lo
+!  explique. Un ancho equivocado se ve raro; un filtro equivocado no deja
+!  entrar.
+!
+!  Y NO SE GUARDA EL ORDEN de las columnas, porque el grid no las reordena.
+#IF(%bgSchemesU AND %bgRemember)
+  DATA
+EQ   QUEUE
+Name   STRING(32)
+     END
+EName STRING(32)
+EW   WINDOW('%bgTSchTitle'),AT(,,180,186),GRAY,SYSTEM,CENTER,FONT('Segoe UI',9)
+       STRING('%bgTSchHint'),AT(8,7,164,26),USE(?EHint),TRN
+       LIST,AT(8,36,164,96),USE(?EList),FROM(EQ),VSCROLL,                       |
+            FORMAT('160L(2)~%bgTSchName~@s32@')
+       PROMPT('%bgTSchAs'),AT(8,138),USE(?EPmt)
+       ENTRY(@s32),AT(40,137,132,11),USE(EName)
+       BUTTON('%bgTSchSave'),AT(8,154,52,14),USE(?ESave)
+       BUTTON('%bgTSchLoad'),AT(64,154,52,14),USE(?ELoad)
+       BUTTON('%bgTSchDel'),AT(120,154,52,14),USE(?EDel)
+       BUTTON('%bgTSchClose'),AT(120,170,52,14),USE(?EClose),STD(STD:Close)
+     END
+lst  CSTRING(1025)
+one  CSTRING(33)
+sec  CSTRING(193)
+val  CSTRING(33)
+c    LONG,AUTO
+ex   LONG,AUTO
+i    LONG,AUTO
+did  LONG
+act  LONG
+  CODE
+  IF ~%bgObject:G THEN EXIT.
+  did   = 0
+  act   = 0
+  EName = ''
+  FREE(EQ)
+!  EL INDICE ES UNA LISTA SEPARADA POR BARRAS, partida a mano porque Clarion no
+!  trae un split. Una clave por nombre obligaria a numerarlas, y a renumerarlas
+!  al borrar una del medio - que es como se pierde un esquema que nadie toco.
+  lst = CLIP(INIMgr.TryFetch('BrowseGrid:%Procedure:%bgObject','esq'))
+  LOOP
+    IF ~lst THEN BREAK.
+    i = INSTRING('|',lst,1,1)
+    IF i
+      one = SUB(lst,1,i - 1)
+      lst = SUB(lst,i + 1,LEN(lst) - i)
+    ELSE
+      one = lst
+      lst = ''
+    END
+    IF one
+      EQ.Name = one
+      ADD(EQ,+EQ.Name)
+    END
+  END
+  OPEN(EW)
+!  LOS BOTONES NO HACEN EL TRABAJO, solo dicen cual. Un equate de campo se
+!  resuelve contra la ventana ACTUAL, y mientras este dialogo esta abierto la
+!  actual es EL: cualquier %bgList{...} de aca adentro lee un control de esta
+!  ventanita en vez del LIST del browse, y no se queja - devuelve que la columna
+!  no existe, el bucle corta en la primera vuelta y no se escribe nada. Que es
+!  exactamente como se ve un esquema que se guarda vacio.
+!
+!  BG:Find ya se habia comido esto y lo dice en su propio comentario. El trabajo
+!  va abajo, con la ventana cerrada.
+  ACCEPT
+    CASE ACCEPTED()
+    OF ?EList
+      GET(EQ,CHOICE(?EList))
+      IF ~ERRORCODE()
+        EName = EQ.Name
+        DISPLAY(?EName)
+      END
+    OF ?ESave
+      EName = CLIP(LEFT(EName))
+      IF ~EName
+        MESSAGE('%bgTSchNoName','%bgTSchTitle',ICON:Asterisk)
+        CYCLE
+      END
+!  FUERA LAS BARRAS. El indice las usa de separador, asi que un nombre con una
+!  adentro se partiria en dos al releerlo.
+      LOOP i = 1 TO LEN(CLIP(EName))
+        IF EName[i] = '|' THEN EName[i] = ' '.
+      END
+      EQ.Name = EName
+      GET(EQ,+EQ.Name)
+      IF ERRORCODE() OR EQ.Name <> EName
+        IF RECORDS(EQ) >= BG:MaxSch
+          MESSAGE('%bgTSchFull','%bgTSchTitle',ICON:Exclamation)
+          CYCLE
+        END
+        EQ.Name = EName
+        ADD(EQ,+EQ.Name)
+      END
+      act = 1
+      POST(EVENT:CloseWindow)
+    OF ?ELoad
+      IF ~EName
+        MESSAGE('%bgTSchNone','%bgTSchTitle',ICON:Asterisk)
+        CYCLE
+      END
+      act = 2
+      POST(EVENT:CloseWindow)
+    OF ?EDel
+      IF ~EName
+        MESSAGE('%bgTSchNone','%bgTSchTitle',ICON:Asterisk)
+        CYCLE
+      END
+      EQ.Name = EName
+      GET(EQ,+EQ.Name)
+      IF ~ERRORCODE() AND EQ.Name = EName THEN DELETE(EQ).
+      act = 3
+      POST(EVENT:CloseWindow)
+    END
+  END
+  CLOSE(EW)
+!  DE ACA PARA ABAJO la ventana actual vuelve a ser la del browse, que es la
+!  unica contra la que %bgList significa algo.
+  sec = 'BrowseGrid:%Procedure:%bgObject' & ':' & CLIP(EName)
+  CASE act
+  OF 1                                                        ! guardar
+    %bgObject:SchName = EName
+    DO BG:SchSave:%bgObject
+  OF 2                                                        ! recuperar
+    %bgObject:SchName = EName
+    DO BG:SchLoad:%bgObject
+!  NADA QUE RECUPERAR es un caso, no un silencio: dejaria el browse igual y al
+!  usuario preguntandose si apreto bien.
+    IF ~%bgObject:SchDid THEN MESSAGE('%bgTSchEmpty','%bgTSchTitle',ICON:Asterisk).
+  OF 3                                                        ! borrar
+    sec = 'BrowseGrid:%Procedure:%bgObject' & ':' & CLIP(EName)
+    LOOP c = 1 TO 512
+      ex = %bgList{PROPLIST:Exists,c}
+      IF ~ex THEN BREAK.
+      INIMgr.Update(sec,'w' & c,'')
+      INIMgr.Update(sec,'h' & c,'')
+#IF(%bgTotals)
+      INIMgr.Update(sec,'t' & c,'')
+#ENDIF
+    END
+  END
+!  EL INDICE, desde la cola: es la que estuvo mandando todo el rato.
+  lst = ''
+  LOOP i = 1 TO RECORDS(EQ)
+    GET(EQ,i)
+    IF ERRORCODE() THEN BREAK.
+    IF lst
+      lst = CLIP(lst) & '|' & CLIP(EQ.Name)
+    ELSE
+      lst = CLIP(EQ.Name)
+    END
+  END
+  INIMgr.Update('BrowseGrid:%Procedure:%bgObject','esq',lst)
+#ELSE
+  EXIT
+#ENDIF
+
 BG:Reset:%bgObject ROUTINE
 !  Throw away everything this grid remembers and read the browse again as it was
 !  designed. Anything that can be got into a state has to have a way out of it,
@@ -2384,7 +3149,7 @@ BG:AutoFit:%bgObject ROUTINE
 !  a cell, the page - where being wrong would show - is exact, and a column
 !  that comes out a few pixels shy can be fixed by dragging it or pressing this
 !  again.
-#IF(%bgAutoFit)
+#IF(%bgAutoFitU AND %bgFlatten)
   DATA
 c    LONG,AUTO
 i    LONG,AUTO
@@ -2444,7 +3209,7 @@ sav  STRING(1024)
 !  shared, so moving it moves the record buffer the browse reads from. Take the
 !  position first and put it back after, and a NEXT on the restored position
 !  reloads the record the browse was sitting on.
-  IF %bgFitScan > 0
+  IF %bgFitScanU > 0
     LOOP c = 1 TO %bgObject:Cols
       IF ~%bgObject:IFld[c] AND %bgObject:Col[c]
         nm[c] = CLIP(WHO(%bgQueueUsed,%bgObject:Fld[c]))
@@ -2460,7 +3225,7 @@ sav  STRING(1024)
         NEXT(%bgBrowseUsed.View)
         IF ERRORCODE() THEN BREAK.
         n += 1
-        IF n > %bgFitScan THEN BREAK.
+        IF n > %bgFitScanU THEN BREAK.
         LOOP c = 1 TO %bgObject:Cols
           IF ~nm[c] THEN CYCLE.
           IF %bgObject:Pic[c]
@@ -2608,7 +3373,7 @@ BG:Find:%bgObject ROUTINE
 !  numerica, por igualdad, porque UPPER de un numero no significa nada y
 !  contener no es lo que nadie espera de un importe. Si lo tipeado no es un
 !  numero, las columnas numericas simplemente no participan.
-#IF(%bgFilterText)
+#IF(%bgFilterTextU)
   DATA
 FTxt STRING(60)
 FAll BYTE
@@ -2665,10 +3430,23 @@ ok   LONG
     END
     IF ~one THEN CYCLE.
     IF LEN(CLIP(expr)) + LEN(CLIP(one)) + 4 > BG:MaxExpr THEN BREAK.
+!  EN UNA SOLA EXPRESION, y no en dos pasos. Separarlo era:
+!
+!      IF expr THEN expr = CLIP(expr) & ' OR '.
+!      expr = CLIP(expr) & CLIP(one)
+!
+!  ...y el segundo CLIP se come el espacio que acababa de poner el primero. El
+!  filtro sale con 'OR' pegado a lo que sigue - ORINSTRING - que el evaluador
+!  lee como un identificador solo, y la vista se abre con
+!  'BIND has not been called for ORINSTRING' y los filtros ignorados.
+!
+!  Solo aparecia buscando en varias columnas: con una sola no hay ningun OR que
+!  pegar.
     IF expr
-      expr = CLIP(expr) & ' OR '
+      expr = CLIP(expr) & ' OR ' & CLIP(one)
+    ELSE
+      expr = CLIP(one)
     END
-    expr = CLIP(expr) & CLIP(one)
   END
 !  Ninguna columna aplicable: la unica del menu es numerica y lo tipeado no es un
 !  numero, o no hay nombres de campo. Decirlo, no quedarse quieto.
@@ -2680,6 +3458,14 @@ ok   LONG
 !  busqueda haya sido en todas: asi se acumula, se limpia y se señala como
 !  cualquier otro filtro, en vez de ser una categoria aparte que despues nadie
 !  sabe donde apagar.
+#IF(%bgDiag)
+!  LA EXPRESION TAL CUAL SE ARMO, antes de que la vea nadie. Discrimina de una:
+!  si aparece 'ORINSTRING' pegado, esta corriendo codigo viejo; si aparece
+!  'OR INSTRING' separado y falla igual, el problema no es el armado sino algun
+!  campo que la vista no tiene bindeado, y el mensaje va a nombrarlo.
+  BG_Log('%Procedure %bgObject buscar: cols=' & %bgObject:Cols & ' todas=' &  |
+         FAll & ' [' & CLIP(expr) & ']')
+#ENDIF
   %bgObject:ColFilt[%bgObject:SortCol + 1] = '(' & CLIP(expr) & ')'
   d2g_FilterOn(%bgObject:G,%bgObject:SortCol,1)
   d2g_PaintNow(%bgObject:G)
@@ -2699,12 +3485,13 @@ BG:Values:%bgObject ROUTINE
 !  Reading the file moves its record buffer, which the browse shares. That is
 !  why this always finishes by re-applying the filters: the browse re-reads and
 !  is put back where it belongs, whether values were chosen or not.
-#IF(%bgFilterBtn AND %bgFileUsed AND %bgFilterVals)
+#IF(%bgFilterBtnU AND %bgFileUsed AND %bgFilterValsU)
   DATA
 VQ   QUEUE
 Mark   STRING(4)                                              ! shown - see the note on ChQ
-Val    STRING(64)                                             ! shown
+Val    STRING(64)                                             ! shown, con el picture puesto
 On     BYTE                                                   ! not shown
+Raw    STRING(64)                                             ! not shown - con lo que se filtra
      END
 VW   WINDOW('%bgTValues'),AT(,,200,250),GRAY,SYSTEM,CENTER,FONT('Segoe UI',9)
        STRING('%bgTValsHint'),AT(8,7,184,18),USE(?VHint),TRN
@@ -2718,6 +3505,9 @@ VW   WINDOW('%bgTValues'),AT(,,200,250),GRAY,SYSTEM,CENTER,FONT('Segoe UI',9)
      END
 nm   CSTRING(65)
 v    CSTRING(65)
+d    CSTRING(65)
+pic  STRING(32)
+one  CSTRING(201)
 expr CSTRING(1025)
 n    LONG,AUTO
 i    LONG,AUTO
@@ -2726,7 +3516,8 @@ ge   LONG
 ae   LONG
 off  LONG,AUTO
   CODE
-  nm = CLIP(WHO(%bgQueueUsed,%bgObject:Fld[%bgObject:SortCol + 1]))
+  nm  = CLIP(WHO(%bgQueueUsed,%bgObject:Fld[%bgObject:SortCol + 1]))
+  pic = %bgObject:Pic[%bgObject:SortCol + 1]
 #IF(%bgDiag)
 !  EN LA ENTRADA, antes de cualquier salida. Las sondas de mas adentro no
 !  sirven para diagnosticar una rutina que se va antes de llegar a ellas.
@@ -2769,20 +3560,39 @@ off  LONG,AUTO
     END
     n += 1
     IF n > BG:MaxScan THEN BREAK.
+!  LO QUE SE MUESTRA Y LO QUE SE COMPARA NO SON LO MISMO. El campo guarda su
+!  valor crudo, y para una fecha eso es el numero de dias que Clarion lleva por
+!  dentro: la lista ofrecia 81234 en vez de 25/12/2026. Se le pone el picture de
+!  la columna para mostrarlo - el mismo que usa el llenado, o seria un texto que
+!  nadie vio nunca en el grid.
+!
+!  Pero el filtro tiene que seguir comparando contra el CRUDO, porque es lo que
+!  hay en el campo. Filtrar por '25/12/2026' contra un long no encuentra nada, y
+!  no encuentra nada sin dar error: la lista queda vacia y parece que no hubiera
+!  registros.
     v = CLIP(LEFT(EVALUATE(nm)))
-    VQ.Val = v
-    GET(VQ,+VQ.Val)                                           ! sorted, so this dedupes as it goes
+    IF pic
+      d = CLIP(LEFT(FORMAT(EVALUATE(nm),CLIP(pic))))
+    ELSE
+      d = v
+    END
+!  Y SE DEDUPLICA POR EL CRUDO, no por lo que se ve. Un picture puede perder
+!  informacion - dos importes distintos redondean al mismo texto - y agrupar por
+!  el texto dejaria fuera las filas del otro valor sin decirlo.
+    VQ.Raw = v
+    GET(VQ,+VQ.Raw)                                           ! sorted, so this dedupes as it goes
     ge = ERRORCODE()
 !  ES DUPLICADO SOLO SI LO QUE VOLVIO ES ESTE VALOR. Preguntarle nada mas al
 !  ERRORCODE es confiar en que un GET por clave sobre una cola siempre falle
 !  cuando no hay coincidencia exacta; si vuelve sin error con OTRO registro,
 !  la condicion no se cumple nunca, no se agrega nada nunca, y la lista
 !  termina vacia despues de haber leido el archivo entero.
-    IF ge OR VQ.Val <> v
-      VQ.Val  = v
+    IF ge OR VQ.Raw <> v
+      VQ.Raw  = v
+      VQ.Val  = d
       VQ.On   = 1
       VQ.Mark = ' X'
-      ADD(VQ,+VQ.Val)
+      ADD(VQ,+VQ.Raw)
       ae = ERRORCODE()
       IF RECORDS(VQ) >= BG:MaxVals THEN BREAK.
     END
@@ -2858,11 +3668,18 @@ off  LONG,AUTO
           GET(VQ,i)
           IF (on <= off AND ~VQ.On) OR (on > off AND VQ.On) THEN CYCLE.
           IF LEN(CLIP(expr)) > BG:MaxExpr THEN BREAK.         ! no entra: se avisa abajo
+!  EN UNA SOLA EXPRESION. El mismo tropiezo que la busqueda por texto: poner el
+!  separador en un paso y el termino en otro deja que el segundo CLIP se coma el
+!  espacio recien puesto, y el filtro sale con ORCUE:FECHA pegado - un
+!  identificador que nadie bindeo. Latente aca porque hacen falta tres valores
+!  distintos y dos tildados para que aparezca un solo OR.
+          one = CLIP(nm) & CHOOSE(on <= off,' = ',' <> ')                       |
+              & '''' & BG_Quote(CLIP(VQ.Raw)) & ''''
           IF expr
-            expr = CLIP(expr) & CHOOSE(on <= off,' OR ',' AND ')
+            expr = CLIP(expr) & CHOOSE(on <= off,' OR ',' AND ') & CLIP(one)
+          ELSE
+            expr = CLIP(one)
           END
-          expr = CLIP(expr) & CLIP(nm) & CHOOSE(on <= off,' = ',' <> ')          |
-               & '''' & BG_Quote(CLIP(VQ.Val)) & ''''
         END
         IF LEN(CLIP(expr)) > BG:MaxExpr
           MESSAGE('%bgTTooMany','BrowseGrid',ICON:Exclamation)
@@ -2892,7 +3709,7 @@ BG:Chooser:%bgObject ROUTINE
 !  is remembered so unhiding puts it back where it was rather than at some
 !  default, and the layout store keeps that across runs for free, because it
 !  keys on LIST column number.
-#IF(%bgChooser)
+#IF(%bgChooserU)
   DATA
 !  ORDER MATTERS. A LIST with FROM(queue) hands its format columns the queue's
 !  fields in the order they are declared - there is no naming of one to the
@@ -3237,7 +4054,7 @@ BG:Cover:%bgObject ROUTINE
 !  the LIST has had a reason to paint itself - taking the focus, being given a
 !  new column width - because the clip style stops it owning the region's
 !  pixels but does not stop it drawing into them.
-#IF(%bgPopup)
+#IF(%bgPopupU)
   IF ~%bgObject:G THEN EXIT.
   DO BG:Place:%bgObject
   d2g_Resize(%bgObject:G)
@@ -3255,7 +4072,7 @@ BG:Right:%bgObject ROUTINE
 !  at all. ABC alerts AppsKey on the list alongside MouseRightUp and treats
 !  the two identically, so Insert/Change/Delete behave exactly as they always
 !  did, popup formatter and all.
-#IF(%bgPopup)
+#IF(%bgPopupU)
   DATA
 rx SIGNED,AUTO
 ry SIGNED,AUTO
@@ -3291,7 +4108,7 @@ BG:Tip:%bgObject ROUTINE
 !  pixels, and PROP:Width answers in dialog units unless it is asked otherwise.
 !  Comparing the two without converting is the mistake that made the drop-down
 !  rule do nothing, and it would silently halve the threshold here.
-#IF(%bgTips)
+#IF(%bgTipsU)
   DATA
 rx  SIGNED,AUTO
 ry  SIGNED,AUTO
@@ -3347,7 +4164,7 @@ BG:Double:%bgObject ROUTINE
 !  would land on a different record. The row is worked out in the grid's own
 !  geometry, the LIST is told to select it, and only then is the browse sent
 !  the double click - which needs no coordinates at all.
-#IF(%bgDouble)
+#IF(%bgDoubleU)
   DATA
 rx SIGNED,AUTO
 ry SIGNED,AUTO
@@ -3400,7 +4217,7 @@ vp  LONG,AUTO
   mx = MOUSEX() - rx
   my = MOUSEY() - ry
   0{PROP:Pixels} = sp
-#IF(%bgBarStyle <> 'Windows')
+#IF(%bgBarStyleU <> 'Windows')
   IF %bgObject:HDrag
     IF bgApi_GetAsyncKeyState(BG:VkLButton) >= 0
       %bgObject:HDrag = 0
@@ -3509,7 +4326,7 @@ c LONG,AUTO
     EXIT
   END
   c = %bgObject:Col[%bgObject:RzCol]
-#IF(%bgChooser)
+#IF(%bgChooserU)
   IF c AND %bgObject:RzHide AND %bgObject:Cols > 1            ! never the last one
 !  Hidden by dragging it shut, the way Excel does. Its width is kept so
 !  Columns... can put it back the size it was.
@@ -3560,9 +4377,11 @@ dy    SIGNED,AUTO
 dw    SIGNED,AUTO
 dh    SIGNED,AUTO
 first LONG,AUTO
+full  LONG,AUTO
 sel   LONG,AUTO
 cf    LONG,AUTO
 total LONG,AUTO
+sp    LONG,AUTO
 map   CSTRING(201)
   CODE
   IF ~%bgObject:G THEN EXIT.
@@ -3580,11 +4399,23 @@ map   CSTRING(201)
 !  changes, and following the LIST costs a GETPOSITION and a SETPOSITION.
   DO BG:Place:%bgObject
   total = RECORDS(%bgQueueUsed)
-  fit   = d2g_PageSize(%bgObject:G) + 1
+!  DOS NUMEROS, NO UNO. `full` son las filas que entran ENTERAS; `fit` es una
+!  mas, la franja de abajo que se dibuja a proposito para que el scroll pueda
+!  ser por pixel y no por fila.
+!
+!  Mezclarlos fue el error: la aritmetica del scroll usaba `fit`, asi que al
+!  bajar mas alla de la ultima fila entera el registro SELECCIONADO aterrizaba
+!  siempre en la franja - dos pixeles de alto. Dibujado, y por lo tanto
+!  invisible. El browse lo tenia bien seleccionado y el panel de datos lo
+!  mostraba, que es lo que hacia parecer que faltaba una fila.
+!
+!  Para dibujar sirve `fit`. Para decidir DONDE mirar sirve `full`.
+  full  = d2g_PageSize(%bgObject:G)
+  fit   = full + 1
   sel   = CHOICE(%bgList)
   first = 0
   rows  = total
-  IF fit > 0 AND total > fit
+  IF full > 0 AND total > full
 !  The grid cannot draw the whole queue. Its rows are taller than the LIST's
 !  lines, so the browse has loaded more records than there is room for, and
 !  drawing from the top simply throws the tail away. Start far enough down that
@@ -3593,12 +4424,39 @@ map   CSTRING(201)
 !  what made Ctrl-PageDown look as though it had selected nothing. The top
 !  never showed it: entry one is always drawn.
     rows = fit
-    IF sel > fit
-      first = sel - fit
-      IF first > total - fit THEN first = total - fit.
+    IF sel > full
+      first = sel - full
+      IF first > total - full THEN first = total - full.
       IF first < 0 THEN first = 0.
     END
+!  Y NO PEDIR MAS DE LO QUE HAY. Corrido hasta el final quedan menos registros
+!  que filas dibujables; sin esto la ultima queda con lo que hubiera antes,
+!  porque el bucle de abajo corta en el GET fallido pero el motor ya recibio
+!  cuantas filas mostrar.
+    IF first + rows > total THEN rows = total - first.
   END
+#IF(%bgDiag)
+!  SOLO CUANDO CAMBIA. Esta rutina corre con cada tecla; registrarla siempre
+!  entierra la transicion que importa bajo cientos de lineas iguales, que es la
+!  misma razon por la que el mapa de columnas se registra solo al cambiar.
+  IF total <> %bgObject:LgQ OR rows <> %bgObject:LgR OR                      |
+     %bgList{PROP:LineHeight} <> %bgObject:LgL
+    %bgObject:LgQ = total
+    %bgObject:LgR = rows
+    %bgObject:LgL = %bgList{PROP:LineHeight}
+!  EN PIXELES, como mide BG:Items. Leerlo sin poner la ventana en pixeles lo da
+!  en dialog units y los dos numeros dejan de ser comparables, que es justo la
+!  comparacion que hace falta.
+    sp = 0{PROP:Pixels}
+    0{PROP:Pixels} = 1
+    BG_Log('%Procedure %bgObject fill: q=' & total & ' rows=' & rows &        |
+           ' first=' & first & ' page=' & d2g_PageSize(%bgObject:G) &         |
+           ' alto=' & %bgObject:Rgn{PROP:Height} &                            |
+           ' listlh=' & %bgList{PROP:LineHeight} &                            |
+           ' listitems=' & %bgList{PROP:Items})
+    0{PROP:Pixels} = sp
+  END
+#ENDIF
   d2g_Page(%bgObject:G,first,rows)
   LOOP i = 1 TO rows
     GET(%bgQueueUsed,first + i)
@@ -3714,7 +4572,7 @@ BG:Scroll:%bgObject ROUTINE
 !  its own scrollbar, and when it has refilled its queue ABC calls Reset, which
 !  is where the grid picks the new page up. So paging, locators and range
 !  limits keep behaving as they always did.
-#IF(%bgBars OR %bgWheel)
+#IF(%bgBarsU OR %bgWheelU)
   DATA
 i  LONG,AUTO
 n  LONG,AUTO
@@ -3744,6 +4602,10 @@ sp LONG,AUTO
     ELSE
       %bgList{PROP:LineHeight} = d2g_RowH(%bgObject:G)
     END
+#IF(%bgDiag)
+    BG_Log('%Procedure %bgObject zoom: listlh=' &                            |
+           %bgList{PROP:LineHeight} & ' rowh=' & d2g_RowH(%bgObject:G))
+#ENDIF
     0{PROP:Pixels} = sp
     DO BG:Items:%bgObject                                     ! and load to the new page size
     DO BG:Fill:%bgObject
@@ -3796,7 +4658,7 @@ BG:Bars:%bgObject ROUTINE
 !  Size both scrollbars from what is actually showing. Windows hides a bar
 !  whose page covers its whole range, so the horizontal one appears only when
 !  the columns are wider than the view, which is what anyone expects.
-#IF(%bgBars)
+#IF(%bgBarsU)
   DATA
 tot   LONG,AUTO
 view  LONG,AUTO
@@ -3811,14 +4673,14 @@ fRecs LONG,AUTO
   IF tot <= view
     %bgObject:ScrollX = 0
     d2g_ScrollX(%bgObject:G,0)
-#IF(%bgBarStyle = 'Windows')
+#IF(%bgBarStyleU = 'Windows')
     BG_SetBar(%bgObject:Rgn{PROP:Handle},BG:SbHorz,0,1,1)     ! nothing to scroll: no bar
 #ELSE
     d2g_HBar(%bgObject:G,0,0,1,1)
 #ENDIF
   ELSE
     IF %bgObject:ScrollX > tot - view THEN %bgObject:ScrollX = tot - view.
-#IF(%bgBarStyle = 'Windows')
+#IF(%bgBarStyleU = 'Windows')
     BG_SetBar(%bgObject:Rgn{PROP:Handle},BG:SbHorz,%bgObject:ScrollX,view,tot)
 #ELSE
     d2g_HBar(%bgObject:G,1,%bgObject:ScrollX,view,tot)
@@ -3871,6 +4733,44 @@ fRecs LONG,AUTO
 #!-----------------------------------------------------------------------------
 #!  A Clarion COLOR prompt is a BGR long; the grid wants 0xRRGGBB.
 #!-----------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------
+#!-----------------------------------------------------------------------------
+#!  CODE TEMPLATE: cargar un esquema de columnas desde codigo.
+#!
+#!  Para lo que no puede decidir el usuario apretando un boton: el esquema que
+#!  corresponde segun quien abrio la ventana - el departamento, el perfil, lo que
+#!  sea. Se arrastra a un embed y listo.
+#!-----------------------------------------------------------------------------
+#CODE(BrowseGridLayout,'BrowseGrid - load a column layout'),DESCRIPTION('BrowseGrid: load layout ' & %bgcName & ' into ' & %bgcGrid)
+  #PROMPT('&Grid object name:',@s32),%bgcGrid,DEFAULT('Grid1'),REQ
+  #DISPLAY('El mismo que figura en Object name, en la solapa Browse de ese grid.')
+  #DISPLAY('')
+  #PROMPT('Layout &name:',@s64),%bgcName,REQ
+  #PROMPT('That is a &variable, not a literal',CHECK),%bgcVar,DEFAULT(0),AT(10)
+  #DISPLAY('')
+  #DISPLAY('Tildado, lo de arriba se emite TAL CUAL para que lo resuelva el')
+  #DISPLAY('compilador - un nombre de variable, o una expresion. Destildado se')
+  #DISPLAY('emite entre comillas, como texto fijo.')
+  #DISPLAY('')
+  #DISPLAY('Ejemplo: con una variable GLO:Departamento y esquemas guardados con')
+  #DISPLAY('esos mismos nombres, cada usuario entra con sus columnas.')
+  #DISPLAY('')
+  #DISPLAY('DONDE PONERLO: en un embed que corra DESPUES de que el grid exista.')
+  #DISPLAY('ThisWindow.Init, despues del padre, es el lugar natural. Antes de que')
+  #DISPLAY('el grid arranque no hay nada que recolocar y la llamada se va callada.')
+  #DISPLAY('')
+  #DISPLAY('Despues de la llamada, %bgcGrid:SchDid vale 1 si habia algo guardado')
+  #DISPLAY('con ese nombre y 0 si no - por si conviene avisar o caer en otro.')
+#!
+#!  LITERAL O EXPRESION, decidido aca y no en el codigo emitido: un nombre de
+#!  variable entrecomillado no da error, da un esquema que se llama
+#!  GLO:Departamento y no existe.
+#IF(%bgcVar)
+%bgcGrid:SchName = %bgcName
+#ELSE
+%bgcGrid:SchName = '%bgcName'
+#ENDIF
+DO BG:SchLoad:%bgcGrid
 #!-----------------------------------------------------------------------------
 #!  End of BrowseGrid template set
 #!-----------------------------------------------------------------------------
