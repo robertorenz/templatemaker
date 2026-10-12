@@ -171,7 +171,10 @@
       #DISPLAY('  which is the conditions in the chosen language.')
       #DISPLAY('- To hang it off a menu item or a button, put the code template')
       #DISPLAY('  "weatherWidget - Show the weather now" in its embed.')
-      #DISPLAY('')
+      #ENDBOXED
+    #ENDTAB
+    #TAB('N&otes')
+      #BOXED('Curl, privacy and start-up')
       #DISPLAY('CURL')
       #DISPLAY('- The download is curl.exe, which ships with Windows 10 and 11')
       #DISPLAY('  in %%SystemRoot%%\System32. It is run HIDDEN, so nothing')

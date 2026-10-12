@@ -117,6 +117,8 @@
       #DISPLAY('button and code templates cannot do it: add this extension')
       #DISPLAY('to every app in the suite and leave the box below alone.')
     #ENDBOXED
+  #ENDTAB
+  #TAB('Cl&ass')
     #BOXED('Override - place the class by hand')
       #INSERT(%AbcLibraryPrompts(ABC))
       #DISPLAY('')
@@ -243,6 +245,8 @@ myExportLanguage     BYTE,EXTERNAL,DLL(dll_mode)           ! it lives in the dat
       #PROMPT('PD&F document',CHECK),%xbPDF,DEFAULT(1),AT(10)
       #PROMPT('Pri&nt (straight to a Windows printer)',CHECK),%xbPrint,DEFAULT(1),AT(10)
     #ENDBOXED
+  #ENDTAB
+  #TAB('A&bout formats')
     #BOXED('About the Excel format')
       #DISPLAY('The .xlsx is written here, in Clarion - a real OOXML workbook')
       #DISPLAY('with a frozen heading row, an auto-filter, the on-screen column')
@@ -311,6 +315,8 @@ myExportLanguage     BYTE,EXTERNAL,DLL(dll_mode)           ! it lives in the dat
       #PROMPT('&Suggest this folder (blank = the current directory):',@s128),%xbFolder,DEFAULT('')
       #DISPLAY('Only a suggestion - the user still picks the folder and name.')
     #ENDBOXED
+  #ENDTAB
+  #TAB('Remem&ber')
     #BOXED('Language')
       #PROMPT('&Language:',DROP('English[1]|Español (Spanish)[2]|Use the application setting[0]')),%xbLang,DEFAULT('1')
       #DISPLAY('The dialog, the Save-As box and every message follow this.')

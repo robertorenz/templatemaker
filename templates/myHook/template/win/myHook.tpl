@@ -183,6 +183,8 @@
         #ENDBOXED
       #ENDENABLE
     #ENDBOXED
+  #ENDTAB
+  #TAB('G&PFs')
     #BOXED('GPFs and other unhandled exceptions')
       #PROMPT('Intercept &GPFs (LastChanceHook)',CHECK),%mhGpfOn,DEFAULT(0),AT(10)
       #ENABLE(%mhGpfOn)
