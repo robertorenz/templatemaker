@@ -1045,6 +1045,13 @@ application follows — month names, day headings, the view and stacking lists, 
 and the footer that counts the days — with an optional per-button override. Like myCalc, the language is
 deliberately *not* remembered between runs, so changing the setting takes effect immediately.
 
+**It can follow a CapeSoft Makeover theme** (v1.1): name the style file on the global extension's *Theme* tab —
+an expression, evaluated each time a calendar opens, so a theme the user switches at run time is followed —
+and the paper, day numbers, weekends, rules, window, buttons and drop lists take the theme's own keys. An
+optional *band section* in the same file colours the top band and gives the calendar its accent, so a green
+theme gets a green calendar. Without a style file nothing changes. v1.1 also fixes the text colours: in 1.0
+they only set the pen, which `SHOW()` ignores, so every number came out in the window's black.
+
 The months are painted with native `BOX` / `LINE` / `SHOW` into an IMAGE (the two-argument
 `SETTARGET(window, ?image)`, so 0,0 is the image's own top-left) with a transparent `REGION` + `IMM` over the
 top to collect the mouse — which is what makes a whole year cheap enough to draw, and makes the hit test plain

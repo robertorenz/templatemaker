@@ -37,6 +37,102 @@ MyCalendarClass.Reset PROCEDURE
 
 
 ! ############################################################################
+!  Theme
+! ############################################################################
+!  Reads the CapeSoft Makeover style file into the colours, so the pop-up looks
+!  like the windows around it:
+!    paper / ink        <- ListColor / ListFontColor
+!    month name, picked <- [BandSection] BarStartColor, the theme's own colour;
+!                          else AccentFontColor, optional (picked text = the paper)
+!    weekends, day names<- InactiveTabFontColor
+!    rules              <- GridColor
+!    range              <- 25 % of the way from the paper to the accent
+!    window, prompt     <- BackgroundColor, TextFontColor
+!    buttons            <- FlatButtons, ButtonFontColor (else TextFontColor)
+!    top band           <- [BandSection] BgColor (half way to BgColorEnd) /
+!                          FontColor, when a section is named
+!  A key the theme does not have keeps the colour it had.
+MyCalendarClass.LoadTheme PROCEDURE()
+sty          CSTRING(261)
+sect         CSTRING(80)
+dflt         CSTRING(80)
+  CODE
+  SELF.Themed = 0
+  sty = CLIP(LEFT(SELF.StyleFile))
+  IF ~sty THEN RETURN 0 .
+  IF ~EXISTS(sty) THEN RETURN 0 .
+  dflt = CHOOSE(CLIP(SELF.StyleSet) <> '',CLIP(SELF.StyleSet),'Basic3')
+  sect = dflt & ' ' & CHOOSE(CLIP(SELF.StyleType) <> '',CLIP(SELF.StyleType),'Window')
+  dflt = dflt & ' Default'
+  SELF.BackColor     = SELF.StyColor(sty,sect,dflt,'ListColor',SELF.BackColor)
+  SELF.InkColor      = SELF.StyColor(sty,sect,dflt,'ListFontColor', |
+                       SELF.StyColor(sty,sect,dflt,'TextFontColor',SELF.InkColor))
+  SELF.TitleColor    = SELF.StyColor(sty,sect,dflt,'AccentFontColor',SELF.TitleColor)
+  SELF.MutedColor    = SELF.StyColor(sty,sect,dflt,'InactiveTabFontColor',SELF.MutedColor)
+  SELF.LineColor     = SELF.StyColor(sty,sect,dflt,'GridColor',SELF.LineColor)
+  SELF.WinColor      = SELF.StyColor(sty,sect,dflt,'BackgroundColor',SELF.WinColor)
+  SELF.TextColor     = SELF.StyColor(sty,sect,dflt,'TextFontColor',SELF.TextColor)
+  SELF.ButtonColor   = SELF.StyColor(sty,sect,dflt,'ButtonFontColor',SELF.TextColor)
+  SELF.FlatButtons   = SELF.StyColor(sty,sect,dflt,'FlatButtons',SELF.FlatButtons)
+  IF CLIP(SELF.BandSection)                                 ! a header gradient: the band takes its middle
+    SELF.BandColor     = SELF.StyColor(sty,SELF.BandSection,'','BgColor',SELF.BandColor)
+    IF SELF.BandColor <> -1
+      SELF.BandColor   = SELF.Blend(SELF.BandColor, |
+                         SELF.StyColor(sty,SELF.BandSection,'','BgColorEnd',SELF.BandColor),50)
+    END
+    SELF.BandFontColor = SELF.StyColor(sty,SELF.BandSection,'','FontColor',SELF.BandFontColor)
+    SELF.TitleColor    = SELF.StyColor(sty,SELF.BandSection,'','BarStartColor',SELF.TitleColor)
+  END
+  SELF.SelColor      = SELF.TitleColor
+  SELF.SelTextColor  = SELF.BackColor
+  SELF.RangeColor    = SELF.Blend(SELF.BackColor,SELF.SelColor,25)
+  SELF.Themed = 1
+  RETURN 1
+
+
+!  One key from the style file: from pSect, else from pDflt. #RRGGBB (as the
+!  STY writes it) or a plain number. Absent, invalid or -1 returns pCurrent.
+!  pKeyC, not pKey: KEYCODES.CLW has PKey EQUATE(0050H) (labels ignore case).
+MyCalendarClass.StyColor PROCEDURE(STRING pSty,STRING pSect,STRING pDflt,STRING pKeyC,LONG pCurrent)
+v            CSTRING(41)
+i            LONG,AUTO
+d            LONG,AUTO
+n            LONG,AUTO
+  CODE
+  v = CLIP(LEFT(GETINI(pSect,pKeyC,'',pSty)))
+  IF ~v AND CLIP(pDflt) THEN v = CLIP(LEFT(GETINI(pDflt,pKeyC,'',pSty))) .
+  IF ~v THEN RETURN pCurrent .
+  IF v[1] = '#' AND LEN(v) = 7                              ! #RRGGBB -> Clarion 00BBGGRRh
+    n = 0
+    LOOP i = 2 TO 7
+      d = INSTRING(UPPER(v[i]),'0123456789ABCDEF',1,1) - 1
+      IF d < 0 THEN RETURN pCurrent .
+      n = n * 16 + d
+    END
+    RETURN BOR(BOR(BSHIFT(BAND(n,0FFh),16),BAND(n,0FF00h)),BAND(BSHIFT(n,-16),0FFh))
+  ELSIF NUMERIC(v)
+    IF v = -1 THEN RETURN pCurrent .
+    RETURN v
+  END
+  RETURN pCurrent
+
+
+!  Mixes two colours channel by channel.
+MyCalendarClass.Blend PROCEDURE(LONG pFrom,LONG pTo,LONG pPct)
+r            LONG(0)
+i            LONG,AUTO
+a            LONG,AUTO
+b            LONG,AUTO
+  CODE
+  LOOP i = 0 TO 16 BY 8
+    a = BAND(BSHIFT(pFrom,-i),0FFh)
+    b = BAND(BSHIFT(pTo,-i),0FFh)
+    r = BOR(r,BSHIFT(a + INT((b - a) * pPct / 100),i))
+  END
+  RETURN r
+
+
+! ############################################################################
 !  Dates
 ! ############################################################################
 !  Clarion stores a date as days since 1800-12-28, and date % 7 gives the day
@@ -413,11 +509,12 @@ t     CSTRING(48)
 
 ! ---- the month name -------------------------------------------------------
   t = CLIP(SELF.MonthName(m)) & ' ' & y4
-  SETPENCOLOR(SELF.TitleColor)
+!  SHOW() writes in the window's FONT colour, not the pen's - see Ink().
+  SELF.Ink(SELF.TitleColor)
   SHOW(pX + INT(SELF.BlockW / 2) - INT(LEN(t) * Cal:CharW / 2), pY + 2, t)
 
 ! ---- the day-name row -----------------------------------------------------
-  SETPENCOLOR(SELF.MutedColor)
+  SELF.Ink(SELF.MutedColor)
   LOOP col = 0 TO 6
     t = SELF.DayName(col)
     SHOW(gx + col * Cal:CellW + INT((Cal:CellW - LEN(t) * Cal:CharW) / 2), pY + Cal:TitleH, t)
@@ -442,7 +539,7 @@ t     CSTRING(48)
 !   opening row may have no Monday at all, and it still needs its number.
     IF SELF.ShowWeekNo AND row <> lastrow
       lastrow = row
-      SETPENCOLOR(SELF.MutedColor)
+      SELF.Ink(SELF.MutedColor)
       t = SELF.WeekNumber(d)
       t = CLIP(LEFT(t))
       SHOW(pX + Cal:WeekW - 3 - LEN(t) * Cal:CharW, cy + 2, t)
@@ -486,15 +583,27 @@ t    CSTRING(12)
   END
   dow = pDate % 7
   IF sel = 1
-    SETPENCOLOR(SELF.SelTextColor)
+    SELF.Ink(SELF.SelTextColor)
   ELSIF ~SELF.Pickable(pDate) OR dow = 0 OR dow = 6
-    SETPENCOLOR(SELF.MutedColor)
+    SELF.Ink(SELF.MutedColor)
   ELSE
-    SETPENCOLOR(SELF.InkColor)
+    SELF.Ink(SELF.InkColor)
   END
   t = DAY(pDate)
   t = CLIP(LEFT(t))
   SHOW(pX + Cal:CellW - 3 - LEN(t) * Cal:CharW, pY + 2, t)
+
+
+!  The colour for what is drawn next. SETPENCOLOR covers LINE and the BOX
+!  edges only: SHOW() writes in the window's current FONT, so text needs the
+!  font colour too. SETFONT(0,...) sets the window's default font, which leaves
+!  existing controls alone; every argument is passed, because an omitted one
+!  falls back to the system font, not to the window's.
+MyCalendarClass.Ink PROCEDURE(LONG pColor)
+  CODE
+  SETPENCOLOR(pColor)
+  SETFONT(0,TARGET{PROP:FontName},TARGET{PROP:FontSize},pColor, |
+          TARGET{PROP:FontStyle},TARGET{PROP:FontCharSet})
 
 
 !  Where a date's cell is on the canvas - the exact reverse of DateAt, and the
@@ -750,6 +859,7 @@ cx           LONG,AUTO
 cy           LONG,AUTO
 fy           LONG,AUTO
 navr         LONG,AUTO                                      ! rows the nav strip is wrapped onto
+tf           LONG,AUTO                                      ! a control, in the Theme routine
 CYear        LONG
 CalWnd WINDOW('Calendar'),AT(,,372,252),FONT('Segoe UI',9,,FONT:regular,CHARSET:ANSI), |
          CENTER,GRAY,SYSTEM,MODAL,ALRT(EscKey)
@@ -792,7 +902,9 @@ CalWnd WINDOW('Calendar'),AT(,,372,252),FONT('Segoe UI',9,,FONT:regular,CHARSET:
   VWQ:VWName = SELF.Txt(CTx:Year)        ; VWQ:VWCount = 12 ; ADD(ViewQ)
   LYQ:LYName = SELF.Txt(CTx:Across) ; LYQ:LYId = Cal:Across ; ADD(LayQ)
   LYQ:LYName = SELF.Txt(CTx:Down)   ; LYQ:LYId = Cal:Down   ; ADD(LayQ)
+  SELF.LoadTheme()
   OPEN(CalWnd)
+  DO Theme
   ?CTitle{PROP:Text}  = CHOOSE(CLIP(SELF.Title) <> '',CLIP(SELF.Title),SELF.Txt(CTx:Calendar))
   0{PROP:Text}        = ?CTitle{PROP:Text}
   ?CViewP{PROP:Text}  = SELF.Txt(CTx:View)
@@ -1038,6 +1150,35 @@ Relayout ROUTINE
     IF VWQ:VWCount = SELF.Months
       ?CView{PROP:Selected} = i
       BREAK
+    END
+  END
+
+!  ---- the pop-up in the theme's colours (see LoadTheme) -------------------
+Theme ROUTINE
+  IF ~SELF.Themed THEN EXIT .
+  IF SELF.WinColor <> -1 THEN 0{PROP:Color} = SELF.WinColor .
+  IF SELF.BandColor <> -1 THEN ?CBand{PROP:Fill} = SELF.BandColor .
+  IF SELF.BandFontColor <> -1
+    ?CTitle{PROP:FontColor} = SELF.BandFontColor
+    ?CSub{PROP:FontColor}   = SELF.BandFontColor
+  END
+  ?CRule{PROP:Fill}      = SELF.LineColor
+  ?CPick{PROP:FontColor} = SELF.TitleColor
+  ?CHint{PROP:FontColor} = SELF.MutedColor
+  ?CViewP{PROP:Trn}      = 1
+  IF SELF.TextColor <> -1 THEN ?CViewP{PROP:FontColor} = SELF.TextColor .
+  LOOP i = 1 TO 4                                           ! the drop lists and the year
+    tf = CHOOSE(i,?CMonth,?CYear,?CView,?CLay)
+    tf{PROP:Color}             = SELF.BackColor
+    tf{PROP:FontColor}         = SELF.InkColor
+    tf{PROP:SelectedFillColor} = SELF.SelColor
+    tf{PROP:SelectedColor}     = SELF.SelTextColor
+  END
+  IF SELF.FlatButtons                                       ! a 3D button keeps its own face,
+    LOOP i = 1 TO 8                                         ! so its text keeps its colour too
+      tf = CHOOSE(i,?CPY,?CPM,?CNM,?CNY,?CToday,?CClear,?COk,?CCancel)
+      tf{PROP:Flat} = 1
+      IF SELF.ButtonColor <> -1 THEN tf{PROP:FontColor} = SELF.ButtonColor .
     END
   END
 

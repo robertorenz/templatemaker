@@ -140,6 +140,26 @@ SelColor             LONG(0603A1FH)            ! a picked day
 SelTextColor         LONG(0FFFFFFH)
 RangeColor           LONG(0F7E9DCH)            ! days between the two ends
 TodayColor           LONG(03DA3E8H)            ! the ring around today
+! ---- following a CapeSoft Makeover theme (.STY) ------------------------------
+!  Ask() calls LoadTheme(), which reads the theme into the colours above and
+!  the pop-up colours below. No theme found = the built-in colours, unchanged.
+!  StyleFile '' = no theme. Keys come from [<StyleSet> <StyleType>], else
+!  [<StyleSet> Default]. The top band reads BgColor / BgColorEnd / FontColor
+!  from BandSection, when one is named, and the accent (month names, the
+!  picked day, the range) is its BarStartColor. Without a band section the
+!  accent is the optional AccentFontColor key, else the built-in TitleColor.
+!  The myCalendar global template fills these in before every Ask().
+StyleFile            CSTRING(261)              ! the .STY; '' = no theme
+StyleSet             CSTRING(33)               ! '' = Basic3
+StyleType            CSTRING(33)               ! '' = Window
+BandSection          CSTRING(65)               ! '' = the band keeps its own colours
+WinColor             LONG(-1)                  ! pop-up background; -1 = leave as is
+TextColor            LONG(-1)                  ! the View prompt
+BandColor            LONG(-1)                  ! the top band
+BandFontColor        LONG(-1)                  ! title and subtitle on the band
+ButtonColor          LONG(-1)                  ! button text (flat buttons only)
+FlatButtons          BYTE(0)
+Themed               BYTE,PROTECTED            ! LoadTheme found a theme
 ! ---- internals ------------------------------------------------------------
 !  Layout() fills these in. They are public because Draw() will happily paint
 !  into an IMAGE on a window of your own, and then you need the size.
@@ -204,6 +224,11 @@ DrawChanged          PROCEDURE(WINDOW pWin,SIGNED pImage,LONG pOldFrom,LONG pOld
 ! ---- words ----------------------------------------------------------------
 Txt                  PROCEDURE(LONG pId),STRING
 
+! ---- theme ----------------------------------------------------------------
+LoadTheme            PROCEDURE(),BYTE,PROC,VIRTUAL    ! 1 = a theme was found and loaded
+StyColor             PROCEDURE(STRING pSty,STRING pSect,STRING pDflt,STRING pKeyC,LONG pCurrent),LONG  ! pKeyC: pKey clashes with KEYCODES PKey
+Blend                PROCEDURE(LONG pFrom,LONG pTo,LONG pPct),LONG   ! pPct % of the way to pTo
+
 ! ---- remembering ----------------------------------------------------------
 LoadSettings         PROCEDURE()
 SaveSettings         PROCEDURE()
@@ -212,6 +237,7 @@ ForgetSettings       PROCEDURE()
 ! ---- internals (protected) ------------------------------------------------
 DrawMonth            PROCEDURE(LONG pFirst,LONG pX,LONG pY),PROTECTED
 DrawCell             PROCEDURE(LONG pDate,LONG pX,LONG pY,BYTE pErase),PROTECTED
+Ink                  PROCEDURE(LONG pColor),PROTECTED   ! pen AND text colour for what follows
 StateIn              PROCEDURE(LONG pDate,LONG pFrom,LONG pTo),BYTE,PROTECTED
 IniPath              PROCEDURE(),STRING,PROTECTED
 IniSection           PROCEDURE(),STRING,PROTECTED

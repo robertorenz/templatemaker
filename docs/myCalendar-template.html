@@ -79,7 +79,7 @@
 </head><body>
 <div class="wrap">
   <nav>
-    <div class="brand"><h1>myCalendar</h1><span class="en">Programmer's Documentation · v1.0</span><span class="es">Documentación del programador · v1.0</span></div>
+    <div class="brand"><h1>myCalendar</h1><span class="en">Programmer's Documentation · v1.1</span><span class="es">Documentación del programador · v1.1</span></div>
     <a href="#over"><span class="en">Overview</span><span class="es">Resumen</span></a>
     <div class="grp"><span class="en">Using it</span><span class="es">Cómo usarlo</span></div>
     <a href="#install" class="h2"><span class="en">Install &amp; register</span><span class="es">Instalar y registrar</span></a>
@@ -99,6 +99,7 @@
     <div class="grp"><span class="en">Reference</span><span class="es">Referencia</span></div>
     <a href="#classref" class="h2"><span class="en">Class reference</span><span class="es">Referencia de la clase</span></a>
     <a href="#colours" class="h2"><span class="en">Colours</span><span class="es">Colores</span></a>
+    <a href="#theme" class="h2"><span class="en">Following a Makeover theme</span><span class="es">Seguir un tema de Makeover</span></a>
     <a href="#hand" class="h2"><span class="en">Driving it from code</span><span class="es">Desde tu propio código</span></a>
     <a href="#traps" class="h2"><span class="en">Clarion notes</span><span class="es">Notas de Clarion</span></a>
     <a href="#trouble" class="h2"><span class="en">Troubleshooting</span><span class="es">Solución de problemas</span></a>
@@ -878,6 +879,10 @@ ShowToday=1</pre>
         <tr><td><code>Persist</code> / <code>Profile</code> / <code>IniFile</code></td><td></td><td>See <a href="#remember">Remembering</a>.</td></tr>
         <tr><td><code>Accepted</code></td><td>BYTE</td><td>1 if the user pressed Accept.</td></tr>
         <tr><td><code>GridCols</code> <code>GridRows</code> <code>BlockW</code> <code>BlockH</code> <code>CanvasW</code> <code>CanvasH</code></td><td>LONG</td><td>Filled in by <code>Layout()</code>. Public so you can size your own IMAGE — see <a href="#hand">Driving it from code</a>.</td></tr>
+        <tr><td><code>StyleFile</code></td><td>CSTRING(261)</td><td>A Makeover style file (.STY) to take the colours from. Blank = no theme. See <a href="#theme">Following a Makeover theme</a>.</td></tr>
+        <tr><td><code>StyleSet</code> / <code>StyleType</code></td><td>CSTRING(33)</td><td>Which section is read: <code>[&lt;StyleSet&gt; &lt;StyleType&gt;]</code>. Blank = <code>Basic3</code> / <code>Window</code>.</td></tr>
+        <tr><td><code>BandSection</code></td><td>CSTRING(65)</td><td>A section of the style file with the top band's colours. Blank = the band keeps its own.</td></tr>
+        <tr><td><code>WinColor</code> <code>TextColor</code> <code>BandColor</code> <code>BandFontColor</code> <code>ButtonColor</code> <code>FlatButtons</code></td><td>LONG / BYTE</td><td>The pop-up's own colours, filled in by <code>LoadTheme()</code>. -1 = leave the control as designed.</td></tr>
       </table>
       <h3>Methods</h3>
       <table>
@@ -902,6 +907,9 @@ ShowToday=1</pre>
         <tr><td><code>DrawDay(window,?image,date)</code></td><td></td><td>Repaints one day in place.</td></tr>
         <tr><td><code>DrawChanged(window,?image,oldFrom,oldTo)</code></td><td>LONG</td><td>Repaints only the days that differ from the given range, and returns how many. See <a href="#speed">Drag performance</a>.</td></tr>
         <tr><td><code>LoadSettings()</code> <code>SaveSettings()</code> <code>ForgetSettings()</code></td><td></td><td>The INI file.</td></tr>
+        <tr><td><code>LoadTheme()</code></td><td>BYTE</td><td>Reads <code>StyleFile</code> into the colours. 1 = a theme was found. <code>Ask()</code> calls it every time. VIRTUAL.</td></tr>
+        <tr><td><code>StyColor(sty,sect,dflt,key,current)</code></td><td>LONG</td><td>One colour from a style file: <i>sect</i>, else <i>dflt</i>; <code>#RRGGBB</code> or a number. Absent or -1 returns <i>current</i>.</td></tr>
+        <tr><td><code>Blend(from,to,pct)</code></td><td>LONG</td><td>A colour <i>pct</i>&nbsp;% of the way from <i>from</i> to <i>to</i>.</td></tr>
       </table>
       </div>
       <div class="es">
@@ -933,6 +941,10 @@ ShowToday=1</pre>
         <tr><td><code>Persist</code> / <code>Profile</code> / <code>IniFile</code></td><td></td><td>Ver <a href="#remember">Recordar</a>.</td></tr>
         <tr><td><code>Accepted</code></td><td>BYTE</td><td>1 si el usuario pulsó Aceptar.</td></tr>
         <tr><td><code>GridCols</code> <code>GridRows</code> <code>BlockW</code> <code>BlockH</code> <code>CanvasW</code> <code>CanvasH</code></td><td>LONG</td><td>Los rellena <code>Layout()</code>. Son públicos para que puedas dimensionar tu propio IMAGE — ver <a href="#hand">Desde tu propio código</a>.</td></tr>
+        <tr><td><code>StyleFile</code></td><td>CSTRING(261)</td><td>Un fichero de estilo de Makeover (.STY) del que tomar los colores. En blanco = sin tema. Ver <a href="#theme">Seguir un tema de Makeover</a>.</td></tr>
+        <tr><td><code>StyleSet</code> / <code>StyleType</code></td><td>CSTRING(33)</td><td>Qué sección se lee: <code>[&lt;StyleSet&gt; &lt;StyleType&gt;]</code>. En blanco = <code>Basic3</code> / <code>Window</code>.</td></tr>
+        <tr><td><code>BandSection</code></td><td>CSTRING(65)</td><td>Una sección del fichero de estilo con los colores de la banda superior. En blanco = la banda conserva los suyos.</td></tr>
+        <tr><td><code>WinColor</code> <code>TextColor</code> <code>BandColor</code> <code>BandFontColor</code> <code>ButtonColor</code> <code>FlatButtons</code></td><td>LONG / BYTE</td><td>Los colores propios de la ventana, que rellena <code>LoadTheme()</code>. -1 = el control queda como se diseñó.</td></tr>
       </table>
       <h3>Métodos</h3>
       <table>
@@ -957,6 +969,9 @@ ShowToday=1</pre>
         <tr><td><code>DrawDay(ventana,?imagen,fecha)</code></td><td></td><td>Repinta un día en su sitio.</td></tr>
         <tr><td><code>DrawChanged(ventana,?imagen,desdeViejo,hastaViejo)</code></td><td>LONG</td><td>Repinta solo los días que difieren del rango dado, y devuelve cuántos. Ver <a href="#speed">Rendimiento del arrastre</a>.</td></tr>
         <tr><td><code>LoadSettings()</code> <code>SaveSettings()</code> <code>ForgetSettings()</code></td><td></td><td>El fichero INI.</td></tr>
+        <tr><td><code>LoadTheme()</code></td><td>BYTE</td><td>Lee <code>StyleFile</code> en los colores. 1 = se encontró un tema. <code>Ask()</code> la llama cada vez. VIRTUAL.</td></tr>
+        <tr><td><code>StyColor(sty,secc,defecto,clave,actual)</code></td><td>LONG</td><td>Un color de un fichero de estilo: <i>secc</i>, si no <i>defecto</i>; <code>#RRGGBB</code> o un número. Si falta o es -1 devuelve <i>actual</i>.</td></tr>
+        <tr><td><code>Blend(desde,hasta,pct)</code></td><td>LONG</td><td>Un color al <i>pct</i>&nbsp;% del camino entre <i>desde</i> y <i>hasta</i>.</td></tr>
       </table>
       </div>
     </section>
@@ -980,6 +995,13 @@ ShowToday=1</pre>
       <div class="callout warn"><b>BGR, not RGB</b>
         Clarion colour longs are <code>0BBGGRR<b>H</b></code>. The navy above is <code>#1F3A60</code> in
         HTML and <code>0603A1FH</code> in Clarion — the same three bytes, back to front.</div>
+      <div class="callout tip"><b>New in 1.1: the text colours reach the text</b>
+        In 1.0 <code>TitleColor</code>, <code>InkColor</code>, <code>MutedColor</code> and
+        <code>SelTextColor</code> only set the pen, and <code>SHOW()</code> writes in the window's font
+        colour, so every number and heading came out in the window's black. It did not show while the
+        defaults were dark; on a dark paper it does. 1.1 sets both (see <a href="#traps">Clarion notes</a>).
+        To take all of these from a CapeSoft Makeover theme instead of setting them by hand, see
+        <a href="#theme">Following a Makeover theme</a>.</div>
       </div>
       <div class="es">
       <p>Cada color es una propiedad pública, como long BGR de Clarion. Asígnalos antes de la llamada para
@@ -998,6 +1020,127 @@ ShowToday=1</pre>
       <div class="callout warn"><b>BGR, no RGB</b>
         Los longs de color de Clarion son <code>0BBGGRR<b>H</b></code>. El azul marino de arriba es
         <code>#1F3A60</code> en HTML y <code>0603A1FH</code> en Clarion: los mismos tres bytes, al revés.</div>
+      <div class="callout tip"><b>Nuevo en 1.1: los colores de texto llegan al texto</b>
+        En la 1.0 <code>TitleColor</code>, <code>InkColor</code>, <code>MutedColor</code> y
+        <code>SelTextColor</code> solo fijaban el lápiz, y <code>SHOW()</code> escribe con el color de la
+        fuente de la ventana, así que todos los números y cabeceras salían en el negro de la ventana. Con
+        los colores por defecto, oscuros, no se notaba; sobre un papel oscuro sí. La 1.1 fija los dos (ver
+        <a href="#traps">Notas de Clarion</a>). Para tomarlos todos de un tema de CapeSoft Makeover en vez
+        de fijarlos a mano, ver <a href="#theme">Seguir un tema de Makeover</a>.</div>
+      </div>
+    </section>
+
+    <section id="theme">
+      <h2><span class="en">Following a Makeover theme</span><span class="es">Seguir un tema de Makeover</span> <a href="#theme" class="top">#</a></h2>
+      <div class="en">
+      <p>If the application is themed with <b>CapeSoft Makeover</b>, the calendar can read the same style
+        file (.STY) and take its colours from it, so the pop-up looks like the windows around it. Nothing
+        is themed until you name a style file: without one the calendar is exactly as in 1.0.</p>
+      <h3>Setting it up</h3>
+      <p>In <b>Global Properties ▸ Extensions ▸ myCalendar - Global</b>, tab <b>Theme</b>:</p>
+      <table>
+        <tr><th>Prompt</th><th>What to enter</th></tr>
+        <tr><td><b class="i">Style file</b></td><td>An <b>expression</b>, evaluated every time a calendar opens — so a
+          theme the user switches at run time is followed without a restart. A fixed file:
+          <code>'Themes\Blue.STY'</code> (with the quotes). The style the application saved:
+          <code>GETINI('Settings','Style','','.\MyApp.INI')</code>. Blank = no theme.</td></tr>
+        <tr><td><b class="i">Style set</b></td><td>The section prefix in the style file. Blank = <code>Basic3</code>.</td></tr>
+        <tr><td><b class="i">Band section</b></td><td>Optional. A section of the style file with the colours of the
+          top band (see below). Blank = the band keeps its built-in navy.</td></tr>
+      </table>
+      <p>Every calendar button and every <b class="i">myCalendar - Open the calendar and return a date</b> code template then emits,
+        before the call:</p>
+      <pre>Cal1.StyleFile   = GETINI(<span class="s">'Settings'</span>,<span class="s">'Style'</span>,<span class="s">''</span>,<span class="s">'.\MyApp.INI'</span>)   <span class="c">! follow the Makeover theme</span>
+Cal1.BandSection = <span class="s">'App Header'</span></pre>
+      <p>From hand code, set the same properties before <code>Ask()</code>, <code>AskFor()</code> or
+        <code>AskRange()</code>.</p>
+      <h3>Which key paints what</h3>
+      <p>The keys are read from <code>[&lt;set&gt; Window]</code>, falling back to
+        <code>[&lt;set&gt; Default]</code> — the section Makeover itself uses for plain windows. A key the
+        theme does not have leaves that colour as it was.</p>
+      <table>
+        <tr><th>Calendar</th><th>Style file key</th></tr>
+        <tr><td>The paper, the day numbers</td><td><code>ListColor</code>, <code>ListFontColor</code> (else <code>TextFontColor</code>)</td></tr>
+        <tr><td>Weekends, day headings, week numbers, the hint</td><td><code>InactiveTabFontColor</code></td></tr>
+        <tr><td>The rules</td><td><code>GridColor</code></td></tr>
+        <tr><td>Window background, the View prompt</td><td><code>BackgroundColor</code>, <code>TextFontColor</code></td></tr>
+        <tr><td>Buttons</td><td><code>FlatButtons</code>; with flat buttons the text takes <code>ButtonFontColor</code> (else <code>TextFontColor</code>)</td></tr>
+        <tr><td>Month and year drop lists, year spin</td><td>The paper and day-number colours, with the accent as the selection</td></tr>
+        <tr><td>Month names, the picked day, the footer</td><td>The accent: the band section's <code>BarStartColor</code>; without a band section, the optional key <code>AccentFontColor</code>; else the built-in <code>TitleColor</code></td></tr>
+        <tr><td>Text on a picked day</td><td>The paper colour</td></tr>
+        <tr><td>Days inside a range</td><td>25&nbsp;% of the way from the paper to the accent</td></tr>
+        <tr><td>Today's ring</td><td>Unchanged (<code>TodayColor</code>)</td></tr>
+      </table>
+      <h3>The band section</h3>
+      <p>Makeover has no keys for a header band, so the band reads a section of your own, in the same
+        style file. The key names follow CapeSoft DrawHeader, so one section can serve both:</p>
+      <pre>[App Header]
+BgColor=#FFFFFF          <span class="c">; band: half way from BgColor ...</span>
+BgColorEnd=#D3DCE8       <span class="c">; ... to BgColorEnd</span>
+FontColor=#17378A        <span class="c">; title and subtitle on the band</span>
+BarStartColor=#1D5083    <span class="c">; the theme's own colour = the calendar's accent</span></pre>
+      <p>Colours are <code>#RRGGBB</code>, as Makeover writes them, or a plain Clarion number.
+        <code>-1</code> means "not set".</p>
+      <div class="callout tip"><b>Why the accent comes from the band</b>
+        A theme family often shares one link-blue (<code>AccentFontColor</code>) across all its variants,
+        while the header bar is in each variant's own colour. Taking the accent from the bar gives a green
+        theme a green calendar and an amber theme an amber one.</div>
+      </div>
+      <div class="es">
+      <p>Si la aplicación usa <b>CapeSoft Makeover</b> para sus temas, el calendario puede leer el mismo
+        fichero de estilo (.STY) y tomar de él sus colores, para que la ventana emergente se vea como las de
+        alrededor. No se aplica ningún tema hasta que nombras un fichero de estilo: sin él el calendario es
+        exactamente el de la 1.0.</p>
+      <h3>Cómo configurarlo</h3>
+      <p>En <b>Global Properties ▸ Extensions ▸ myCalendar - Global</b>, pestaña <b>Theme</b>:</p>
+      <table>
+        <tr><th>Prompt</th><th>Qué poner</th></tr>
+        <tr><td><b class="i">Style file</b></td><td>Una <b>expresión</b>, que se evalúa cada vez que se abre un
+          calendario: así se sigue un tema que el usuario cambie en ejecución, sin reiniciar. Un fichero fijo:
+          <code>'Themes\Blue.STY'</code> (con las comillas). El estilo que guardó la aplicación:
+          <code>GETINI('Settings','Style','','.\MyApp.INI')</code>. En blanco = sin tema.</td></tr>
+        <tr><td><b class="i">Style set</b></td><td>El prefijo de sección del fichero de estilo. En blanco = <code>Basic3</code>.</td></tr>
+        <tr><td><b class="i">Band section</b></td><td>Opcional. Una sección del fichero de estilo con los colores de la
+          banda superior (ver abajo). En blanco = la banda conserva su azul marino.</td></tr>
+      </table>
+      <p>Cada botón de calendario y cada plantilla de código <b class="i">myCalendar - Open the calendar and return a date</b>
+        genera entonces, antes de la llamada:</p>
+      <pre>Cal1.StyleFile   = GETINI(<span class="s">'Settings'</span>,<span class="s">'Style'</span>,<span class="s">''</span>,<span class="s">'.\MyApp.INI'</span>)   <span class="c">! seguir el tema de Makeover</span>
+Cal1.BandSection = <span class="s">'App Header'</span></pre>
+      <p>Desde código propio, fija las mismas propiedades antes de <code>Ask()</code>, <code>AskFor()</code>
+        o <code>AskRange()</code>.</p>
+      <h3>Qué clave pinta qué</h3>
+      <p>Las claves se leen de <code>[&lt;set&gt; Window]</code>, y si no están, de
+        <code>[&lt;set&gt; Default]</code>: la sección que usa el propio Makeover para las ventanas normales.
+        Una clave que el tema no tenga deja ese color como estaba.</p>
+      <table>
+        <tr><th>Calendario</th><th>Clave del fichero de estilo</th></tr>
+        <tr><td>El papel, los números de los días</td><td><code>ListColor</code>, <code>ListFontColor</code> (si no, <code>TextFontColor</code>)</td></tr>
+        <tr><td>Fines de semana, cabeceras de días, números de semana, la ayuda</td><td><code>InactiveTabFontColor</code></td></tr>
+        <tr><td>Las líneas</td><td><code>GridColor</code></td></tr>
+        <tr><td>Fondo de la ventana, el prompt View</td><td><code>BackgroundColor</code>, <code>TextFontColor</code></td></tr>
+        <tr><td>Botones</td><td><code>FlatButtons</code>; con botones planos el texto toma <code>ButtonFontColor</code> (si no, <code>TextFontColor</code>)</td></tr>
+        <tr><td>Listas de mes y vista, spin del año</td><td>Los colores del papel y de los números, con el acento como selección</td></tr>
+        <tr><td>Nombres de los meses, el día elegido, el pie</td><td>El acento: el <code>BarStartColor</code> de la sección de banda; sin sección de banda, la clave opcional <code>AccentFontColor</code>; si no, el <code>TitleColor</code> de serie</td></tr>
+        <tr><td>Texto sobre el día elegido</td><td>El color del papel</td></tr>
+        <tr><td>Días dentro de un rango</td><td>Al 25&nbsp;% del camino entre el papel y el acento</td></tr>
+        <tr><td>El recuadro de hoy</td><td>Sin cambios (<code>TodayColor</code>)</td></tr>
+      </table>
+      <h3>La sección de la banda</h3>
+      <p>Makeover no tiene claves para una banda de cabecera, así que la banda lee una sección tuya, en el
+        mismo fichero de estilo. Los nombres de las claves siguen a CapeSoft DrawHeader, de modo que una
+        misma sección sirve a los dos:</p>
+      <pre>[App Header]
+BgColor=#FFFFFF          <span class="c">; banda: a medio camino entre BgColor ...</span>
+BgColorEnd=#D3DCE8       <span class="c">; ... y BgColorEnd</span>
+FontColor=#17378A        <span class="c">; título y subtítulo sobre la banda</span>
+BarStartColor=#1D5083    <span class="c">; el color propio del tema = el acento del calendario</span></pre>
+      <p>Los colores son <code>#RRGGBB</code>, como los escribe Makeover, o un número de Clarion.
+        <code>-1</code> significa "sin definir".</p>
+      <div class="callout tip"><b>Por qué el acento sale de la banda</b>
+        Una familia de temas suele compartir un mismo azul de enlace (<code>AccentFontColor</code>) en todas
+        sus variantes, mientras que la barra de cabecera va en el color propio de cada una. Tomando el acento
+        de la barra, un tema verde da un calendario verde y uno ámbar, uno ámbar.</div>
       </div>
     </section>
 
@@ -1093,6 +1236,8 @@ Wnd  <span class="k">WINDOW</span>(<span class="s">'Agenda'</span>),AT(,,400,300
         <tr><td><code>by</code> is reserved</td><td><code>LOOP … BY -1</code> makes <code>by</code> a keyword; a variable of that name will not compile. (This one cost an afternoon.)</td></tr>
         <tr><td>Do not name a method <code>Format</code></td><td>It shadows the built-in <code>FORMAT()</code> inside the class. The date formatter here is called <code>DateText</code>.</td></tr>
         <tr><td>ANSI and CRLF</td><td>An LF-only <code>.inc</code> produces the baffling <code>Illegal data type: MYCALENDARCLASS</code> at every use site. The shipped files are correct — keep them that way if you edit them.</td></tr>
+        <tr><td><code>SHOW()</code> writes in the <b>font</b> colour</td><td><code>SETPENCOLOR</code> colours <code>LINE</code> and the edge of a <code>BOX</code>, nothing else. <code>SHOW()</code> uses the window's current font, colour included. <code>SETFONT(0,…)</code> sets that default font without touching existing controls — but pass <b>every</b> argument: an omitted typeface or size falls back to the <i>system</i> font, not the window's. The class does both in one place, <code>Ink()</code>.</td></tr>
+        <tr><td>Do not name a parameter <code>pKey</code></td><td><code>KEYCODES.CLW</code> declares <code>PKey EQUATE(0050H)</code>, the P key, and labels ignore case. A parameter called <code>pKey</code> in a module that includes it gives <code>Label duplicated</code> on the procedure line — one warning per app that compiles the module — and may resolve to the key code. Here it is <code>pKeyC</code>.</td></tr>
       </table>
       </div>
       <div class="es">
@@ -1110,6 +1255,8 @@ Wnd  <span class="k">WINDOW</span>(<span class="s">'Agenda'</span>),AT(,,400,300
         <tr><td><code>by</code> es reservada</td><td><code>LOOP … BY -1</code> convierte <code>by</code> en palabra clave; una variable con ese nombre no compila. (Esta costó una tarde.)</td></tr>
         <tr><td>No llames <code>Format</code> a un método</td><td>Tapa la función <code>FORMAT()</code> dentro de la clase. Aquí el formateador de fechas se llama <code>DateText</code>.</td></tr>
         <tr><td>ANSI y CRLF</td><td>Un <code>.inc</code> con solo LF produce el desconcertante <code>Illegal data type: MYCALENDARCLASS</code> en cada uso. Los ficheros que se entregan son correctos: mantenlos así si los editas.</td></tr>
+        <tr><td><code>SHOW()</code> escribe con el color de la <b>fuente</b></td><td><code>SETPENCOLOR</code> colorea <code>LINE</code> y el borde de un <code>BOX</code>, nada más. <code>SHOW()</code> usa la fuente actual de la ventana, color incluido. <code>SETFONT(0,…)</code> fija esa fuente por defecto sin tocar los controles existentes, pero pasa <b>todos</b> los argumentos: una tipografía o un tamaño omitidos vuelven a la fuente <i>del sistema</i>, no a la de la ventana. La clase hace las dos cosas en un solo sitio, <code>Ink()</code>.</td></tr>
+        <tr><td>No llames <code>pKey</code> a un parámetro</td><td><code>KEYCODES.CLW</code> declara <code>PKey EQUATE(0050H)</code>, la tecla P, y las etiquetas no distinguen mayúsculas. Un parámetro <code>pKey</code> en un módulo que lo incluya da <code>Label duplicated</code> en la línea del procedimiento —un aviso por cada aplicación que compile el módulo— y puede resolverse como el código de tecla. Aquí se llama <code>pKeyC</code>.</td></tr>
       </table>
       </div>
     </section>
@@ -1129,6 +1276,8 @@ Wnd  <span class="k">WINDOW</span>(<span class="s">'Agenda'</span>),AT(,,400,300
         <tr><td>The calendar opens on today, not on the field</td><td>The field was empty or zero. That is intended — there is nothing to open on.</td></tr>
         <tr><td>The user cannot pick anything</td><td><code>MinDate</code> / <code>MaxDate</code> exclude the whole visible month, or <code>NoWeekends</code> is on and the view is a weekend.</td></tr>
         <tr><td>The window is wider than the screen</td><td>The full year across is 4 × 3 and wants about 1100 px. Use <b class="i">Down</b>, or a smaller view, on low resolutions.</td></tr>
+        <tr><td>The calendar ignores the theme</td><td>The <b class="i">Style file</b> expression is blank, or returns a file that does not exist at run time (a relative path is relative to the current folder). Check also the <b class="i">Style set</b>: the keys must be in <code>[&lt;set&gt; Window]</code> or <code>[&lt;set&gt; Default]</code>.</td></tr>
+        <tr><td>Green or amber theme, blue calendar</td><td>No <b class="i">Band section</b>, so the accent comes from <code>AccentFontColor</code>. Name the section that holds the theme's <code>BarStartColor</code>.</td></tr>
       </table>
       </div>
       <div class="es">
@@ -1144,6 +1293,8 @@ Wnd  <span class="k">WINDOW</span>(<span class="s">'Agenda'</span>),AT(,,400,300
         <tr><td>El calendario abre en hoy, no en el campo</td><td>El campo estaba vacío o a cero. Es lo previsto: no hay fecha sobre la que abrir.</td></tr>
         <tr><td>El usuario no puede elegir nada</td><td><code>MinDate</code> / <code>MaxDate</code> excluyen todo el mes visible, o <code>NoWeekends</code> está activo y la vista es un fin de semana.</td></tr>
         <tr><td>La ventana es más ancha que la pantalla</td><td>El año completo en fila es 4 × 3 y pide unos 1100 px. Usa <b class="i">En columna</b>, o una vista más pequeña, en resoluciones bajas.</td></tr>
+        <tr><td>El calendario ignora el tema</td><td>La expresión <b class="i">Style file</b> está en blanco, o devuelve un fichero que no existe en ejecución (una ruta relativa lo es a la carpeta actual). Revisa también el <b class="i">Style set</b>: las claves tienen que estar en <code>[&lt;set&gt; Window]</code> o <code>[&lt;set&gt; Default]</code>.</td></tr>
+        <tr><td>Tema verde o ámbar, calendario azul</td><td>No hay <b class="i">Band section</b>, así que el acento sale de <code>AccentFontColor</code>. Nombra la sección que tiene el <code>BarStartColor</code> del tema.</td></tr>
       </table>
       </div>
     </section>
