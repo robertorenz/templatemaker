@@ -2,7 +2,7 @@
 
 Every example below is drawn from real shipped templates in `<CLARION_ROOT>\template\win\` and
 `<CLARION_ROOT>\accessory\template\win\` (where `<CLARION_ROOT>` is the active Clarion install — see
-SKILL.md; default `clarion12`). Directives start with `#`; everything else is emitted as
+SKILL.md). Directives start with `#`; everything else is emitted as
 literal Clarion source. `#!` is a template comment (discarded); `!` inside output is a Clarion comment.
 
 ---

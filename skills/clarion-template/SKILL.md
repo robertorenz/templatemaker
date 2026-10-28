@@ -24,19 +24,13 @@ task touches their area — don't load all of them up front):
 ### Where the corpus lives — `<CLARION_ROOT>`
 
 Paths below use `<CLARION_ROOT>` = the root of the Clarion install you are working in: the folder that
-contains both a `bin\` and a `template\win\` subtree. **Resolve it per task rather than hardcoding a
-version:**
+contains both a `bin\` and a `template\win\` subtree. **Resolve it per task, do not assume `C:\clarion12`:**
 
 - If you know the path of the `.tpl`/`.tpw`/`.app` in play, walk *up* from it to the first ancestor
   folder that has both `bin\` and `template\win\` — that ancestor is `<CLARION_ROOT>`.
-- This developer runs several side-by-side installs. Primary, day-to-day work — and where this repo's
-  templates and their classes are deployed — is **`clarion12`** (12.0.13941). Others present: several
-  11.1 builds (`Clarion11.1-13810` is the live one, 11.1.13855), an 11.0, and a Clarion 10. When the
-  version is unstated, default to **`clarion12`**.
-- The template language is the same in 11.1 and 12: identical directive vocabulary, identical built-in
-  symbols, and SoftVelocity shipped 12 with the `template\win` corpus unchanged. A template authored
-  against either install is valid source for the other, so the choice of root decides only which corpus
-  you read — never which syntax is legal.
+- Machines often carry several side-by-side installs (10 / 11.0 / 11.1 / 12). Prefer the install that
+  owns the file in play; when no file pins the version, ask the developer which install to use rather
+  than assuming a specific folder name.
 
 The canonical PDFs ship at `<CLARION_ROOT>\docs\TemplateLanguageReference.pdf` and `TemplateGuide.pdf`.
 Real shipped templates live in `<CLARION_ROOT>\template\win\` (ABC = `AB*.TPW`, classic = the rest) and
@@ -140,8 +134,7 @@ per-procedure, project files, export lists, custom embeds).
 
 1. **Find the closest shipped/accessory template that already does something similar** and read it.
    Glob `<CLARION_ROOT>\template\win\*.TPW` and `<CLARION_ROOT>\accessory\template\win\*.tpl` (resolve
-   `<CLARION_ROOT>` per the rule above — default `clarion12`). Imitation of a working template
-   beats invention.
+   `<CLARION_ROOT>` per the rule above). Imitation of a working template beats invention.
 2. **Decide the kind** — extension (most common), control, procedure, or just a group.
 3. **Design the prompts** before the code: what does the developer configure? Use `#SHEET`/`#TAB`/`#BOXED`
    and `WHERE()` to show/hide. Give every prompt a `%Symbol`, sensible `DEFAULT()`, and `REQ` where needed.

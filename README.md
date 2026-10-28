@@ -1050,7 +1050,7 @@ an expression, evaluated each time a calendar opens, so a theme the user switche
 and the paper, day numbers, weekends, rules, window, buttons and drop lists take the theme's own keys. An
 optional *band section* in the same file colours the top band and gives the calendar its accent, so a green
 theme gets a green calendar. Without a style file nothing changes. v1.1 also fixes the text colours: in 1.0
-they only set the pen, which `SHOW()` ignores, so every number came out in the window's black.
+they only set the pen, which `SHOW()` ignores, so every number came out in the window's black. Thanks to **Dinko Bačun** for both (PR #42).
 
 The months are painted with native `BOX` / `LINE` / `SHOW` into an IMAGE (the two-argument
 `SETTARGET(window, ?image)`, so 0,0 is the image's own top-left) with a transparent `REGION` + `IMM` over the
@@ -2269,6 +2269,16 @@ the caller can surface the error — and many methods became **`VIRTUAL`** so th
 overridden. `EanCheckDigit`/`UpcCheckDigit` now bound their loop to the passed string's `SIZE()` to avoid an
 invalid `[slice]`. Both sets of changes were verified to compile clean against Clarion 12. Thanks again to
 **Carl T. Barnes**.
+
+**myCalendar 1.1 — follows a CapeSoft Makeover theme; text colours fixed (PR #42).** The calendar can read the
+application's Makeover style file (.STY) — an expression on the global extension's new *Theme* tab, re-evaluated
+each time a calendar opens — so the pop-up takes the paper, day numbers, weekends, rules, buttons and drop lists
+from the theme, and an optional band section gives it the top band and the accent colour. New class members:
+`StyleFile`/`StyleSet`/`StyleType`/`BandSection`, `LoadTheme()` (VIRTUAL), `StyColor()` and `Blend()`. It also fixes
+a 1.0 bug: `TitleColor`, `InkColor`, `MutedColor` and `SelTextColor` only set the pen, which `SHOW()` ignores; a new
+`Ink()` sets the text colour too via `SETFONT(0, …)`. Without a style file nothing changes. Tested by the
+contributor on Clarion 11.1 multi-DLL with seven themes. Thanks to **Dinko Bačun** for the feature, the fix and
+the bilingual documentation.
 
 **myYuru — Direct2D backend now follows window resizes (v2.30.5).** The GPU direct-to-window host was sized
 **once**, lazily, on the first Direct2D frame and then frozen: when the window (and an anchored `IMAGE`
