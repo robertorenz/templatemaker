@@ -1,4 +1,4 @@
-#TEMPLATE(myCalendar,'myCalendar - Pop-up date picker beside any date field - v1.0'),FAMILY('ABC')
+#TEMPLATE(myCalendar,'myCalendar - Pop-up date picker beside any date field - v1.1'),FAMILY('ABC')
 #!-----------------------------------------------------------------------------
 #!  myCalendar template set  -  puts a small calendar button beside a date entry
 #!  field. Press it and a modal calendar opens on whatever the field already
@@ -22,6 +22,9 @@
 #!
 #!  OPTIONS: week numbers (ISO-8601), first day of the week, today ringed,
 #!  weekends blocked, earliest / latest date allowed, English or Spanish.
+#!
+#!  THEME (v1.1): the global extension can point the calendar at a CapeSoft
+#!  Makeover style file (.STY); the pop-up then takes the theme's colours.
 #!
 #!  THE TEMPLATES
 #!    myCalendarGlobal (APPLICATION) - the application-wide defaults: language,
@@ -52,7 +55,7 @@
 #SHEET
   #TAB('&General')
     #BOXED('myCalendar')
-      #DISPLAY('myCalendar Global - Version 1.0')
+      #DISPLAY('myCalendar Global - Version 1.1')
       #DISPLAY('Makes MyCalendarClass available to every procedure in the app,')
       #DISPLAY('and holds the defaults every calendar button starts from.')
       #DISPLAY('')
@@ -85,6 +88,25 @@
       #PROMPT('&Stack the months:',DROP('Across (side by side)[0]|Down (one under the other)[1]')),%mdgOrient,DEFAULT('0')
       #DISPLAY('Where the calendar opens. The user can change both from the')
       #DISPLAY('window, and the choice is remembered per profile.')
+    #ENDBOXED
+  #ENDTAB
+  #TAB('&Theme')
+    #BOXED('Follow a CapeSoft Makeover theme')
+      #PROMPT('Style &file (an expression; blank = no theme):',@s255),%mdgStyleFile,DEFAULT('')
+      #PROMPT('Style &set (blank = Basic3):',@s32),%mdgStyleSet,DEFAULT('')
+      #PROMPT('&Band section (blank = none):',@s64),%mdgBandSection,DEFAULT('')
+      #DISPLAY('The style file is an EXPRESSION, evaluated every time a')
+      #DISPLAY('calendar opens, so a theme the user switches at runtime is')
+      #DISPLAY('followed. A fixed file: ''Themes\Blue.STY'' (quoted). The style')
+      #DISPLAY('the app saved: GETINI(''Settings'',''Style'','''',''.\MyApp.INI'')')
+      #DISPLAY('')
+      #DISPLAY('Colours come from [<<set> Window], else [<<set> Default]:')
+      #DISPLAY('ListColor / ListFontColor (the days), GridColor, BackgroundColor,')
+      #DISPLAY('TextFontColor, InactiveTabFontColor (weekends), FlatButtons,')
+      #DISPLAY('ButtonFontColor. The band section, if named, gives the top band')
+      #DISPLAY('BgColor / BgColorEnd / FontColor, and the accent (month names,')
+      #DISPLAY('the picked day) from its BarStartColor; without one the accent')
+      #DISPLAY('is the optional AccentFontColor key. Colours are #RRGGBB.')
     #ENDBOXED
   #ENDTAB
 #ENDSHEET
@@ -298,6 +320,27 @@ INCLUDE('MyCalendarClass.INC'),ONCE
   %mdObject.IniFile     = '%mdIni'
 #ENDIF
 #ENDIF
+#! The theme lives in the global extension: another scope, so #CONTEXT to reach
+#! it (precedent: BrowseGrid.tpl; CRTABCRPT.TPW:66). VAREXISTS = no global.
+#DECLARE(%mdStyleU)
+#DECLARE(%mdStyleSetU)
+#DECLARE(%mdBandU)
+#CONTEXT(%Application)
+  #IF(VAREXISTS(%mdgStyleFile))
+    #SET(%mdStyleU,%mdgStyleFile)
+    #SET(%mdStyleSetU,%mdgStyleSet)
+    #SET(%mdBandU,%mdgBandSection)
+  #ENDIF
+#ENDCONTEXT
+#IF(%mdStyleU)
+  %mdObject.StyleFile   = %mdStyleU                  ! follow the Makeover theme
+#IF(%mdStyleSetU)
+  %mdObject.StyleSet    = '%mdStyleSetU'
+#ENDIF
+#IF(%mdBandU)
+  %mdObject.BandSection = '%mdBandU'
+#ENDIF
+#ENDIF
 #EMBED(%myCalendarBeforeOpen,'myCalendar - before the calendar opens'),%ActiveTemplateInstance,HIDE
 #IF(%mdRange='1')
   IF %mdObject.AskRange(%mdVar,%mdVar2)                    ! seeds from both fields, writes both back
@@ -409,6 +452,27 @@ INCLUDE('MyCalendarClass.INC'),ONCE
 %mnObject.Profile     = '%mnProfile'
 #ELSE
 %mnObject.Profile     = '%Procedure'
+#ENDIF
+#ENDIF
+#! The theme lives in the global extension: another scope, so #CONTEXT to reach
+#! it (precedent: BrowseGrid.tpl; CRTABCRPT.TPW:66). VAREXISTS = no global.
+#DECLARE(%mnStyleU)
+#DECLARE(%mnStyleSetU)
+#DECLARE(%mnBandU)
+#CONTEXT(%Application)
+  #IF(VAREXISTS(%mdgStyleFile))
+    #SET(%mnStyleU,%mdgStyleFile)
+    #SET(%mnStyleSetU,%mdgStyleSet)
+    #SET(%mnBandU,%mdgBandSection)
+  #ENDIF
+#ENDCONTEXT
+#IF(%mnStyleU)
+%mnObject.StyleFile   = %mnStyleU                  ! follow the Makeover theme
+#IF(%mnStyleSetU)
+%mnObject.StyleSet    = '%mnStyleSetU'
+#ENDIF
+#IF(%mnBandU)
+%mnObject.BandSection = '%mnBandU'
 #ENDIF
 #ENDIF
 #IF(%mnRange='1')
