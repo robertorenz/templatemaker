@@ -150,9 +150,9 @@
       #ENABLE(%SDAUsaList=1)
         #PROMPT('   Color:',COLOR),%SDAColList,DEFAULT(00F8F8F8h)
       #ENDENABLE
-      #PROMPT('TAB',CHECK),%SDAUsaTab,DEFAULT(1)
+      #PROMPT('TAB',CHECK),%SDAUsaTab,DEFAULT(0)
       #ENABLE(%SDAUsaTab=1)
-        #PROMPT('   Color:',COLOR),%SDAColTab,DEFAULT(00D8D8D8h)
+        #PROMPT('   Color:',COLOR),%SDAColTab,DEFAULT(00E5DCD6h)
         #DISPLAY('   Requiere desactivar el estilo visual en el manifiesto')
         #DISPLAY('   de la aplicacion; si no, Windows lo ignora.')
       #ENDENABLE

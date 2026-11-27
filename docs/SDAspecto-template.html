@@ -262,6 +262,12 @@ SDAspectoApply()                     <span class="c">! repaint the current windo
         a <code>GROUP</code> (about RGB(217,217,217)): the border was still drawn, but could not be told
         from the background, which reads as the template having broken it. <code>12566463</code> is
         RGB(191,191,191), clear of that grey.</p>
+      <p>The <code>ColorTab</code> default itself has moved on since, to
+        <code>00E5DCD6h</code> &mdash; RGB(214,220,229), a pale blue rather than a grey, which
+        cannot collide with the <code>GROUP</code> border at all. That only decides what a fresh
+        INI gets, which is the whole reason this code template exists; and the two numbers are
+        deliberately not tied together, because escaping a colour that collides and choosing what
+        new installations get are different questions. Both are prompts.</p>
     </section>
 
     <section id="rules">
