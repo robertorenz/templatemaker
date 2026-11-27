@@ -1,4 +1,4 @@
-#TEMPLATE(BrowseGrid,'BrowseGrid - draw any browse with Direct2D - v1.38'),FAMILY('ABC')
+#TEMPLATE(BrowseGrid,'BrowseGrid - draw any browse with Direct2D - v1.41'),FAMILY('ABC')
 #!-----------------------------------------------------------------------------
 #!  BrowseGrid  -  a browse that does not look like 1995.
 #!
@@ -34,7 +34,7 @@
 #SHEET
   #TAB('General')
     #BOXED('BrowseGrid')
-      #DISPLAY('BrowseGrid - Version 1.38')
+      #DISPLAY('BrowseGrid - Version 1.46')
       #DISPLAY('Draws an ABC browse with Direct2D and DirectWrite instead of')
       #DISPLAY('the runtime LIST, without touching the browse underneath.')
       #DISPLAY('')
@@ -81,6 +81,7 @@
     #PROMPT('Take the typeface from SD &Aspecto',CHECK),%bgGSDAsp,DEFAULT(0),AT(10)
     #PROMPT('&Font:',@s32),%bgGFont,DEFAULT('Segoe UI')
     #PROMPT('&Size (points):',SPIN(@n3,6,24,1)),%bgGSize,DEFAULT(9)
+    #PROMPT('Draw the standard chec&k box with geometry',CHECK),%bgGDrawChk,DEFAULT(0),AT(10)
     #PROMPT('Draw the text the way the LIST does (&GDI)',CHECK),%bgGGdiText,DEFAULT(1),AT(10)
     #PROMPT('Font wei&ght:',DROP('As the name says[0]|Light[300]|Regular[400]|Medium[500]|SemiBold[600]|Bold[700]')),%bgGWeight,DEFAULT('0')
     #PROMPT('&Wrap text that is too long for its column',CHECK),%bgGWrap,DEFAULT(0),AT(10)
@@ -211,6 +212,7 @@ d2g_Cell(LONG h,LONG visRow,LONG col,*CSTRING s),RAW,NAME('_d2g_Cell')
 d2g_CellColour(LONG h,LONG visRow,LONG col,LONG nfg,LONG nbg,LONG sfg,LONG sbg),NAME('_d2g_CellColour')
 d2g_ColumnColour(LONG h,LONG col,LONG fg,LONG bg,LONG sfg,LONG sbg),NAME('_d2g_ColumnColour')
 d2g_CheckCol(LONG h,LONG col,LONG on),NAME('_d2g_CheckCol')
+d2g_CheckIds(LONG h,LONG off,LONG on),NAME('_d2g_CheckIds')
 d2g_IconName(LONG h,LONG idx,*CSTRING name),RAW,NAME('_d2g_IconName')
 d2g_CellIcon(LONG h,LONG visRow,LONG col,LONG idx),NAME('_d2g_CellIcon')
 d2g_IconErr(LONG h,LONG idx),LONG,NAME('_d2g_IconErr')
@@ -616,13 +618,9 @@ c LONG,AUTO
       #DISPLAY('el CASE se renumera solo, asi que sacar una no descoloca al resto.')
       #DISPLAY('Sin ninguna, no se abre menu.')
       #PROMPT('Take these from the &global extension',CHECK),%bgGlobMenu,DEFAULT(0),AT(10)
-      #DISPLAY('Todo lo de esta solapa - y el boton desplegable - sale de la')
-      #DISPLAY('extension global, para no repetirlo browse por browse. Si la')
-      #DISPLAY('extension global no esta, se usa lo de aca abajo.')
-      #DISPLAY('')
-      #DISPLAY('OJO: el boton desplegable viene APAGADO tambien en la global, asi')
-      #DISPLAY('que tildar esto sin haberlo encendido alla deja el browse sin menu.')
-      #DISPLAY('Los valores de la global son los de fabrica hasta que los toques.')
+      #DISPLAY('Sale todo de la extension global. OJO: el boton desplegable')
+      #DISPLAY('viene apagado alla, asi que tildar esto sin encenderlo alli')
+      #DISPLAY('deja el browse sin menu.')
       #ENABLE(%bgGlobMenu = 0)
       #PROMPT('&Sort Ascending / Descending',CHECK),%bgMnSort,DEFAULT(1),AT(10)
       #PROMPT('Filter on &this value',CHECK),%bgMnFiltOn,DEFAULT(1),AT(10)
@@ -630,25 +628,23 @@ c LONG,AUTO
       #PROMPT('Clear &all filters',CHECK),%bgMnClrAll,DEFAULT(1),AT(10)
       #PROMPT('&Reset layout',CHECK),%bgMnReset,DEFAULT(1),AT(10)
       #PROMPT('La&youts... (save and recall column layouts)',CHECK),%bgSchemes,DEFAULT(0),AT(10)
-      #DISPLAY('  Guarda las columnas visibles, sus anchos y cuales totalizan,')
-      #DISPLAY('  con un nombre. Necesita que este puesto Remember this grid<39>s')
-      #DISPLAY('  layout between runs, que es donde vive el almacenamiento.')
+      #DISPLAY('  Columnas visibles, anchos y totales, con un nombre. Necesita')
+      #DISPLAY('  Remember this grid<39>s layout.')
       #ENDENABLE
       #DISPLAY('')
       #DISPLAY('Columns... sale del tilde de la solapa Columns, Filter by value y')
       #DISPLAY('Find text de los de aca abajo, y Auto-fit del de su recuadro.')
     #ENDBOXED
+  #ENDTAB
+  #TAB('Filtering')
+    #ENABLE(%bgGlobMenu = 0)
     #BOXED('Filtering')
       #PROMPT('&Excel-style drop-down button on every heading',CHECK),%bgFilterBtn,DEFAULT(0),AT(10)
       #ENABLE(%bgFilterBtn)
         #PROMPT('  Offer &Filter by value... on that menu',CHECK),%bgFilterVals,DEFAULT(1),AT(10)
         #PROMPT('  Offer Fi&nd text... on that menu',CHECK),%bgFilterText,DEFAULT(1),AT(10)
-        #DISPLAY('  Free text, in this column or in all of them. No scan: it becomes a')
-        #DISPLAY('  filter like any other, so it costs what any filter costs.')
-        #DISPLAY('  Reads the whole FILE to collect the distinct values of the column.')
-        #DISPLAY('  It is the only sequential scan this template does: on a big table')
-        #DISPLAY('  over a slow link it is a visible freeze. Untick it to drop the')
-        #DISPLAY('  option from the menu entirely.')
+        #DISPLAY('  Filter by value lee el ARCHIVO entero: es el unico barrido')
+        #DISPLAY('  secuencial, y sobre red lenta se nota. Find text no barre nada.')
       #ENDENABLE
       #ENABLE(%bgFilterBtn)
         #PROMPT('  Browse o&bject:',@s64),%bgBrowseObj,DEFAULT('')
@@ -659,59 +655,46 @@ c LONG,AUTO
     #BOXED('Auto-fit')
       #ENABLE(%bgFilterBtn)
         #PROMPT('A&uto-fit column widths on the heading menu',CHECK),%bgAutoFit,DEFAULT(1),AT(10)
-        #DISPLAY('  Sizes every visible column to the widest of its heading and its')
-        #DISPLAY('  values, in one go. Needs the drop-down button, which is where')
-        #DISPLAY('  the option lives.')
-        #DISPLAY('')
-        #DISPLAY('  Needs a FLATTENED format too. In a grouped one the width that')
-        #DISPLAY('  governs the layout belongs to the GROUP, and sizing the fields')
-        #DISPLAY('  inside it without touching that would leave the spanning heading')
-        #DISPLAY('  at its old width. With Flatten off the option is not offered.')
+        #DISPLAY('  Acomoda cada columna a lo mas ancho que tenga. Necesita el boton')
+        #DISPLAY('  desplegable y un formato aplanado: en uno agrupado manda el')
+        #DISPLAY('  ancho del GRUPO.')
         #ENABLE(%bgAutoFit)
           #PROMPT('  Records to look &ahead:',SPIN(@n7,0,100000,500)),%bgFitScan,DEFAULT(1000)
-          #DISPLAY('  The loaded page is measured exactly and costs nothing - it is')
-          #DISPLAY('  already in memory. Beyond it the browse<39>s own view is walked,')
-          #DISPLAY('  which is real reading: this is the dial for how much of it.')
-          #DISPLAY('  At 0 only what is loaded is measured, and no file is touched.')
+          #DISPLAY('  La pagina cargada se mide exacta y es gratis. Mas alla se lee')
+          #DISPLAY('  de verdad: en 0 no se toca el archivo.')
         #ENDENABLE
       #ENDENABLE
     #ENDBOXED
+    #ENDENABLE
   #ENDTAB
   #TAB('Look')
     #ENABLE(%bgGlobLook = 0)
     #BOXED('Type')
       #PROMPT('Take all of this from the &global extension',CHECK),%bgGlobLook,DEFAULT(0),AT(10)
-      #DISPLAY('Tipografia, colores y variables salen de la extension global, para')
-      #DISPLAY('no repetirlos browse por browse. Las tres solapas juntas, porque')
-      #DISPLAY('Variables pisa a Look y a Colours: heredar una sola dejaria mitad')
-      #DISPLAY('de un tema y mitad de otro. Sin extension global, se usa lo de aca.')
+      #DISPLAY('Tipografia, colores y variables salen de la extension global. Las')
+      #DISPLAY('tres solapas juntas, porque Variables pisa a las otras dos.')
       #PROMPT('Take the typeface from SD &Aspecto',CHECK),%bgSDAsp,DEFAULT(0),AT(10)
-      #DISPLAY('Font and size come from that application<39>s SDAspecto extension, so')
-      #DISPLAY('the grid follows the same typography as everything else. The colours')
-      #DISPLAY('below are unaffected.')
-      #DISPLAY('')
-      #DISPLAY('If SDAspecto is not in the application, or its typography is switched')
-      #DISPLAY('off, or its size is -1 (leave alone), the settings below are used.')
+      #DISPLAY('Tipografia y tamano salen de SDAspecto, leidos de su instancia en')
+      #DISPLAY('EJECUCION - sus prompts son el valor de fabrica. Los colores no se')
+      #DISPLAY('tocan.')
       #ENABLE(%bgSDAsp = 0)
         #PROMPT('&Font:',@s32),%bgFont,DEFAULT('Segoe UI')
         #PROMPT('&Size (points):',SPIN(@n3,6,24,1)),%bgSize,DEFAULT(9)
       #ENDENABLE
+      #PROMPT('Draw the standard chec&k box with geometry',CHECK),%bgDrawChk,DEFAULT(0),AT(10)
+      #DISPLAY('Ticked, the BoxOff/BoxOn pair is drawn with geometry and grows')
+      #DISPLAY('with the row. Unticked, their .ico load like any other icon.')
       #PROMPT('Draw the text the way the LIST does (&GDI)',CHECK),%bgGdiText,DEFAULT(1),AT(10)
       #PROMPT('Font wei&ght:',DROP('As the name says[0]|Light[300]|Regular[400]|Medium[500]|SemiBold[600]|Bold[700]')),%bgWeight,DEFAULT('0')
-      #DISPLAY('A family name can carry the weight in it. <39>Roboto Medium<39> is a')
-      #DISPLAY('family to GDI, which resolves it to the Medium face; DirectWrite')
-      #DISPLAY('may hand that same family its 400-weight member instead. When it')
-      #DISPLAY('does you are not seeing the same text rendered differently - you')
-      #DISPLAY('are seeing two different FACES, and no amount of contrast will')
-      #DISPLAY('match them. Name the weight here and the guessing stops.')
-      #DISPLAY('A LIST is drawn by GDI and the grid by DirectWrite, and they do not')
-      #DISPLAY('render alike: GDI snaps the stems to the pixel grid and adds')
-      #DISPLAY('contrast, so they look thicker. Side by side in one window the')
-      #DISPLAY('grid reads as thinner even though the typeface and the size are')
-      #DISPLAY('identical. Ticked, the grid is told to hint the way GDI does.')
-      #DISPLAY('')
-      #DISPLAY('Untick it to get DirectWrite<39>s own rendering, which is smoother')
-      #DISPLAY('and lighter - better on its own, different from everything else.')
+      #DISPLAY('Un nombre de familia puede llevar el peso adentro: GDI resuelve')
+      #DISPLAY('<39>Roboto Medium<39> a la cara Medium y DirectWrite a la de 400. Con')
+      #DISPLAY('<39>As the name says<39> se lee la ultima palabra del nombre.')
+    #ENDBOXED
+    #ENDENABLE
+  #ENDTAB
+  #TAB('Sizes')
+    #ENABLE(%bgGlobLook = 0)
+    #BOXED('Rows')
       #PROMPT('&Wrap text that is too long for its column',CHECK),%bgWrap,DEFAULT(0),AT(10)
       #ENABLE(%bgWrap)
         #PROMPT('  &Lines a cell may use:',SPIN(@n1,2,4,1)),%bgWrapLines,DEFAULT(2)
@@ -869,6 +852,7 @@ c LONG,AUTO
   #DECLARE(%bgFontU)
   #DECLARE(%bgSizeU)
   #DECLARE(%bgGdiTextU)
+  #DECLARE(%bgDrawChkU)
   #DECLARE(%bgWeightU)
   #DECLARE(%bgWrapU)
   #DECLARE(%bgWrapLinesU)
@@ -906,6 +890,7 @@ c LONG,AUTO
   #SET(%bgFontU,%bgFont)
   #SET(%bgSizeU,%bgSize)
   #SET(%bgGdiTextU,%bgGdiText)
+  #SET(%bgDrawChkU,%bgDrawChk)
   #SET(%bgWeightU,%bgWeight)
   #SET(%bgWrapU,%bgWrap)
   #SET(%bgWrapLinesU,%bgWrapLines)
@@ -946,6 +931,7 @@ c LONG,AUTO
         #SET(%bgFontU,%bgGFont)
         #SET(%bgSizeU,%bgGSize)
         #SET(%bgGdiTextU,%bgGGdiText)
+        #SET(%bgDrawChkU,%bgGDrawChk)
         #SET(%bgWeightU,%bgGWeight)
         #SET(%bgWrapU,%bgGWrap)
         #SET(%bgWrapLinesU,%bgGWrapLines)
@@ -1416,11 +1402,12 @@ BG:ClrHit:%bgObject  EQUATE(EVENT:User + 40 + %ActiveTemplateInstance)
 %bgObject:Fld        LONG,DIM(BG:MaxCols)                     ! queue field behind each column
 %bgObject:CFld       LONG,DIM(BG:MaxCols)                     ! and where its colours start, 0 none
 %bgObject:Num        LONG,DIM(BG:MaxCols)                     ! does its picture say it is a number?
-%bgObject:IFld       LONG,DIM(BG:MaxCols)                     ! and its icon id, 0 = not a tick box
-%bgObject:IconFld    LONG,DIM(BG:MaxCols)                     ! an icon column that is NOT a tick box, 0 = none
+%bgObject:IconFld    LONG,DIM(BG:MaxCols)                     ! this column carries an icon id, not text
 %bgObject:IconOn     LONG                                     ! the icon that means ticked
-%bgObject:IconChk    LONG                                     ! is the icon list a tick box pair?
+%bgObject:IconOff    LONG                                     ! and the one that means not ticked
 %bgObject:W0         LONG,DIM(BG:MaxCols)                     ! the widths as the formatter drew them
+%bgObject:Hdr0       LONG                                     ! what the LIST takes up apart from its rows
+%bgObject:H0         LONG                                     ! 1 = measured, even if it came out zero
 #IF(%bgTotals)
 %bgObject:Sum        LONG,DIM(BG:MaxCols)                     ! does this column add up?
 %bgObject:SumNm      CSTRING(65),DIM(BG:MaxCols)              ! and the field name to read it by
@@ -1954,7 +1941,7 @@ raw   CSTRING(261)                                            ! icon name/path, 
 !  tick box is not left drawing nothing any more either - see below, it gets
 !  its own icons back, loaded rather than faked.
   %bgObject:IconOn  = 0
-  %bgObject:IconChk = 0
+  %bgObject:IconOff = 0
   n = 0
   LOOP c = 1 TO 16
     raw  = CLIP(%bgList{PROP:IconList,c})
@@ -1968,14 +1955,37 @@ raw   CSTRING(261)                                            ! icon name/path, 
     d2g_IconName(%bgObject:G,c,raw)
     IF INSTRING('boxoff',head,1,1) OR INSTRING('checkoff',head,1,1)          |
        OR INSTRING('unchecked',head,1,1) OR INSTRING('untick',head,1,1)
-      %bgObject:IconChk = 1
+      %bgObject:IconOff = c
     ELSIF INSTRING('boxon',head,1,1) OR INSTRING('checkon',head,1,1)         |
        OR INSTRING('checked',head,1,1) OR INSTRING('tick',head,1,1)
-      %bgObject:IconChk = 1
       %bgObject:IconOn  = c
     END
   END
-  IF ~%bgObject:IconOn THEN %bgObject:IconChk = 0.
+!  HALF A PAIR IS NOT A PAIR. No 'on' entry and there is nothing to draw a
+!  tick into, so the list is treated as ordinary icons throughout.
+  IF ~%bgObject:IconOn THEN %bgObject:IconOff = 0.
+#IF(%bgDrawChkU)
+  d2g_CheckIds(%bgObject:G,%bgObject:IconOff,%bgObject:IconOn)
+#ELSE
+!  THE PAIR IS NOT CLAIMED. Told nothing, the engine treats every id as an
+!  icon of its own and loads those two .ico like any other - which is what
+!  a plain LIST does with them, and the usual case, because the pair is far
+!  more often the developer<39>s own artwork than Clarion<39>s.
+  d2g_CheckIds(%bgObject:G,0,0)
+#ENDIF
+#IF(%bgDiag)
+!  LA LISTA DE ICONOS TAL CUAL, y el par que se reconocio de ella. Si un par
+!  propio no sale dibujado como casilla, lo que falta esta aca y no hay que
+!  deducirlo de una captura: la deteccion es POR NOMBRE y solo acepta
+!  boxoff/boxon, checkoff/checkon, unchecked/checked y untick/tick.
+  dbg = ''
+  LOOP c = 1 TO n
+    dbg = CLIP(dbg) & ' ' & c & '=[' & CLIP(%bgList{PROP:IconList,c}) & ']'
+  END
+  BG_Log('%Procedure %bgObject lista de iconos: n=' & n & ' off=' &          |
+         %bgObject:IconOff & ' on=' & %bgObject:IconOn &                   |
+         ' geom=%bgDrawChkU' & CLIP(dbg))
+#ENDIF
 
   LOOP pass = 1 TO 2
   n = 0
@@ -2056,7 +2066,6 @@ raw   CSTRING(261)                                            ! icon name/path, 
 !  <field>_NormalFG, wherever they actually ended up, so that is what gets
 !  looked for - a short scan (colours plus an icon is at most half a dozen
 !  fields) rather than a guess about their order.
-    %bgObject:IFld[n + 1] = 0
     %bgObject:IconFld[n + 1] = 0
     p = %bgList{PROPLIST:Icon,c}
     IF ~p THEN p = %bgList{PROPLIST:IconTrn,c}.                ! J, the transparent kind
@@ -2065,11 +2074,10 @@ raw   CSTRING(261)                                            ! icon name/path, 
       LOOP scan = fld + 1 TO fld + 10
         IF ~CLIP(WHO(%bgQueueUsed,scan)) THEN BREAK.           ! past the last real field
         IF UPPER(CLIP(WHO(%bgQueueUsed,scan))) = iconNm
-          IF %bgObject:IconChk
-            %bgObject:IFld[n + 1] = scan
-          ELSE
-            %bgObject:IconFld[n + 1] = scan                    ! not a tick box: draw its own icon
-          END
+!  MARKED WHATEVER THE LIST HOLDS. Whether this cell is a tick box or an
+!  icon of its own is a question about its ID, and the id is per ROW: the
+!  engine is told which two ids are the pair and decides cell by cell.
+            %bgObject:IconFld[n + 1] = scan
           BREAK
         END
       END
@@ -2118,7 +2126,7 @@ raw   CSTRING(261)                                            ! icon name/path, 
 !  number is a number and nothing here can tell otherwise. Untick the totals
 !  or change that column<39>s picture.
     %bgObject:Sum[n + 1] = 0
-    IF ~%bgObject:IFld[n + 1] AND ~%bgObject:IconFld[n + 1] AND %bgObject:Num[n + 1]
+    IF ~%bgObject:IconFld[n + 1] AND %bgObject:Num[n + 1]
       %bgObject:Sum[n + 1] = 1
 !  The name once, here, and not once per record per column inside the walk:
 !  WHO() is asking the queue about itself, and the answer does not change
@@ -2133,7 +2141,6 @@ raw   CSTRING(261)                                            ! icon name/path, 
 !  by row, these are set once in the window and hold for the whole column.
 !  Read once per column rather than once per cell, which is why they cost
 !  nothing. -1 is Clarion<39>s COLOR:None and has to stay -1.
-    d2g_CheckCol(%bgObject:G,n,CHOOSE(%bgObject:IFld[n + 1] > 0,1,0))
     d2g_ColumnColour(%bgObject:G,n,                                            |
                      BG_Colr(%bgList{PROPLIST:TextColor,c}),                    |
                      BG_Colr(%bgList{PROPLIST:BackColor,c}),                    |
@@ -2540,13 +2547,43 @@ fit   LONG,AUTO
          ' rowh=' & d2g_RowH(%bgObject:G) &                                   |
          ' page=' & fit & ' listlh=' & lh & ' listitems=' & items)
 #ENDIF
-  IF lh > 0 AND items > 0 AND fit > 0 AND fit <> items
-    newlh = items * lh / fit
+!  FROM THE ORIGINAL, NEVER FROM WHAT IT IS NOW.
+!
+!  This routine WRITES the LIST's line height, and ABC recomputes its items
+!  from it. Working the new height out from the height and the items of NOW is
+!  feeding on its own output: every call starts from what the last one left and
+!  the value oscillates until it settles. Measured on one window opening:
+!  21 -> 17 -> 14 -> 21 -> 18 -> 19 -> 19 - five rounds, and each one is a
+!  redraw with the rows at a different height. That is what is seen as flicker.
+!
+!  WHAT STAYS PUT IS THE HEADING, NOT THE USABLE HEIGHT. Storing items * lh
+!  from the first round as though it were a constant is wrong: the LIST grows
+!  with the window, and after a maximise that stale base gave a line height of
+!  189/22 = 8, so ABC loaded 58 records where 22 fit.
+!
+!  What does stay put is what the LIST takes up outside its rows - its height
+!  less items * line height - measured ONCE while the line height is still the
+!  designed one. The row area is then worked out from the height of NOW, so the
+!  count follows the window without feeding on its own output.
+  IF ~%bgObject:H0 AND lh > 0 AND items > 0
+    %bgObject:H0   = 1                                        ! measured, even if zero
+    %bgObject:Hdr0 = %bgList{PROP:Height} - items * lh
+    IF %bgObject:Hdr0 < 0 THEN %bgObject:Hdr0 = 0.
+  END
+  IF %bgObject:H0 AND fit > 0 AND %bgList{PROP:Height} > %bgObject:Hdr0
+    newlh = (%bgList{PROP:Height} - %bgObject:Hdr0) / fit
     IF newlh < 2 THEN newlh = 2.
-    %bgList{PROP:LineHeight} = newlh
+!  AND ONLY IF IT CHANGED. Writing the same number back raises the resize event
+!  again, which comes back in here: the loop would keep turning even once the
+!  arithmetic had stopped moving.
+    IF newlh <> lh
+      %bgList{PROP:LineHeight} = newlh
 #IF(%bgDiag)
-    BG_Log('%Procedure %bgObject items: baja el alto de linea a ' & newlh)
+      BG_Log('%Procedure %bgObject items: line height ' & lh & ' -> ' &     |
+             newlh & ' (height ' & %bgList{PROP:Height} & ' - hdr ' &       |
+             %bgObject:Hdr0 & ' / ' & fit & ')')
 #ENDIF
+    END
   END
   0{PROP:Pixels} = sp
 
@@ -3309,7 +3346,7 @@ sav  STRING(1024)
     GET(%bgQueueUsed,i)
     IF ERRORCODE() THEN BREAK.
     LOOP c = 1 TO %bgObject:Cols
-      IF %bgObject:IFld[c] OR %bgObject:IconFld[c] THEN CYCLE. ! neither carries text
+      IF %bgObject:IconFld[c] THEN CYCLE.                      ! carries an id, not text
       IF %bgObject:Pic[c]
         txt = CLIP(LEFT(FORMAT(WHAT(%bgQueueUsed,%bgObject:Fld[c]),                |
                                CLIP(%bgObject:Pic[c]))))
@@ -3329,7 +3366,7 @@ sav  STRING(1024)
 !  reloads the record the browse was sitting on.
   IF %bgFitScanU > 0
     LOOP c = 1 TO %bgObject:Cols
-      IF ~%bgObject:IFld[c] AND ~%bgObject:IconFld[c] AND %bgObject:Col[c]
+      IF ~%bgObject:IconFld[c] AND %bgObject:Col[c]
         nm[c] = CLIP(WHO(%bgQueueUsed,%bgObject:Fld[c]))
       END
     END
@@ -3372,7 +3409,7 @@ sav  STRING(1024)
     lc = %bgObject:Col[c]
     IF ~lc THEN CYCLE.
     IF %bgList{PROPLIST:Width,lc} < 1 THEN CYCLE.
-    IF %bgObject:IFld[c] OR %bgObject:IconFld[c]
+    IF %bgObject:IconFld[c]
       w = BG:FitBox
     ELSE
       w = best[c] + BG:FitPad
@@ -3542,7 +3579,7 @@ ok   LONG
   expr = ''
   LOOP i = 1 TO %bgObject:Cols
     IF ~FAll AND i <> %bgObject:SortCol + 1 THEN CYCLE.
-    IF %bgObject:IFld[i] THEN CYCLE.                          ! una casilla no lleva texto
+    IF %bgObject:IconFld[i] THEN CYCLE.                       ! un icono no lleva texto
     nm = CLIP(WHO(%bgQueueUsed,%bgObject:Fld[i]))
     IF ~nm THEN CYCLE.
     one = ''
@@ -4369,7 +4406,7 @@ wid LONG,AUTO
   %bgObject:Rgn{PROP:Tip} = ''
   IF row < 0 OR col < 0 OR col >= %bgObject:Cols THEN EXIT.   ! the header, or past the last
   IF row >= RECORDS(%bgQueueUsed) THEN EXIT.
-  IF %bgObject:IFld[col + 1] THEN EXIT.                       ! a tick box says all it has to
+  IF %bgObject:IconFld[col + 1] THEN EXIT.                    ! an icon says all it has to
   GET(%bgQueueUsed,row + 1)
   IF ERRORCODE() THEN EXIT.
   IF %bgObject:Pic[col + 1]
@@ -4699,12 +4736,7 @@ imap  CSTRING(650)
     GET(%bgQueueUsed,first + i)
     IF ERRORCODE() THEN BREAK.
     LOOP col = 1 TO %bgObject:Cols
-      IF %bgObject:IFld[col]
-!  A tick box carries no text: what goes over is whether it is ticked, and
-!  the engine draws the square.
-        %bgObject:Cell = CHOOSE(WHAT(%bgQueueUsed,%bgObject:IFld[col]) =      |
-                                %bgObject:IconOn, '1', '0')
-      ELSIF %bgObject:IconFld[col]
+      IF %bgObject:IconFld[col]
 !  Igual que el tilde: la celda no lleva texto. Lo que importa es CUAL de los
 !  iconos de la lista corresponde a esta fila - ese numero es el mismo id que
 !  ABC ya calculo y dejo en el queue, uno atras del valor.
@@ -4756,7 +4788,6 @@ imap  CSTRING(650)
   LOOP i = 1 TO %bgObject:Cols
     map = CLIP(map) & ' ' & %bgObject:Col[i] & '>f' & %bgObject:Fld[i]         |
         & '[' & CLIP(%bgObject:Pic[i]) & ']w' & d2g_ColWidth(%bgObject:G,i - 1)
-    IF %bgObject:IFld[i] THEN map = CLIP(map) & 'i' & %bgObject:IFld[i].
     IF %bgObject:IconFld[i] THEN map = CLIP(map) & 'I' & %bgObject:IconFld[i].
     IF %bgObject:CFld[i] THEN map = CLIP(map) & 'c' & %bgObject:CFld[i].
 #IF(%bgTotals)

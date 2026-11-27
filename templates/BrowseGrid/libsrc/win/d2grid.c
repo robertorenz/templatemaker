@@ -1,6 +1,6 @@
 /* ============================================================================
  *  d2grid.c - a grid drawn with Direct2D and DirectWrite, for Clarion.
- *  v1.36 - it ships with the BrowseGrid template of the same number, and the
+ *  v1.41 - it ships with the BrowseGrid template of the same number, and the
  *  two are versioned together because the template declares every export here.
  *
  *  WHY. Clarion's LIST is drawn by the runtime and looks it. This draws every
@@ -69,6 +69,7 @@ typedef struct { long left, top, right, bottom; } RECT;
 #define GWL_WNDPROC  (-4)
 #define WM_PAINT      0x000F
 #define WM_ERASEBKGND 0x0014
+#define WM_SIZE       0x0005
 
 extern "C" {
 
@@ -225,6 +226,11 @@ typedef struct {
        for the column. Cheap enough to keep for every column - four ints - and
        read once per column instead of once per cell. -1 is 'none' here too. */
     int   colCheck[G_COLS];     /* draw a tick box instead of the text?     */
+    /* THE TWO ICON IDS THAT ARE THE TICK BOX, 0 = none. Which shape a cell
+       gets cannot be settled per COLUMN: the id is a per-row value, so one
+       column can legitimately show a tick on one row and an icon on the
+       next. These two let cellOut decide per cell. */
+    int   chkOff, chkOn;
     /* ---- icon columns (v1.38) --------------------------------------------
        A column of the developer's OWN icons, not the tick box above. What
        each of the LIST's up-to-16 icons is called is remembered here; the
@@ -335,6 +341,7 @@ static void* g_dw  = 0;
 static int   g_tried = 0;
 
 static long WINAPI d2g_WndProc(HWND h, UINT msg, UINT wp, long lp);
+static int  resizeTarget(Grid* c);
 
 /* How tall a row and a heading are for a given point size. Leading has to grow
    WITH the type, not sit at a fixed number of pixels above it: pt + 10 is
@@ -792,10 +799,8 @@ static void text(Grid* c, const char* s, float l, float t, float r, float b,
    Which icon means ticked is decided on the Clarion side, where the icon
    list's names can be read; by the time it arrives the cell holds '1' or
    '0' and there is nothing left to interpret. */
-static void checkBox(Grid* c, int row, int col, float l, float t, float r,
-                     float b, unsigned int rgb) {
-    const char* s = CELL(c, row, col);
-    int   on = (s && s[0] == '1');
+static void checkBoxAt(Grid* c, float l, float t, float r, float b,
+                       unsigned int rgb, int on) {
     float sz = (b - t) * 0.55f;
     float cx, cy, x0, y0, x1, y1;
     if (sz <  7.0f) sz =  7.0f;
@@ -811,6 +816,14 @@ static void checkBox(Grid* c, int row, int col, float l, float t, float r,
         line(c, x0 + sz * 0.22f, cy, cx - sz * 0.04f, y1 - sz * 0.24f, rgb);
         line(c, cx - sz * 0.04f, y1 - sz * 0.24f, x1 - sz * 0.16f, y0 + sz * 0.24f, rgb);
     }
+}
+
+/* The column-level tick box, kept for a caller that marks a whole column
+   with d2g_CheckCol and sends '1' or '0' as the cell's text. */
+static void checkBox(Grid* c, int row, int col, float l, float t, float r,
+                     float b, unsigned int rgb) {
+    const char* s = CELL(c, row, col);
+    checkBoxAt(c, l, t, r, b, rgb, (s && s[0] == '1'));
 }
 
 /* Just the filename. PROP:IconList can hold a full path - whatever the
@@ -902,12 +915,20 @@ static int loadIcon(Grid* c, int idx) {
           fallback for an icon that, for whatever reason, did not end up
           compiled in. */
     { char bn[260], rn[260], dir[260], full[520];
-      baseName(c->iconName[idx], bn, sizeof(bn));
+      const char* nm = c->iconName[idx];
+/*    THE '~' IS CLARION'S MARK, NOT PART OF THE NAME. PROP:IconList hands
+      the string over exactly as the window declared it, and a leading '~'
+      is how Clarion says "this one is a standard icon". It belongs to
+      neither the file on disk nor the resource name, and left on it makes
+      all three tries below ask for something that cannot exist:
+      '~BOXOFF_ICO' as a resource, '~BoxOff.ico' as a file. */
+      if (nm[0] == '~') nm++;
+      baseName(nm, bn, sizeof(bn));
       resName(bn, rn, sizeof(rn));
       hIcon = LoadImageA(GetModuleHandleA(0), rn, IMG_ICON,
                          D2G_ICONPX, D2G_ICONPX, 0);
       if (!hIcon)
-          hIcon = LoadImageA(0, c->iconName[idx], IMG_ICON,
+          hIcon = LoadImageA(0, nm, IMG_ICON,
                              D2G_ICONPX, D2G_ICONPX, LR_LOADFROMFILE);
       if (!hIcon && bn[0] && exeDir(dir, sizeof(dir))) {
           int di, fi = 0;
@@ -1048,11 +1069,22 @@ static void iconGlyph(Grid* c, int idx, float l, float t, float r, float b) {
 static void cellOut(Grid* c, int row, int col, int sel, unsigned int rowFore,
                     float l, float t, float r, float b, int align) {
     unsigned int fore = cellColour(c, row, col, sel, rowFore, l, t, r, b);
-    if (c->colCheck[col]) { checkBox(c, row, col, l, t, r, b, fore); return; }
+/*  WHICH SHAPE, DECIDED HERE AND PER CELL. The id in the cell says it: one of
+    the tick box pair gets the square drawn with geometry - so it keeps
+    growing with the row the way a drawn shape does - and anything else gets
+    the developer's own icon, loaded. Deciding it per column instead meant a
+    list that held the pair anywhere turned EVERY icon column into a tick
+    box, which is the usual case: icons get added to a list that already had
+    ~BoxOff and ~BoxOn in it. */
     if (c->cellIcon) {
         int idx = CELLICON(c, row, col);
-        if (idx > 0) { iconGlyph(c, idx, l, t, r, b); return; }
+        if (idx > 0) {
+            if (c->chkOn  && idx == c->chkOn)  { checkBoxAt(c, l, t, r, b, fore, 1); return; }
+            if (c->chkOff && idx == c->chkOff) { checkBoxAt(c, l, t, r, b, fore, 0); return; }
+            iconGlyph(c, idx, l, t, r, b); return;
+        }
     }
+    if (c->colCheck[col]) { checkBox(c, row, col, l, t, r, b, fore); return; }
     text(c, CELL(c, row, col), l + 4.0f, t + 1.0f, r - 4.0f, b,
          fore, align, c->fmt, c->wrap);
 }
@@ -1390,6 +1422,19 @@ static long WINAPI d2g_WndProc(HWND h, UINT msg, UINT wp, long lp) {
     if (!c) return DefWindowProcA(h, msg, wp, lp);
     if (msg == WM_PAINT)      { BeginPaint(h, ps); d2g_Draw(c); EndPaint(h, ps); return 0; }
     if (msg == WM_ERASEBKGND) return 1;
+/*  THE SURFACE IS RESIZED THERE AND THEN, not when Clarion gets to hear of it.
+
+    On a maximise the region grows NOW and the Clarion-side handler arrives
+    late: BG:Resized is posted. In between, the render target is still the old
+    size, and Direct2D presents that old image stretched - or with an empty
+    band down one side. That is the flash seen on maximising, and nothing
+    further up can fix it, because by the time ACCEPT processes the event the
+    window has already been painted several times.
+
+    All this does is resize and invalidate. The rows and the columns are still
+    decided by the Clarion side when its turn comes; what this avoids is
+    showing something distorted in the meantime. */
+    if (msg == WM_SIZE)       { resizeTarget(c); }
     return CallWindowProcA(c->oldProc, h, msg, wp, lp);
 }
 
@@ -1409,6 +1454,7 @@ int d2g_Attach(void* hwnd, const char* face, int pt) {
     c->used = 1; c->hwnd = (HWND)hwnd; c->rt = 0; c->brush = 0;
     c->cells = 0; c->rowCap = 0; c->colCap = 0; c->cellCol = 0; c->cellIcon = 0;
     c->footH = 0; c->footTxt = 0; c->footCap = 0;
+    c->chkOff = 0; c->chkOn = 0;
     { int k; for (k = 0; k < G_COLS; k++) {
         c->colCheck[k] = 0;
         c->colFg[k] = -1; c->colBg[k] = -1;
@@ -1599,6 +1645,14 @@ void d2g_CheckCol(int h, int col, int on) {
     if (!c || col < 0 || col >= G_COLS) return;
     c->colCheck[col] = on ? 1 : 0;
 }
+/* WHICH TWO IDS OF THE LIST ARE THE TICK BOX. Told once, when the columns
+   are read; cellOut then decides shape by shape. 0 for either means the
+   list has no tick box pair and every id is an icon of its own. */
+void d2g_CheckIds(int h, int off, int on) {
+    Grid* c = slot(h);
+    if (!c) return;
+    c->chkOff = off; c->chkOn = on;
+}
 
 /* What icon slot idx (1..G_ICONS) is called - the same string the Clarion
    side read off PROP:IconList. Cheap and idempotent: a name that has not
@@ -1684,8 +1738,7 @@ void d2g_CellColour(int h, int visRow, int col, int nfg, int nbg, int sfg, int s
     p[0] = nfg; p[1] = nbg; p[2] = sfg; p[3] = sbg;
 }
 
-int d2g_Resize(int h) {
-    Grid* c = slot(h);
+static int resizeTarget(Grid* c) {
     RECT  r;
     SIZEU s;
     if (!c) return 0;
@@ -1701,6 +1754,8 @@ int d2g_Resize(int h) {
     InvalidateRect(c->hwnd, 0, 0);
     return 1;
 }
+
+int d2g_Resize(int h) { return resizeTarget(slot(h)); }
 
 /* how many whole rows fit below the header - what the Clarion side needs to
    know to fill a page */
