@@ -1,4 +1,4 @@
-#TEMPLATE(SDAspecto,'SDAspecto - Personalizacion visual de controles v3.06'),FAMILY('ABC')
+#TEMPLATE(SDAspecto,'SDAspecto - Personalizacion visual de controles v3.07'),FAMILY('ABC')
 #!-----------------------------------------------------------------------------
 #! SDAspecto - Adrian E. Santarelli - SDigitales
 #!
