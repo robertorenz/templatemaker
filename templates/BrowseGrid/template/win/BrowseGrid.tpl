@@ -1,4 +1,4 @@
-#TEMPLATE(BrowseGrid,'BrowseGrid - draw any browse with Direct2D - v1.38'),FAMILY('ABC')
+#TEMPLATE(BrowseGrid,'BrowseGrid - draw any browse with Direct2D - v1.39'),FAMILY('ABC')
 #!-----------------------------------------------------------------------------
 #!  BrowseGrid  -  a browse that does not look like 1995.
 #!
@@ -1421,6 +1421,8 @@ BG:ClrHit:%bgObject  EQUATE(EVENT:User + 40 + %ActiveTemplateInstance)
 %bgObject:IconOn     LONG                                     ! the icon that means ticked
 %bgObject:IconChk    LONG                                     ! is the icon list a tick box pair?
 %bgObject:W0         LONG,DIM(BG:MaxCols)                     ! the widths as the formatter drew them
+%bgObject:Hdr0       LONG                                     ! what the LIST takes up apart from its rows
+%bgObject:H0         LONG                                     ! 1 = measured, even if it came out zero
 #IF(%bgTotals)
 %bgObject:Sum        LONG,DIM(BG:MaxCols)                     ! does this column add up?
 %bgObject:SumNm      CSTRING(65),DIM(BG:MaxCols)              ! and the field name to read it by
@@ -2540,13 +2542,43 @@ fit   LONG,AUTO
          ' rowh=' & d2g_RowH(%bgObject:G) &                                   |
          ' page=' & fit & ' listlh=' & lh & ' listitems=' & items)
 #ENDIF
-  IF lh > 0 AND items > 0 AND fit > 0 AND fit <> items
-    newlh = items * lh / fit
+!  FROM THE ORIGINAL, NEVER FROM WHAT IT IS NOW.
+!
+!  This routine WRITES the LIST's line height, and ABC recomputes its items
+!  from it. Working the new height out from the height and the items of NOW is
+!  feeding on its own output: every call starts from what the last one left and
+!  the value oscillates until it settles. Measured on one window opening:
+!  21 -> 17 -> 14 -> 21 -> 18 -> 19 -> 19 - five rounds, and each one is a
+!  redraw with the rows at a different height. That is what is seen as flicker.
+!
+!  WHAT STAYS PUT IS THE HEADING, NOT THE USABLE HEIGHT. Storing items * lh
+!  from the first round as though it were a constant is wrong: the LIST grows
+!  with the window, and after a maximise that stale base gave a line height of
+!  189/22 = 8, so ABC loaded 58 records where 22 fit.
+!
+!  What does stay put is what the LIST takes up outside its rows - its height
+!  less items * line height - measured ONCE while the line height is still the
+!  designed one. The row area is then worked out from the height of NOW, so the
+!  count follows the window without feeding on its own output.
+  IF ~%bgObject:H0 AND lh > 0 AND items > 0
+    %bgObject:H0   = 1                                        ! measured, even if zero
+    %bgObject:Hdr0 = %bgList{PROP:Height} - items * lh
+    IF %bgObject:Hdr0 < 0 THEN %bgObject:Hdr0 = 0.
+  END
+  IF %bgObject:H0 AND fit > 0 AND %bgList{PROP:Height} > %bgObject:Hdr0
+    newlh = (%bgList{PROP:Height} - %bgObject:Hdr0) / fit
     IF newlh < 2 THEN newlh = 2.
-    %bgList{PROP:LineHeight} = newlh
+!  AND ONLY IF IT CHANGED. Writing the same number back raises the resize event
+!  again, which comes back in here: the loop would keep turning even once the
+!  arithmetic had stopped moving.
+    IF newlh <> lh
+      %bgList{PROP:LineHeight} = newlh
 #IF(%bgDiag)
-    BG_Log('%Procedure %bgObject items: baja el alto de linea a ' & newlh)
+      BG_Log('%Procedure %bgObject items: line height ' & lh & ' -> ' &     |
+             newlh & ' (height ' & %bgList{PROP:Height} & ' - hdr ' &       |
+             %bgObject:Hdr0 & ' / ' & fit & ')')
 #ENDIF
+    END
   END
   0{PROP:Pixels} = sp
 

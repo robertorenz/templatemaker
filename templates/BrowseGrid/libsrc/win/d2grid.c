@@ -1,6 +1,6 @@
 /* ============================================================================
  *  d2grid.c - a grid drawn with Direct2D and DirectWrite, for Clarion.
- *  v1.36 - it ships with the BrowseGrid template of the same number, and the
+ *  v1.39 - it ships with the BrowseGrid template of the same number, and the
  *  two are versioned together because the template declares every export here.
  *
  *  WHY. Clarion's LIST is drawn by the runtime and looks it. This draws every
@@ -69,6 +69,7 @@ typedef struct { long left, top, right, bottom; } RECT;
 #define GWL_WNDPROC  (-4)
 #define WM_PAINT      0x000F
 #define WM_ERASEBKGND 0x0014
+#define WM_SIZE       0x0005
 
 extern "C" {
 
@@ -335,6 +336,7 @@ static void* g_dw  = 0;
 static int   g_tried = 0;
 
 static long WINAPI d2g_WndProc(HWND h, UINT msg, UINT wp, long lp);
+static int  resizeTarget(Grid* c);
 
 /* How tall a row and a heading are for a given point size. Leading has to grow
    WITH the type, not sit at a fixed number of pixels above it: pt + 10 is
@@ -1390,6 +1392,19 @@ static long WINAPI d2g_WndProc(HWND h, UINT msg, UINT wp, long lp) {
     if (!c) return DefWindowProcA(h, msg, wp, lp);
     if (msg == WM_PAINT)      { BeginPaint(h, ps); d2g_Draw(c); EndPaint(h, ps); return 0; }
     if (msg == WM_ERASEBKGND) return 1;
+/*  THE SURFACE IS RESIZED THERE AND THEN, not when Clarion gets to hear of it.
+
+    On a maximise the region grows NOW and the Clarion-side handler arrives
+    late: BG:Resized is posted. In between, the render target is still the old
+    size, and Direct2D presents that old image stretched - or with an empty
+    band down one side. That is the flash seen on maximising, and nothing
+    further up can fix it, because by the time ACCEPT processes the event the
+    window has already been painted several times.
+
+    All this does is resize and invalidate. The rows and the columns are still
+    decided by the Clarion side when its turn comes; what this avoids is
+    showing something distorted in the meantime. */
+    if (msg == WM_SIZE)       { resizeTarget(c); }
     return CallWindowProcA(c->oldProc, h, msg, wp, lp);
 }
 
@@ -1684,8 +1699,7 @@ void d2g_CellColour(int h, int visRow, int col, int nfg, int nbg, int sfg, int s
     p[0] = nfg; p[1] = nbg; p[2] = sfg; p[3] = sbg;
 }
 
-int d2g_Resize(int h) {
-    Grid* c = slot(h);
+static int resizeTarget(Grid* c) {
     RECT  r;
     SIZEU s;
     if (!c) return 0;
@@ -1701,6 +1715,8 @@ int d2g_Resize(int h) {
     InvalidateRect(c->hwnd, 0, 0);
     return 1;
 }
+
+int d2g_Resize(int h) { return resizeTarget(slot(h)); }
 
 /* how many whole rows fit below the header - what the Clarion side needs to
    know to fill a page */
