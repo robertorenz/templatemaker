@@ -106,6 +106,16 @@
       #DISPLAY('emailc.c is compiled into your EXE by Clarion''s own C')
       #DISPLAY('compiler. There is no DLL to ship and nothing to register.')
     #ENDBOXED
+    #BOXED('Options')
+      #PROMPT('&Disable this template',CHECK),%ETgDisable,DEFAULT(0),AT(10)
+      #PROMPT('&Object name:',@s64),%ETgObject,REQ,DEFAULT('Mailer')
+      #PROMPT('&Language:',DROP('English[1]|Espa' & CHR(241) & 'ol (Spanish)[2]')),%ETgLanguage,DEFAULT('1')
+      #PROMPT('&Keep a conversation log (for support)',CHECK),%ETgTrace,DEFAULT(1),AT(10)
+      #DISPLAY('The log is what the Setup window shows on its Log tab.')
+      #DISPLAY('Passwords and tokens are masked before they reach it.')
+    #ENDBOXED
+  #ENDTAB
+  #TAB('Up&grade')
     #BOXED('Upgraded from v1.03? The API moved out of here')
       #DISPLAY('v1.03 put the Provider API on a tab of THIS extension. It is')
       #DISPLAY('now an extension of its own - "emailTo - Provider API" - so')
@@ -116,14 +126,6 @@
       #DISPLAY('If you had it switched on here: Global Properties >')
       #DISPLAY('Extensions > Insert > "emailTo - Provider API", and put the')
       #DISPLAY('object name back. Anything this tab used to store is ignored.')
-    #ENDBOXED
-    #BOXED('Options')
-      #PROMPT('&Disable this template',CHECK),%ETgDisable,DEFAULT(0),AT(10)
-      #PROMPT('&Object name:',@s64),%ETgObject,REQ,DEFAULT('Mailer')
-      #PROMPT('&Language:',DROP('English[1]|Espa' & CHR(241) & 'ol (Spanish)[2]')),%ETgLanguage,DEFAULT('1')
-      #PROMPT('&Keep a conversation log (for support)',CHECK),%ETgTrace,DEFAULT(1),AT(10)
-      #DISPLAY('The log is what the Setup window shows on its Log tab.')
-      #DISPLAY('Passwords and tokens are masked before they reach it.')
     #ENDBOXED
   #ENDTAB
   #TAB('&Account')
@@ -219,6 +221,10 @@
         #PROMPT('From &name:',FIELD(%ETgFile)),%ETgColFromName
         #PROMPT('&Reply to:',FIELD(%ETgFile)),%ETgColReplyTo
       #ENDBOXED
+    #ENDENABLE
+  #ENDTAB
+  #TAB('Table col&umns 2')
+    #ENABLE(%ETgFile)
       #BOXED('Columns - OAuth2 and API keys')
         #PROMPT('Client &ID:',FIELD(%ETgFile)),%ETgColClientId
         #PROMPT('Client &secret:',FIELD(%ETgFile)),%ETgColSecret
@@ -260,6 +266,8 @@
       #DISPLAY('emailc.c is compiled only into the app that owns the classes,')
       #DISPLAY('because the PRAGMA lives in EmailNetClass.clw.')
     #ENDBOXED
+  #ENDTAB
+  #TAB('Cl&asses')
     #BOXED('Override - place the classes by hand')
       #INSERT(%AbcLibraryPrompts(ABC))
       #DISPLAY('')
@@ -833,6 +841,8 @@ INCLUDE('EmailApiClass.INC'),ONCE                          #! pulls in all four 
         #DISPLAY('this on unless one table serves exactly one account.')
       #ENDENABLE
     #ENDBOXED
+  #ENDTAB
+  #TAB('Sync tables &2')
     #ENABLE(%ETyOn)
       #BOXED('Blocked addresses - who the provider refuses, and why')
         #PROMPT('&Table:',FILE),%ETyBlockedFile
@@ -856,7 +866,7 @@ INCLUDE('EmailApiClass.INC'),ONCE                          #! pulls in all four 
       #ENDBOXED
     #ENDENABLE
   #ENDTAB
-  #TAB('Sync tables &2')
+  #TAB('Sync tables &3')
     #ENABLE(%ETyOn)
       #BOXED('Activity - what happened to each message')
         #PROMPT('&Table:',FILE),%ETyEventFile

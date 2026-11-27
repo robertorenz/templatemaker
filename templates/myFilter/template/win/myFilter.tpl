@@ -241,6 +241,14 @@ myFilterStorage      BYTE(%mfgStorage)                    ! 0 = INI, 1 = table
       #PROMPT('&Disable this button',CHECK),%mfDisable,DEFAULT(0),AT(10)
       #PROMPT('&Object name:',@s64),%mfObject,REQ,DEFAULT('Flt' & %ActiveTemplateInstance)
     #ENDBOXED
+    #BOXED('The button')
+      #DISPLAY('Change the button text the normal way, on the control itself.')
+      #PROMPT('Show the &condition count on the button',CHECK),%mfCount,DEFAULT(1),AT(10)
+      #DISPLAY('The button reads "Filters (3)" while three conditions are on,')
+      #DISPLAY('so it is obvious the list is not showing everything.')
+    #ENDBOXED
+  #ENDTAB
+  #TAB('&Browse')
     #BOXED('The browse it filters')
       #PROMPT('&Browse object:',@s64),%mfBrowse,REQ,DEFAULT('BRW1')
       #PROMPT('&File whose fields to offer:',FILE),%mfFile
@@ -259,17 +267,11 @@ myFilterStorage      BYTE(%mfgStorage)                    ! 0 = INI, 1 = table
       #DISPLAY('extension for the name.')
       #PROMPT('&Window title (blank = the localised word):',@s64),%mfTitle,DEFAULT('')
     #ENDBOXED
-    #BOXED('The button')
-      #DISPLAY('Change the button text the normal way, on the control itself.')
-      #PROMPT('Show the &condition count on the button',CHECK),%mfCount,DEFAULT(1),AT(10)
-      #DISPLAY('The button reads "Filters (3)" while three conditions are on,')
-      #DISPLAY('so it is obvious the list is not showing everything.')
-    #ENDBOXED
   #ENDTAB
   #TAB('&Fields')
     #BOXED('Offer exactly these fields')
       #DISPLAY('Leave this empty to offer every field of the files on the')
-      #DISPLAY('General tab. Fill it in to offer just these, in this order -')
+      #DISPLAY('Browse tab. Fill it in to offer just these, in this order -')
       #DISPLAY('which is how you mirror the columns the browse actually')
       #DISPLAY('shows, joined files included.')
       #BUTTON('&Fields to offer'),MULTI(%mfPicked,%mfPickField & '  ' & %mfPickLabel),INLINE

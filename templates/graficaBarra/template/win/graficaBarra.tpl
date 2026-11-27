@@ -145,7 +145,7 @@ INCLUDE('GraficaBarraClass.INC'),ONCE
       #ENDENABLE
     #ENDBOXED
   #ENDTAB
-  #TAB('&Series')
+  #TAB('&Series 1-2')
     #DISPLAY('Only needed when "Number of series" on the General tab is 2 or more.')
     #DISPLAY('The name is what the legend shows. "Draw as" mixes shapes on the one')
     #DISPLAY('chart - sales on Bars, the trend on Line, over the same value axis.')
@@ -177,6 +177,8 @@ INCLUDE('GraficaBarraClass.INC'),ONCE
         #ENDENABLE
       #ENDBOXED
     #ENDENABLE
+  #ENDTAB
+  #TAB('Series &3-4')
     #ENABLE(%gbWNSeries>=3)
       #BOXED('Series 3')
         #PROMPT('Na&me:',@s32),%gbWS3Name,DEFAULT('Series 3')
@@ -305,6 +307,8 @@ Refresh:%gbWObject ROUTINE
       #DISPLAY('The chart is redrawn for every band printed, so the values may')
       #DISPLAY('be fields from the record being printed or running totals.')
     #ENDBOXED
+  #ENDTAB
+  #TAB('Sca&le')
     #BOXED('Value scale')
       #PROMPT('&Automatic scale (nice round maximum from the data)',CHECK),%gbRAutoScale,DEFAULT(1),AT(10)
       #ENABLE(%gbRAutoScale=0)
@@ -381,7 +385,7 @@ Refresh:%gbWObject ROUTINE
       #ENDENABLE
     #ENDBOXED
   #ENDTAB
-  #TAB('&Series')
+  #TAB('&Series 1-2')
     #DISPLAY('Only needed when "Number of series" on the General tab is 2 or more.')
     #DISPLAY('"Draw as" mixes shapes on the one chart - sales on Bars, the trend')
     #DISPLAY('on Line, over the same value axis. Column, Line and Scatter only.')
@@ -413,6 +417,8 @@ Refresh:%gbWObject ROUTINE
         #ENDENABLE
       #ENDBOXED
     #ENDENABLE
+  #ENDTAB
+  #TAB('Series &3-4')
     #ENABLE(%gbRNSeries>=3)
       #BOXED('Series 3')
         #PROMPT('Na&me:',@s32),%gbRS3Name,DEFAULT('Series 3')

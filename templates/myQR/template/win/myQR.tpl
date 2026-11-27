@@ -65,7 +65,7 @@
       #DISPLAY('myQR for Clarion  v' & %myQRTPLVersion)
       #DISPLAY('Renders a QR code into an IMAGE control. Value can be a literal or a')
       #DISPLAY('variable/expression that you change in code; the image auto-refreshes.')
-      #DISPLAY('PRIVACY: the value is sent over HTTPS to api.qrserver.com (see Instructions).')
+      #DISPLAY('PRIVACY: the value is sent over HTTPS to api.qrserver.com (see Caveats).')
     #ENDBOXED
     #BOXED('Options'),AT(,,250)
       #PROMPT('&Disable this template',CHECK),%myQRDisable,DEFAULT(0),AT(10)
@@ -107,7 +107,10 @@
       #DISPLAY('- Any time, force a redraw from your own embed code with:  DO myQRRefresh')
       #DISPLAY('- Auto-refresh OFF (or the value never changes): the code is rendered once')
       #DISPLAY('   at window open; call DO myQRRefresh yourself after you change the value.')
-      #DISPLAY('')
+      #ENDBOXED
+    #ENDTAB
+    #TAB('&Caveats')
+      #BOXED('Timer, curl and privacy')
       #DISPLAY('TIMER CAVEAT')
       #DISPLAY('- Auto-refresh sets the WINDOW timer (0{PROP:Timer}). If this procedure')
       #DISPLAY('   already uses the window timer for something else, turn auto-refresh OFF')
