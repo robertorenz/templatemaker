@@ -1,6 +1,6 @@
 /* ============================================================================
  *  d2grid.c - a grid drawn with Direct2D and DirectWrite, for Clarion.
- *  v1.40 - it ships with the BrowseGrid template of the same number, and the
+ *  v1.41 - it ships with the BrowseGrid template of the same number, and the
  *  two are versioned together because the template declares every export here.
  *
  *  WHY. Clarion's LIST is drawn by the runtime and looks it. This draws every
@@ -915,12 +915,20 @@ static int loadIcon(Grid* c, int idx) {
           fallback for an icon that, for whatever reason, did not end up
           compiled in. */
     { char bn[260], rn[260], dir[260], full[520];
-      baseName(c->iconName[idx], bn, sizeof(bn));
+      const char* nm = c->iconName[idx];
+/*    THE '~' IS CLARION'S MARK, NOT PART OF THE NAME. PROP:IconList hands
+      the string over exactly as the window declared it, and a leading '~'
+      is how Clarion says "this one is a standard icon". It belongs to
+      neither the file on disk nor the resource name, and left on it makes
+      all three tries below ask for something that cannot exist:
+      '~BOXOFF_ICO' as a resource, '~BoxOff.ico' as a file. */
+      if (nm[0] == '~') nm++;
+      baseName(nm, bn, sizeof(bn));
       resName(bn, rn, sizeof(rn));
       hIcon = LoadImageA(GetModuleHandleA(0), rn, IMG_ICON,
                          D2G_ICONPX, D2G_ICONPX, 0);
       if (!hIcon)
-          hIcon = LoadImageA(0, c->iconName[idx], IMG_ICON,
+          hIcon = LoadImageA(0, nm, IMG_ICON,
                              D2G_ICONPX, D2G_ICONPX, LR_LOADFROMFILE);
       if (!hIcon && bn[0] && exeDir(dir, sizeof(dir))) {
           int di, fi = 0;

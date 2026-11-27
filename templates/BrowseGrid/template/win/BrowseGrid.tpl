@@ -1,4 +1,4 @@
-#TEMPLATE(BrowseGrid,'BrowseGrid - draw any browse with Direct2D - v1.40'),FAMILY('ABC')
+#TEMPLATE(BrowseGrid,'BrowseGrid - draw any browse with Direct2D - v1.41'),FAMILY('ABC')
 #!-----------------------------------------------------------------------------
 #!  BrowseGrid  -  a browse that does not look like 1995.
 #!
@@ -81,6 +81,7 @@
     #PROMPT('Take the typeface from SD &Aspecto',CHECK),%bgGSDAsp,DEFAULT(0),AT(10)
     #PROMPT('&Font:',@s32),%bgGFont,DEFAULT('Segoe UI')
     #PROMPT('&Size (points):',SPIN(@n3,6,24,1)),%bgGSize,DEFAULT(9)
+    #PROMPT('Draw the standard chec&k box with geometry',CHECK),%bgGDrawChk,DEFAULT(0),AT(10)
     #PROMPT('Draw the text the way the LIST does (&GDI)',CHECK),%bgGGdiText,DEFAULT(1),AT(10)
     #PROMPT('Font wei&ght:',DROP('As the name says[0]|Light[300]|Regular[400]|Medium[500]|SemiBold[600]|Bold[700]')),%bgGWeight,DEFAULT('0')
     #PROMPT('&Wrap text that is too long for its column',CHECK),%bgGWrap,DEFAULT(0),AT(10)
@@ -680,6 +681,9 @@ c LONG,AUTO
         #PROMPT('&Font:',@s32),%bgFont,DEFAULT('Segoe UI')
         #PROMPT('&Size (points):',SPIN(@n3,6,24,1)),%bgSize,DEFAULT(9)
       #ENDENABLE
+      #PROMPT('Draw the standard chec&k box with geometry',CHECK),%bgDrawChk,DEFAULT(0),AT(10)
+      #DISPLAY('Ticked, the BoxOff/BoxOn pair is drawn with geometry and grows')
+      #DISPLAY('with the row. Unticked, their .ico load like any other icon.')
       #PROMPT('Draw the text the way the LIST does (&GDI)',CHECK),%bgGdiText,DEFAULT(1),AT(10)
       #PROMPT('Font wei&ght:',DROP('As the name says[0]|Light[300]|Regular[400]|Medium[500]|SemiBold[600]|Bold[700]')),%bgWeight,DEFAULT('0')
       #DISPLAY('Un nombre de familia puede llevar el peso adentro: GDI resuelve')
@@ -848,6 +852,7 @@ c LONG,AUTO
   #DECLARE(%bgFontU)
   #DECLARE(%bgSizeU)
   #DECLARE(%bgGdiTextU)
+  #DECLARE(%bgDrawChkU)
   #DECLARE(%bgWeightU)
   #DECLARE(%bgWrapU)
   #DECLARE(%bgWrapLinesU)
@@ -885,6 +890,7 @@ c LONG,AUTO
   #SET(%bgFontU,%bgFont)
   #SET(%bgSizeU,%bgSize)
   #SET(%bgGdiTextU,%bgGdiText)
+  #SET(%bgDrawChkU,%bgDrawChk)
   #SET(%bgWeightU,%bgWeight)
   #SET(%bgWrapU,%bgWrap)
   #SET(%bgWrapLinesU,%bgWrapLines)
@@ -925,6 +931,7 @@ c LONG,AUTO
         #SET(%bgFontU,%bgGFont)
         #SET(%bgSizeU,%bgGSize)
         #SET(%bgGdiTextU,%bgGGdiText)
+        #SET(%bgDrawChkU,%bgGDrawChk)
         #SET(%bgWeightU,%bgGWeight)
         #SET(%bgWrapU,%bgGWrap)
         #SET(%bgWrapLinesU,%bgGWrapLines)
@@ -1957,7 +1964,28 @@ raw   CSTRING(261)                                            ! icon name/path, 
 !  HALF A PAIR IS NOT A PAIR. No 'on' entry and there is nothing to draw a
 !  tick into, so the list is treated as ordinary icons throughout.
   IF ~%bgObject:IconOn THEN %bgObject:IconOff = 0.
+#IF(%bgDrawChkU)
   d2g_CheckIds(%bgObject:G,%bgObject:IconOff,%bgObject:IconOn)
+#ELSE
+!  THE PAIR IS NOT CLAIMED. Told nothing, the engine treats every id as an
+!  icon of its own and loads those two .ico like any other - which is what
+!  a plain LIST does with them, and the usual case, because the pair is far
+!  more often the developer<39>s own artwork than Clarion<39>s.
+  d2g_CheckIds(%bgObject:G,0,0)
+#ENDIF
+#IF(%bgDiag)
+!  LA LISTA DE ICONOS TAL CUAL, y el par que se reconocio de ella. Si un par
+!  propio no sale dibujado como casilla, lo que falta esta aca y no hay que
+!  deducirlo de una captura: la deteccion es POR NOMBRE y solo acepta
+!  boxoff/boxon, checkoff/checkon, unchecked/checked y untick/tick.
+  dbg = ''
+  LOOP c = 1 TO n
+    dbg = CLIP(dbg) & ' ' & c & '=[' & CLIP(%bgList{PROP:IconList,c}) & ']'
+  END
+  BG_Log('%Procedure %bgObject lista de iconos: n=' & n & ' off=' &          |
+         %bgObject:IconOff & ' on=' & %bgObject:IconOn &                   |
+         ' geom=%bgDrawChkU' & CLIP(dbg))
+#ENDIF
 
   LOOP pass = 1 TO 2
   n = 0
