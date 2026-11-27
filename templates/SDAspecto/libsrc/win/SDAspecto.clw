@@ -1145,6 +1145,11 @@ lColor      LONG
   lColor = -1
   CASE lTipo
   OF CREATE:tab
+    !-- OJO con el VALOR que se le ponga: el borde de un GROUP se dibuja en un
+    !-- gris de alrededor de D9D9D9. Si el TAB queda de ese mismo tono, los
+    !-- GROUP que tenga adentro pierden visualmente el borde - esta dibujado,
+    !-- pero no se distingue del fondo. El default de SDAspecto era D8D8D8 y
+    !-- colisionaba justo ahi.
     lColor = SELF.ColorTab
   OF CREATE:sheet
     lColor = SELF.ColorSheet
@@ -1222,6 +1227,7 @@ lChr        LONG
 lTipo       LONG
 lX          LONG
 lY          LONG
+lHayCambio  BYTE
   CODE
   lTipo = 0
   IF pFeq <> 0
@@ -1267,6 +1273,43 @@ lY          LONG
       pFeq{PROP:FontCharSet} = lChr
     END
   ELSE
+    !-- CENTINELAS DE "NO TOCAR" -----------------------------------------------
+    !-- Hasta la 3.06 esto le pasaba SIEMPRE a SETFONT un color y un estilo
+    !-- explicitos, aunque fueran los que el control ya tenia. Visualmente daba
+    !-- lo mismo, pero para Windows es una ASIGNACION de color, y eso saca al
+    !-- control del modo themed. El sintoma: un GROUP pierde el marco del BOXED,
+    !-- y solo volvia desactivando los temas en el manifiesto.
+    !--
+    !-- Es el mismo error que ya teniamos resuelto en PintarFondo -reescribir una
+    !-- propiedad con el valor que ya tiene NO es un no-op en Clarion- pero que
+    !-- nunca habiamos aplicado aca.
+    !--
+    !-- El prototipo lo contempla:
+    !--   SETFONT(feq, <typeface>, size=0, color=COLOR:None, style=-1, ...)
+    !-- COLOR:None en el color y -1 en el estilo significan "no lo toques".
+    !--
+    !-- Asi que cada atributo que NO va a cambiar se reemplaza por su centinela.
+    !-- Cubre los dos casos: que no haya color configurado, y que el control
+    !-- tenga una tipografia propia del disenador que hay que respetar.
+    !--
+    !-- El charset queda como estaba a proposito: su default es CHARSET:Default,
+    !-- que ASIGNA el charset por defecto en vez de significar "no tocar", asi
+    !-- que no hay centinela que usar.
+    !--
+    !-- OJO: la rama de los menus de arriba NO pasa por aca, y tiene que seguir
+    !-- asi. Esa compara con IF <> antes de asignar; con un centinela adentro
+    !-- terminaria escribiendo -1 como color real.
+    lHayCambio = 0
+    IF lNom <> pFeq{PROP:FontName} OR lTam <> pFeq{PROP:FontSize} OR |
+       lCol <> pFeq{PROP:FontColor} OR lEst <> pFeq{PROP:FontStyle} OR |
+       lChr <> pFeq{PROP:FontCharSet}
+      lHayCambio = 1
+    END
+    !-- La sustitucion va DESPUES de decidir si hay cambio: si fuera antes, el
+    !-- centinela no coincidiria con el valor actual y pareceria un cambio.
+    IF lCol = pFeq{PROP:FontColor} THEN lCol = COLOR:None.
+    IF lEst = pFeq{PROP:FontStyle} THEN lEst = -1.
+
     IF pFeq = 0
       !-- SETFONT sobre la ventana le corre xpos/ypos, porque son relativos
       !-- a la unidad de dialogo, que es justo lo que acaba de cambiar.
@@ -1290,9 +1333,7 @@ lY          LONG
     ELSE
       !-- Solo si algo cambio de verdad. Un SETFONT redundante repinta el
       !-- control y puede alterarle el aspecto.
-      IF lNom <> pFeq{PROP:FontName} OR lTam <> pFeq{PROP:FontSize} OR |
-         lCol <> pFeq{PROP:FontColor} OR lEst <> pFeq{PROP:FontStyle} OR |
-         lChr <> pFeq{PROP:FontCharSet}
+      IF lHayCambio
         SETFONT(pFeq, lNom, lTam, lCol, lEst, lChr)
       END
     END
