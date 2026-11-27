@@ -13,7 +13,7 @@
 #SHEET
   #TAB('General')
     #DISPLAY('SDAspecto - Adrian E. Santarelli - SDigitales')
-    #DISPLAY('Version 3.06')
+    #DISPLAY('Version 3.07')
     #DISPLAY('')
     #PROMPT('Nombre del esquema:',@s40),%SDAEsquema,DEFAULT('SDigitales'),REQ
     #PROMPT('Nombre de la instancia global:',@s40),%SDAObjName,DEFAULT('GLO_SDAspecto'),REQ
@@ -150,9 +150,9 @@
       #ENABLE(%SDAUsaList=1)
         #PROMPT('   Color:',COLOR),%SDAColList,DEFAULT(00F8F8F8h)
       #ENDENABLE
-      #PROMPT('TAB',CHECK),%SDAUsaTab,DEFAULT(1)
+      #PROMPT('TAB',CHECK),%SDAUsaTab,DEFAULT(0)
       #ENABLE(%SDAUsaTab=1)
-        #PROMPT('   Color:',COLOR),%SDAColTab,DEFAULT(00D8D8D8h)
+        #PROMPT('   Color:',COLOR),%SDAColTab,DEFAULT(00E5DCD6h)
         #DISPLAY('   Requiere desactivar el estilo visual en el manifiesto')
         #DISPLAY('   de la aplicacion; si no, Windows lo ignora.')
       #ENDENABLE
@@ -510,6 +510,54 @@ IF EVENT() = SDAspecto:EventoRefresh
   #ENDIF
 END
 #ENDAT
+#!#############################################################################
+#! CODE TEMPLATE: migrar un valor de ColorTab
+#!
+#! Es un parche de migracion, y va como CODE TEMPLATE a proposito: se inserta
+#! a mano en el embed que uno elija -tipicamente la rutina que inicializa las
+#! variables globales- y corre ahi, una sola vez. No hay que agregarle una
+#! extension a cada aplicacion, ni queda codigo corriendo en cada arranque.
+#! Para sacarlo, se borra del embed.
+#!
+#! El caso que lo motivo: 14211288 (#D8D8D8) fue durante meses el DEFAULT de
+#! ColorTab, y quedo grabado en el INI de todas las instalaciones. Colisiona
+#! con el gris del borde de los GROUP (~#D9D9D9): el borde se dibuja igual
+#! pero no se distingue del fondo, y parece que el template lo rompio.
+#! Como el valor vive en cada INI, cambiar el default del template no corrige
+#! las instalaciones que ya estan andando.
+#!
+#! Los valores viejo y nuevo son prompts, no numeros fijos: asi sirve para
+#! cualquier migracion futura de ColorTab y no es "el parche del D8D8D8".
+#!#############################################################################
+#CODE(SDAMigrarColorTab,'SDAspecto - Migrar un valor de ColorTab'),DESCRIPTION('[SDAspecto] Migrar ColorTab ' & %SDAMigViejo & ' a ' & %SDAMigNuevo)
+#DISPLAY('Corrige un valor de ColorTab que haya quedado grabado en el INI, y')
+#DISPLAY('regraba el archivo.')
+#DISPLAY('')
+#DISPLAY('DONDE INSERTARLO: en cualquier punto posterior a que SDAspecto haya')
+#DISPLAY('leido el INI, o sea despues del Arrancar() que genera la extension')
+#DISPLAY('principal en el arranque del programa. La rutina que inicializa las')
+#DISPLAY('variables globales es un buen lugar.')
+#DISPLAY('')
+#DISPLAY('Solo pisa el valor EXACTO indicado abajo. Cualquier otro color,')
+#DISPLAY('elegido a mano, queda intacto.')
+#DISPLAY('')
+#PROMPT('Nombre de la instancia global:',@s40),%SDAMigObj,DEFAULT('GLO_SDAspecto'),REQ
+#DISPLAY('El mismo que figura en la extension principal de SDAspecto.')
+#DISPLAY('')
+#PROMPT('Valor a corregir:',@n-14),%SDAMigViejo,DEFAULT(14211288)
+#PROMPT('Reemplazar por:',@n-14),%SDAMigNuevo,DEFAULT(12566463)
+#DISPLAY('')
+#DISPLAY('14211288 es RGB(216,216,216): choca con el borde de los GROUP.')
+#DISPLAY('12566463 es RGB(191,191,191): bien separado de ese gris.')
+#DISPLAY('')
+#DISPLAY('MIGRACION DE UNA SOLA VEZ: sacar el code template del embed cuando')
+#DISPLAY('la instalacion ya quedo corregida.')
+  !-- SDAspecto: migracion de un valor de ColorTab que quedo en el INI.
+  !-- Solo corrige el valor exacto; cualquier otro queda como esta.
+  IF %SDAMigObj.ColorTab = %SDAMigViejo
+    %SDAMigObj.ColorTab = %SDAMigNuevo
+    SDAspectoGuardar()
+  END
 #!#############################################################################
 #! GRUPOS
 #!

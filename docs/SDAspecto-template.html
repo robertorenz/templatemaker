@@ -76,6 +76,7 @@
     <a href="#tabs" class="h2">The four prompt tabs</a>
     <a href="#exceptions" class="h2">Windows that need an exception</a>
     <div class="grp">The rule engine</div>
+    <a href="#migrate" class="h2">Migrating a stored colour</a>
     <a href="#rules" class="h2">What a rule is</a>
     <a href="#cascade" class="h2">The cascade</a>
     <a href="#bitmasks" class="h2">Two bitmasks</a>
@@ -230,6 +231,43 @@ SDAspectoApply()                     <span class="c">! repaint the current windo
         positions, concludes that this small layout is what a full screen looks like, and never spreads
         anything out again. This extension puts the two back in order at the end of the deferred
         pass.</p>
+    </section>
+
+    <section id="migrate">
+      <h2>Migrating a stored colour <a href="#migrate" class="top">#</a></h2>
+      <p>A code template, <code>SDAspecto - Migrar un valor de ColorTab</code>, for the one case a
+        template cannot fix by changing a <code>DEFAULT()</code>: a value that is already written into
+        every installation&rsquo;s INI.</p>
+      <p><b>Why a default cannot fix it.</b> <code>ColorTab</code> is stored per installation, so the
+        default only decides what a <i>fresh</i> INI gets. Change it and every machine already running
+        keeps the old value &mdash; and since the INI is the authority at run time, the template looks
+        broken on exactly the installations that have been in use the longest.</p>
+      <p><b>Why a code template and not an extension.</b> It is a one-off patch. It goes into whichever
+        embed you choose &mdash; typically the routine that initialises the global variables &mdash; and
+        runs there once, so there is no extension to add to every application and no code left running
+        on every start-up. Remove it from the embed once the installed base is corrected. It has to sit
+        <b>after</b> SDAspecto has read the INI, which means after the <code>Arrancar()</code> the main
+        extension emits at start-up.</p>
+      <p><b>Both values are prompts, not constants</b>, so it serves any future <code>ColorTab</code>
+        migration rather than being the patch for one particular colour. Only the exact value given is
+        overwritten; any other colour, chosen by hand, is left alone.</p>
+      <table>
+        <tr><th>Prompt</th><th>What it is</th></tr>
+        <tr><td><code>Nombre de la instancia global</code></td><td>The same name as in the main SDAspecto extension.</td></tr>
+        <tr><td><code>Valor a corregir</code></td><td>The value to replace. Defaults to <code>14211288</code>.</td></tr>
+        <tr><td><code>Reemplazar por</code></td><td>What to put in its place. Defaults to <code>12566463</code>.</td></tr>
+      </table>
+      <p>Those defaults are the case that prompted it. <code>14211288</code> is RGB(216,216,216), which
+        was the <code>ColorTab</code> default for months and collided with the grey Windows draws around
+        a <code>GROUP</code> (about RGB(217,217,217)): the border was still drawn, but could not be told
+        from the background, which reads as the template having broken it. <code>12566463</code> is
+        RGB(191,191,191), clear of that grey.</p>
+      <p>The <code>ColorTab</code> default itself has moved on since, to
+        <code>00E5DCD6h</code> &mdash; RGB(214,220,229), a pale blue rather than a grey, which
+        cannot collide with the <code>GROUP</code> border at all. That only decides what a fresh
+        INI gets, which is the whole reason this code template exists; and the two numbers are
+        deliberately not tied together, because escaping a colour that collides and choosing what
+        new installations get are different questions. Both are prompts.</p>
     </section>
 
     <section id="rules">

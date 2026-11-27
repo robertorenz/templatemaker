@@ -12,7 +12,7 @@ _SDAspectoPresent_      EQUATE(1)
 !-- todos los threads a la vez: la queue de reglas necesita un lock.
     INCLUDE('CWSYNCHM.INC'),ONCE
 
-SDAspecto:Version       EQUATE('3.06')
+SDAspecto:Version       EQUATE('3.07')
 
 !-- Evento propio para re-aplicar una vez que la ventana termino de armarse.
 !-- En Init todavia hay codigo de ABC por correr (restauracion de posicion
