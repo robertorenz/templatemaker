@@ -1,4 +1,4 @@
-#TEMPLATE(BrowseGrid,'BrowseGrid - draw any browse with Direct2D - v1.39'),FAMILY('ABC')
+#TEMPLATE(BrowseGrid,'BrowseGrid - draw any browse with Direct2D - v1.40'),FAMILY('ABC')
 #!-----------------------------------------------------------------------------
 #!  BrowseGrid  -  a browse that does not look like 1995.
 #!
@@ -211,6 +211,7 @@ d2g_Cell(LONG h,LONG visRow,LONG col,*CSTRING s),RAW,NAME('_d2g_Cell')
 d2g_CellColour(LONG h,LONG visRow,LONG col,LONG nfg,LONG nbg,LONG sfg,LONG sbg),NAME('_d2g_CellColour')
 d2g_ColumnColour(LONG h,LONG col,LONG fg,LONG bg,LONG sfg,LONG sbg),NAME('_d2g_ColumnColour')
 d2g_CheckCol(LONG h,LONG col,LONG on),NAME('_d2g_CheckCol')
+d2g_CheckIds(LONG h,LONG off,LONG on),NAME('_d2g_CheckIds')
 d2g_IconName(LONG h,LONG idx,*CSTRING name),RAW,NAME('_d2g_IconName')
 d2g_CellIcon(LONG h,LONG visRow,LONG col,LONG idx),NAME('_d2g_CellIcon')
 d2g_IconErr(LONG h,LONG idx),LONG,NAME('_d2g_IconErr')
@@ -1394,10 +1395,9 @@ BG:ClrHit:%bgObject  EQUATE(EVENT:User + 40 + %ActiveTemplateInstance)
 %bgObject:Fld        LONG,DIM(BG:MaxCols)                     ! queue field behind each column
 %bgObject:CFld       LONG,DIM(BG:MaxCols)                     ! and where its colours start, 0 none
 %bgObject:Num        LONG,DIM(BG:MaxCols)                     ! does its picture say it is a number?
-%bgObject:IFld       LONG,DIM(BG:MaxCols)                     ! and its icon id, 0 = not a tick box
-%bgObject:IconFld    LONG,DIM(BG:MaxCols)                     ! an icon column that is NOT a tick box, 0 = none
+%bgObject:IconFld    LONG,DIM(BG:MaxCols)                     ! this column carries an icon id, not text
 %bgObject:IconOn     LONG                                     ! the icon that means ticked
-%bgObject:IconChk    LONG                                     ! is the icon list a tick box pair?
+%bgObject:IconOff    LONG                                     ! and the one that means not ticked
 %bgObject:W0         LONG,DIM(BG:MaxCols)                     ! the widths as the formatter drew them
 %bgObject:Hdr0       LONG                                     ! what the LIST takes up apart from its rows
 %bgObject:H0         LONG                                     ! 1 = measured, even if it came out zero
@@ -1934,7 +1934,7 @@ raw   CSTRING(261)                                            ! icon name/path, 
 !  tick box is not left drawing nothing any more either - see below, it gets
 !  its own icons back, loaded rather than faked.
   %bgObject:IconOn  = 0
-  %bgObject:IconChk = 0
+  %bgObject:IconOff = 0
   n = 0
   LOOP c = 1 TO 16
     raw  = CLIP(%bgList{PROP:IconList,c})
@@ -1948,14 +1948,16 @@ raw   CSTRING(261)                                            ! icon name/path, 
     d2g_IconName(%bgObject:G,c,raw)
     IF INSTRING('boxoff',head,1,1) OR INSTRING('checkoff',head,1,1)          |
        OR INSTRING('unchecked',head,1,1) OR INSTRING('untick',head,1,1)
-      %bgObject:IconChk = 1
+      %bgObject:IconOff = c
     ELSIF INSTRING('boxon',head,1,1) OR INSTRING('checkon',head,1,1)         |
        OR INSTRING('checked',head,1,1) OR INSTRING('tick',head,1,1)
-      %bgObject:IconChk = 1
       %bgObject:IconOn  = c
     END
   END
-  IF ~%bgObject:IconOn THEN %bgObject:IconChk = 0.
+!  HALF A PAIR IS NOT A PAIR. No 'on' entry and there is nothing to draw a
+!  tick into, so the list is treated as ordinary icons throughout.
+  IF ~%bgObject:IconOn THEN %bgObject:IconOff = 0.
+  d2g_CheckIds(%bgObject:G,%bgObject:IconOff,%bgObject:IconOn)
 
   LOOP pass = 1 TO 2
   n = 0
@@ -2036,7 +2038,6 @@ raw   CSTRING(261)                                            ! icon name/path, 
 !  <field>_NormalFG, wherever they actually ended up, so that is what gets
 !  looked for - a short scan (colours plus an icon is at most half a dozen
 !  fields) rather than a guess about their order.
-    %bgObject:IFld[n + 1] = 0
     %bgObject:IconFld[n + 1] = 0
     p = %bgList{PROPLIST:Icon,c}
     IF ~p THEN p = %bgList{PROPLIST:IconTrn,c}.                ! J, the transparent kind
@@ -2045,11 +2046,10 @@ raw   CSTRING(261)                                            ! icon name/path, 
       LOOP scan = fld + 1 TO fld + 10
         IF ~CLIP(WHO(%bgQueueUsed,scan)) THEN BREAK.           ! past the last real field
         IF UPPER(CLIP(WHO(%bgQueueUsed,scan))) = iconNm
-          IF %bgObject:IconChk
-            %bgObject:IFld[n + 1] = scan
-          ELSE
-            %bgObject:IconFld[n + 1] = scan                    ! not a tick box: draw its own icon
-          END
+!  MARKED WHATEVER THE LIST HOLDS. Whether this cell is a tick box or an
+!  icon of its own is a question about its ID, and the id is per ROW: the
+!  engine is told which two ids are the pair and decides cell by cell.
+            %bgObject:IconFld[n + 1] = scan
           BREAK
         END
       END
@@ -2098,7 +2098,7 @@ raw   CSTRING(261)                                            ! icon name/path, 
 !  number is a number and nothing here can tell otherwise. Untick the totals
 !  or change that column<39>s picture.
     %bgObject:Sum[n + 1] = 0
-    IF ~%bgObject:IFld[n + 1] AND ~%bgObject:IconFld[n + 1] AND %bgObject:Num[n + 1]
+    IF ~%bgObject:IconFld[n + 1] AND %bgObject:Num[n + 1]
       %bgObject:Sum[n + 1] = 1
 !  The name once, here, and not once per record per column inside the walk:
 !  WHO() is asking the queue about itself, and the answer does not change
@@ -2113,7 +2113,6 @@ raw   CSTRING(261)                                            ! icon name/path, 
 !  by row, these are set once in the window and hold for the whole column.
 !  Read once per column rather than once per cell, which is why they cost
 !  nothing. -1 is Clarion<39>s COLOR:None and has to stay -1.
-    d2g_CheckCol(%bgObject:G,n,CHOOSE(%bgObject:IFld[n + 1] > 0,1,0))
     d2g_ColumnColour(%bgObject:G,n,                                            |
                      BG_Colr(%bgList{PROPLIST:TextColor,c}),                    |
                      BG_Colr(%bgList{PROPLIST:BackColor,c}),                    |
@@ -3319,7 +3318,7 @@ sav  STRING(1024)
     GET(%bgQueueUsed,i)
     IF ERRORCODE() THEN BREAK.
     LOOP c = 1 TO %bgObject:Cols
-      IF %bgObject:IFld[c] OR %bgObject:IconFld[c] THEN CYCLE. ! neither carries text
+      IF %bgObject:IconFld[c] THEN CYCLE.                      ! carries an id, not text
       IF %bgObject:Pic[c]
         txt = CLIP(LEFT(FORMAT(WHAT(%bgQueueUsed,%bgObject:Fld[c]),                |
                                CLIP(%bgObject:Pic[c]))))
@@ -3339,7 +3338,7 @@ sav  STRING(1024)
 !  reloads the record the browse was sitting on.
   IF %bgFitScanU > 0
     LOOP c = 1 TO %bgObject:Cols
-      IF ~%bgObject:IFld[c] AND ~%bgObject:IconFld[c] AND %bgObject:Col[c]
+      IF ~%bgObject:IconFld[c] AND %bgObject:Col[c]
         nm[c] = CLIP(WHO(%bgQueueUsed,%bgObject:Fld[c]))
       END
     END
@@ -3382,7 +3381,7 @@ sav  STRING(1024)
     lc = %bgObject:Col[c]
     IF ~lc THEN CYCLE.
     IF %bgList{PROPLIST:Width,lc} < 1 THEN CYCLE.
-    IF %bgObject:IFld[c] OR %bgObject:IconFld[c]
+    IF %bgObject:IconFld[c]
       w = BG:FitBox
     ELSE
       w = best[c] + BG:FitPad
@@ -3552,7 +3551,7 @@ ok   LONG
   expr = ''
   LOOP i = 1 TO %bgObject:Cols
     IF ~FAll AND i <> %bgObject:SortCol + 1 THEN CYCLE.
-    IF %bgObject:IFld[i] THEN CYCLE.                          ! una casilla no lleva texto
+    IF %bgObject:IconFld[i] THEN CYCLE.                       ! un icono no lleva texto
     nm = CLIP(WHO(%bgQueueUsed,%bgObject:Fld[i]))
     IF ~nm THEN CYCLE.
     one = ''
@@ -4379,7 +4378,7 @@ wid LONG,AUTO
   %bgObject:Rgn{PROP:Tip} = ''
   IF row < 0 OR col < 0 OR col >= %bgObject:Cols THEN EXIT.   ! the header, or past the last
   IF row >= RECORDS(%bgQueueUsed) THEN EXIT.
-  IF %bgObject:IFld[col + 1] THEN EXIT.                       ! a tick box says all it has to
+  IF %bgObject:IconFld[col + 1] THEN EXIT.                    ! an icon says all it has to
   GET(%bgQueueUsed,row + 1)
   IF ERRORCODE() THEN EXIT.
   IF %bgObject:Pic[col + 1]
@@ -4709,12 +4708,7 @@ imap  CSTRING(650)
     GET(%bgQueueUsed,first + i)
     IF ERRORCODE() THEN BREAK.
     LOOP col = 1 TO %bgObject:Cols
-      IF %bgObject:IFld[col]
-!  A tick box carries no text: what goes over is whether it is ticked, and
-!  the engine draws the square.
-        %bgObject:Cell = CHOOSE(WHAT(%bgQueueUsed,%bgObject:IFld[col]) =      |
-                                %bgObject:IconOn, '1', '0')
-      ELSIF %bgObject:IconFld[col]
+      IF %bgObject:IconFld[col]
 !  Igual que el tilde: la celda no lleva texto. Lo que importa es CUAL de los
 !  iconos de la lista corresponde a esta fila - ese numero es el mismo id que
 !  ABC ya calculo y dejo en el queue, uno atras del valor.
@@ -4766,7 +4760,6 @@ imap  CSTRING(650)
   LOOP i = 1 TO %bgObject:Cols
     map = CLIP(map) & ' ' & %bgObject:Col[i] & '>f' & %bgObject:Fld[i]         |
         & '[' & CLIP(%bgObject:Pic[i]) & ']w' & d2g_ColWidth(%bgObject:G,i - 1)
-    IF %bgObject:IFld[i] THEN map = CLIP(map) & 'i' & %bgObject:IFld[i].
     IF %bgObject:IconFld[i] THEN map = CLIP(map) & 'I' & %bgObject:IconFld[i].
     IF %bgObject:CFld[i] THEN map = CLIP(map) & 'c' & %bgObject:CFld[i].
 #IF(%bgTotals)

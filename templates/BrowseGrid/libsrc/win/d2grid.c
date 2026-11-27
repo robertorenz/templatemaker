@@ -1,6 +1,6 @@
 /* ============================================================================
  *  d2grid.c - a grid drawn with Direct2D and DirectWrite, for Clarion.
- *  v1.39 - it ships with the BrowseGrid template of the same number, and the
+ *  v1.40 - it ships with the BrowseGrid template of the same number, and the
  *  two are versioned together because the template declares every export here.
  *
  *  WHY. Clarion's LIST is drawn by the runtime and looks it. This draws every
@@ -226,6 +226,11 @@ typedef struct {
        for the column. Cheap enough to keep for every column - four ints - and
        read once per column instead of once per cell. -1 is 'none' here too. */
     int   colCheck[G_COLS];     /* draw a tick box instead of the text?     */
+    /* THE TWO ICON IDS THAT ARE THE TICK BOX, 0 = none. Which shape a cell
+       gets cannot be settled per COLUMN: the id is a per-row value, so one
+       column can legitimately show a tick on one row and an icon on the
+       next. These two let cellOut decide per cell. */
+    int   chkOff, chkOn;
     /* ---- icon columns (v1.38) --------------------------------------------
        A column of the developer's OWN icons, not the tick box above. What
        each of the LIST's up-to-16 icons is called is remembered here; the
@@ -794,10 +799,8 @@ static void text(Grid* c, const char* s, float l, float t, float r, float b,
    Which icon means ticked is decided on the Clarion side, where the icon
    list's names can be read; by the time it arrives the cell holds '1' or
    '0' and there is nothing left to interpret. */
-static void checkBox(Grid* c, int row, int col, float l, float t, float r,
-                     float b, unsigned int rgb) {
-    const char* s = CELL(c, row, col);
-    int   on = (s && s[0] == '1');
+static void checkBoxAt(Grid* c, float l, float t, float r, float b,
+                       unsigned int rgb, int on) {
     float sz = (b - t) * 0.55f;
     float cx, cy, x0, y0, x1, y1;
     if (sz <  7.0f) sz =  7.0f;
@@ -813,6 +816,14 @@ static void checkBox(Grid* c, int row, int col, float l, float t, float r,
         line(c, x0 + sz * 0.22f, cy, cx - sz * 0.04f, y1 - sz * 0.24f, rgb);
         line(c, cx - sz * 0.04f, y1 - sz * 0.24f, x1 - sz * 0.16f, y0 + sz * 0.24f, rgb);
     }
+}
+
+/* The column-level tick box, kept for a caller that marks a whole column
+   with d2g_CheckCol and sends '1' or '0' as the cell's text. */
+static void checkBox(Grid* c, int row, int col, float l, float t, float r,
+                     float b, unsigned int rgb) {
+    const char* s = CELL(c, row, col);
+    checkBoxAt(c, l, t, r, b, rgb, (s && s[0] == '1'));
 }
 
 /* Just the filename. PROP:IconList can hold a full path - whatever the
@@ -1050,11 +1061,22 @@ static void iconGlyph(Grid* c, int idx, float l, float t, float r, float b) {
 static void cellOut(Grid* c, int row, int col, int sel, unsigned int rowFore,
                     float l, float t, float r, float b, int align) {
     unsigned int fore = cellColour(c, row, col, sel, rowFore, l, t, r, b);
-    if (c->colCheck[col]) { checkBox(c, row, col, l, t, r, b, fore); return; }
+/*  WHICH SHAPE, DECIDED HERE AND PER CELL. The id in the cell says it: one of
+    the tick box pair gets the square drawn with geometry - so it keeps
+    growing with the row the way a drawn shape does - and anything else gets
+    the developer's own icon, loaded. Deciding it per column instead meant a
+    list that held the pair anywhere turned EVERY icon column into a tick
+    box, which is the usual case: icons get added to a list that already had
+    ~BoxOff and ~BoxOn in it. */
     if (c->cellIcon) {
         int idx = CELLICON(c, row, col);
-        if (idx > 0) { iconGlyph(c, idx, l, t, r, b); return; }
+        if (idx > 0) {
+            if (c->chkOn  && idx == c->chkOn)  { checkBoxAt(c, l, t, r, b, fore, 1); return; }
+            if (c->chkOff && idx == c->chkOff) { checkBoxAt(c, l, t, r, b, fore, 0); return; }
+            iconGlyph(c, idx, l, t, r, b); return;
+        }
     }
+    if (c->colCheck[col]) { checkBox(c, row, col, l, t, r, b, fore); return; }
     text(c, CELL(c, row, col), l + 4.0f, t + 1.0f, r - 4.0f, b,
          fore, align, c->fmt, c->wrap);
 }
@@ -1424,6 +1446,7 @@ int d2g_Attach(void* hwnd, const char* face, int pt) {
     c->used = 1; c->hwnd = (HWND)hwnd; c->rt = 0; c->brush = 0;
     c->cells = 0; c->rowCap = 0; c->colCap = 0; c->cellCol = 0; c->cellIcon = 0;
     c->footH = 0; c->footTxt = 0; c->footCap = 0;
+    c->chkOff = 0; c->chkOn = 0;
     { int k; for (k = 0; k < G_COLS; k++) {
         c->colCheck[k] = 0;
         c->colFg[k] = -1; c->colBg[k] = -1;
@@ -1613,6 +1636,14 @@ void d2g_CheckCol(int h, int col, int on) {
     Grid* c = slot(h);
     if (!c || col < 0 || col >= G_COLS) return;
     c->colCheck[col] = on ? 1 : 0;
+}
+/* WHICH TWO IDS OF THE LIST ARE THE TICK BOX. Told once, when the columns
+   are read; cellOut then decides shape by shape. 0 for either means the
+   list has no tick box pair and every id is an icon of its own. */
+void d2g_CheckIds(int h, int off, int on) {
+    Grid* c = slot(h);
+    if (!c) return;
+    c->chkOff = off; c->chkOn = on;
 }
 
 /* What icon slot idx (1..G_ICONS) is called - the same string the Clarion
